@@ -21,55 +21,12 @@ h1 {
   margin-top: 40px;
 }
 
-.cookie-area img {
-  width: 200px;
-  cursor: pointer;
-  transition: transform 0.1s;
-}
-
-.cookie-area img:active {
-  transform: scale(0.9);
-}
-
-.shop {
-  background: #fff3e0;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
-  min-width: 220px;
-  text-align: left;
-}
-
-.shop h2 {
+.cookie-area {
   text-align: center;
 }
 
-.shop button {
-  display: block;
-  margin: 10px auto;
-  padding: 10px;
-  width: 100%;
-  background: #d2691e;
-  border: none;
-  color: white;
-  cursor: pointer;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: background 0.2s;
-}
+.shop { display: none; } /* removed shop for flappy */
 
-.shop button:hover {
-  background: #a0522d;
-}  border: none;
-  color: white;
-  cursor: pointer;
-  border-radius: 10px;
-  font-size: 16px;
-}
-
-.shop button:hover {
-  background: #a0522d;
-}
 .chat-box {
   background: #fff3e0;
   padding: 20px;
@@ -107,4 +64,5 @@ h1 {
 
 #send-chat:hover {
   background: #a0522d;
+}22d;
 }
