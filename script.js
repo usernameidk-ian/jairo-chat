@@ -47,6 +47,7 @@ function resetGame() {
   pipes = [];
   score = 0;
   gameOver = false;
+  updateGame(); // restart the game loop immediately
 }
 
 function drawBird() {
@@ -61,20 +62,37 @@ function drawPipes() {
   });
 }
 
-function updateGame() {
-  if (gameOver) return;
 
+
+
+
+updateGame();
+
+// ---------------------- MUSIC ----------------------
+document.addEventListener("click", () => {
+  const bgm = document.getElementById("bgm");
+  if (bgm.paused) bgm.play().catch(() => {});
+}, { once: true });
+
+// ---------------------- CHAT ----------------------
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const sendChat = document.getElementById("send-chat");
+cfunction updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Bird physics
-  bird.velocity += bird.gravity;
-  bird.y += bird.velocity;
+  if (!gameOver) {
+    bird.velocity += bird.gravity;
+    bird.y += bird.velocity;
+  }
 
+  // Check collisions
   if (bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
 
   // Pipes
   pipes.forEach(pipe => {
-    pipe.x -= 2;
+    if (!gameOver) pipe.x -= 2;
 
     if (
       bird.x < pipe.x + pipe.width &&
@@ -106,6 +124,7 @@ function updateGame() {
   document.getElementById("score").textContent = score;
   document.getElementById("best").textContent = best;
 
+  // Game over overlay
   if (gameOver) {
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -117,33 +136,18 @@ function updateGame() {
 
   requestAnimationFrame(updateGame);
 }
+const messagesRef = db.ref("messages");
+const clearChatBtn = document.getElementById("clear-chat");
 
-canvas.addEventListener("click", flap);
+sendChat.acanvas.addEventListener("click", flap);
 
 function flap() {
   if (gameOver) {
     resetGame();
-    return; // stop here so we don't flap immediately after resetting
+    return;
   }
-  bird.velocity = bird.lift; // normal flap
-}
-
-updateGame();
-
-// ---------------------- MUSIC ----------------------
-document.addEventListener("click", () => {
-  const bgm = document.getElementById("bgm");
-  if (bgm.paused) bgm.play().catch(() => {});
-}, { once: true });
-
-// ---------------------- CHAT ----------------------
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const sendChat = document.getElementById("send-chat");
-const messagesRef = db.ref("messages");
-const clearChatBtn = document.getElementById("clear-chat");
-
-sendChat.addEventListener("click", () => {
+  bird.velocity = bird.lift;
+}ddEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   messagesRef.push({ text, username, timestamp: Date.now() });
