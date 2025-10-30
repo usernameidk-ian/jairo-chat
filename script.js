@@ -33,7 +33,7 @@ canvas.width = 300;
 canvas.height = 400;
 
 let score = 0;
-let best = localStorage.getItem("bestScore") || 0;
+let best = parseInt(localStorage.getItem("bestScore")) || 0;
 let pipes = [];
 let gameOver = false;
 
@@ -47,7 +47,6 @@ function resetGame() {
   pipes = [];
   score = 0;
   gameOver = false;
-  updateGame(); // restart the game loop immediately
 }
 
 function drawBird() {
@@ -62,23 +61,7 @@ function drawPipes() {
   });
 }
 
-
-
-
-
-updateGame();
-
-// ---------------------- MUSIC ----------------------
-document.addEventListener("click", () => {
-  const bgm = document.getElementById("bgm");
-  if (bgm.paused) bgm.play().catch(() => {});
-}, { once: true });
-
-// ---------------------- CHAT ----------------------
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const sendChat = document.getElementById("send-chat");
-cfunction updateGame() {
+function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Bird physics
@@ -87,10 +70,10 @@ cfunction updateGame() {
     bird.y += bird.velocity;
   }
 
-  // Check collisions
+  // Check collisions with ground/ceiling
   if (bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
 
-  // Pipes
+  // Move pipes & check collision
   pipes.forEach(pipe => {
     if (!gameOver) pipe.x -= 2;
 
@@ -110,8 +93,10 @@ cfunction updateGame() {
     }
   });
 
+  // Remove offscreen pipes
   pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
 
+  // Add new pipes
   if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 120) {
     let top = Math.random() * 100 + 50;
     let bottom = Math.random() * 100 + 50;
@@ -136,18 +121,32 @@ cfunction updateGame() {
 
   requestAnimationFrame(updateGame);
 }
+
+// Flap / restart
+canvas.addEventListener("click", () => {
+  if (gameOver) {
+    resetGame();
+  }
+  bird.velocity = bird.lift;
+});
+
+// Start game loop
+updateGame();
+
+// ---------------------- MUSIC ----------------------
+document.addEventListener("click", () => {
+  const bgm = document.getElementById("bgm");
+  if (bgm.paused) bgm.play().catch(() => {});
+}, { once: true });
+
+// ---------------------- CHAT ----------------------
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const sendChat = document.getElementById("send-chat");
 const messagesRef = db.ref("messages");
 const clearChatBtn = document.getElementById("clear-chat");
 
-sendChat.acanvas.addEventListener("click", flap);
-
-function flap() {
-  if (gameOver) {
-    resetGame();
-    return;
-  }
-  bird.velocity = bird.lift;
-}ddEventListener("click", () => {
+sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   messagesRef.push({ text, username, timestamp: Date.now() });
