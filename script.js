@@ -156,7 +156,6 @@ function updateGame() {
 
 // ---------------------- FLAP / RESTART ----------------------
 function flap() {
-  if (document.activeElement === chatInput) return; // don't flap if typing
   if (gameOver) {
     resetGame();
     return;
@@ -165,10 +164,12 @@ function flap() {
 }
 
 canvas.addEventListener("mousedown", flap);
+
+// Fixed keydown so space works in chat
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.code === "ArrowUp") {
+  if ((e.code === "Space" || e.code === "ArrowUp") && document.activeElement !== chatInput) {
     flap();
-    e.preventDefault();
+    e.preventDefault(); // only block default if we actually flap
   }
 });
 
