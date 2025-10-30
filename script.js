@@ -38,8 +38,23 @@ let pipes = [];
 let gameOver = false;
 
 const birdImg = new Image();
-birdImg.src = "jairobird.png"; // <-- replace with your bird image
-const bird = { x: 50, y: 200, width: 40, height: 40, velocity: 0, gravity: 0.5, lift: -8 };
+birdImg.src = "jairobird.png";
+
+const pipeTopImg = new Image();
+pipeTopImg.src = "pipe-top.png";
+
+const pipeBottomImg = new Image();
+pipeBottomImg.src = "pipe-bottom.png";
+
+const bird = {
+  x: 50,
+  y: 200,
+  width: 40,
+  height: 40,
+  velocity: 0,
+  gravity: 0.5,
+  lift: -8
+};
 
 function resetGame() {
   bird.y = canvas.height / 2;
@@ -55,10 +70,18 @@ function drawBird() {
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    ctx.fillStyle = "#6ab04c";
-    ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
-    ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
+    ctx.drawImage(pipeTopImg, pipe.x, pipe.top - pipeTopImg.height, pipe.width, pipe.top);
+    ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
   });
+}
+
+function addPipe() {
+  const gap = 120;
+  const minHeight = 30;
+  const maxHeight = canvas.height - gap - minHeight;
+  const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+  const bottomHeight = canvas.height - gap - topHeight;
+  pipes.push({ x: canvas.width, width: 40, top: topHeight, bottom: bottomHeight, passed: false });
 }
 
 function updateGame() {
@@ -96,11 +119,9 @@ function updateGame() {
   // Remove offscreen pipes
   pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
 
-  // Add new pipes
-  if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 120) {
-    let top = Math.random() * 100 + 50;
-    let bottom = Math.random() * 100 + 50;
-    pipes.push({ x: canvas.width, width: 40, top, bottom, passed: false });
+  // Add new pipes with proper spacing
+  if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
+    addPipe();
   }
 
   drawPipes();
@@ -116,18 +137,24 @@ function updateGame() {
     ctx.fillStyle = "white";
     ctx.font = "20px Arial";
     ctx.fillText("Game Over!", 70, 180);
-    ctx.fillText("Click to restart", 55, 210);
+    ctx.fillText("Click or press Up/Space to restart", 10, 210);
   }
 
   requestAnimationFrame(updateGame);
 }
 
 // Flap / restart
-canvas.addEventListener("click", () => {
+function flap() {
   if (gameOver) {
     resetGame();
+    return;
   }
   bird.velocity = bird.lift;
+}
+
+canvas.addEventListener("mousedown", flap);
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.code === "ArrowUp") flap();
 });
 
 // Start game loop
