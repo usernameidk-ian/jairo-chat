@@ -38,7 +38,7 @@ let pipes = [];
 let gameOver = false;
 
 const birdImg = new Image();
-birdImg.src = "bird.png"; // <-- replace with your bird image
+birdImg.src = "jairobird.png"; // <-- replace with your bird image
 const bird = { x: 50, y: 200, width: 40, height: 40, velocity: 0, gravity: 0.5, lift: -8 };
 
 function resetGame() {
