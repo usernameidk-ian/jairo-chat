@@ -7,7 +7,7 @@ let password = "";
 if (username === adminUsername) {
   password = prompt("Enter admin password:");
   if (password !== adminPassword) {
-    alert("just kidding, you are NOT the real bian, loser. ");
+    alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
   }
 }
@@ -70,14 +70,19 @@ function drawBird() {
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    ctx.drawImage(pipeTopImg, pipe.x, pipe.top - pipeTopImg.height, pipe.width, pipe.top);
-    ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
+    // Draw top pipe
+    const topScale = pipe.top / pipeTopImg.height;
+    ctx.drawImage(pipeTopImg, pipe.x, 0, pipe.width, pipeTopImg.height * topScale);
+
+    // Draw bottom pipe
+    const bottomScale = pipe.bottom / pipeBottomImg.height;
+    ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipeBottomImg.height * bottomScale);
   });
 }
 
 function addPipe() {
   const gap = 120;
-  const minHeight = 30;
+  const minHeight = 40;
   const maxHeight = canvas.height - gap - minHeight;
   const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
   const bottomHeight = canvas.height - gap - topHeight;
@@ -145,6 +150,7 @@ function updateGame() {
 
 // Flap / restart
 function flap() {
+  if (document.activeElement === chatInput) return; // don't flap if typing
   if (gameOver) {
     resetGame();
     return;
@@ -154,7 +160,10 @@ function flap() {
 
 canvas.addEventListener("mousedown", flap);
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.code === "ArrowUp") flap();
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    flap();
+    e.preventDefault();
+  }
 });
 
 // Start game loop
