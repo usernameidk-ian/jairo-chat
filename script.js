@@ -118,10 +118,15 @@ function updateGame() {
   requestAnimationFrame(updateGame);
 }
 
-canvas.addEventListener("click", () => {
-  if (gameOver) resetGame();
-  bird.velocity = bird.lift;
-});
+canvas.addEventListener("click", flap);
+
+function flap() {
+  if (gameOver) {
+    resetGame();
+    return; // stop here so we don't flap immediately after resetting
+  }
+  bird.velocity = bird.lift; // normal flap
+}
 
 updateGame();
 
