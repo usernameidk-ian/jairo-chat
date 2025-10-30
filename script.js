@@ -80,15 +80,21 @@ function drawPipes() {
   });
 }
 
+// ---------------------- PIPE SPAWNING ----------------------
 function addPipe() {
-  const gap = 120;
+  const baseGap = 160; // bigger base gap = easier
+  const gapVariance = 20; // slightly vary gap randomly
+  const gap = baseGap + Math.random() * gapVariance;
+
   const minHeight = 40;
   const maxHeight = canvas.height - gap - minHeight;
   const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
   const bottomHeight = canvas.height - gap - topHeight;
+
   pipes.push({ x: canvas.width, width: 40, top: topHeight, bottom: bottomHeight, passed: false });
 }
 
+// ---------------------- GAME LOOP ----------------------
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -148,7 +154,7 @@ function updateGame() {
   requestAnimationFrame(updateGame);
 }
 
-// Flap / restart
+// ---------------------- FLAP / RESTART ----------------------
 function flap() {
   if (document.activeElement === chatInput) return; // don't flap if typing
   if (gameOver) {
