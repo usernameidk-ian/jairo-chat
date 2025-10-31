@@ -38,7 +38,7 @@ let pipes = [];
 let gameOver = false;
 
 const birdImg = new Image();
-birdImg.src = "jairobird2.png";
+birdImg.src = "jairobird.png";
 
 const pipeTopImg = new Image();
 pipeTopImg.src = "pipe-top.png";
