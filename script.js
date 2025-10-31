@@ -46,6 +46,49 @@ pipeTopImg.src = "pipe-top.png";
 const pipeBottomImg = new Image();
 pipeBottomImg.src = "pipe-bottom.png";
 
+// ---------------------- CLOUDS ----------------------
+let cloudImg = new Image();
+
+// easily choose your cloud image
+function setCloudImage(src) {
+  cloudImg.src = src;
+}
+
+// default cloud
+setCloudImage("cloud.png"); // <-- replace with your cloud image file
+
+let clouds = [];
+
+// create some starting clouds
+for (let i = 0; i < 3; i++) {
+  clouds.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * (canvas.height / 2),
+    width: 60 + Math.random() * 40,
+    height: 30 + Math.random() * 20,
+    speed: 0.5 + Math.random() * 0.5
+  });
+}
+
+function drawClouds() {
+  clouds.forEach(cloud => {
+    ctx.globalAlpha = 0.7;
+    ctx.drawImage(cloudImg, cloud.x, cloud.y, cloud.width, cloud.height);
+    ctx.globalAlpha = 1.0;
+  });
+}
+
+function updateClouds() {
+  clouds.forEach(cloud => {
+    cloud.x -= cloud.speed;
+    if (cloud.x + cloud.width < 0) {
+      cloud.x = canvas.width + Math.random() * 100;
+      cloud.y = Math.random() * (canvas.height / 2);
+    }
+  });
+}
+
+// ---------------------- BIRD SETTINGS ----------------------
 const bird = {
   x: 50,
   y: 200,
@@ -70,11 +113,9 @@ function drawBird() {
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    // Draw top pipe
     const topScale = pipe.top / pipeTopImg.height;
     ctx.drawImage(pipeTopImg, pipe.x, 0, pipe.width, pipeTopImg.height * topScale);
 
-    // Draw bottom pipe
     const bottomScale = pipe.bottom / pipeBottomImg.height;
     ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipeBottomImg.height * bottomScale);
   });
@@ -82,8 +123,8 @@ function drawPipes() {
 
 // ---------------------- PIPE SPAWNING ----------------------
 function addPipe() {
-  const baseGap = 160; // bigger base gap = easier
-  const gapVariance = 20; // slightly vary gap randomly
+  const baseGap = 160;
+  const gapVariance = 20;
   const gap = baseGap + Math.random() * gapVariance;
 
   const minHeight = 40;
@@ -97,6 +138,10 @@ function addPipe() {
 // ---------------------- GAME LOOP ----------------------
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // draw clouds first (background)
+  updateClouds();
+  drawClouds();
 
   // Bird physics
   if (!gameOver) {
@@ -127,10 +172,8 @@ function updateGame() {
     }
   });
 
-  // Remove offscreen pipes
   pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
 
-  // Add new pipes with proper spacing
   if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
     addPipe();
   }
@@ -141,7 +184,6 @@ function updateGame() {
   document.getElementById("score").textContent = score;
   document.getElementById("best").textContent = best;
 
-  // Game over overlay
   if (gameOver) {
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -165,11 +207,10 @@ function flap() {
 
 canvas.addEventListener("mousedown", flap);
 
-// Fixed keydown so space works in chat
 document.addEventListener("keydown", (e) => {
   if ((e.code === "Space" || e.code === "ArrowUp") && document.activeElement !== chatInput) {
     flap();
-    e.preventDefault(); // only block default if we actually flap
+    e.preventDefault();
   }
 });
 
