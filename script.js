@@ -26,7 +26,7 @@ function stringToColor(str) {
 
 const userColor = stringToColor(username);
 
-// ---------------------- FLAPPY BIRD ----------------------
+// ---------------------- FLAPPY BIRD SETUP ----------------------
 const canvas = document.getElementById("flappyCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 300;
@@ -36,6 +36,7 @@ let score = 0;
 let best = parseInt(localStorage.getItem("bestScore")) || 0;
 let pipes = [];
 let gameOver = false;
+let paused = false; // for video reward pauses
 
 const birdImg = new Image();
 birdImg.src = "jairobird.png";
@@ -48,18 +49,12 @@ pipeBottomImg.src = "pipe-bottom.png";
 
 // ---------------------- CLOUDS ----------------------
 let cloudImg = new Image();
-
-// easily choose your cloud image
 function setCloudImage(src) {
   cloudImg.src = src;
 }
-
-// default cloud
-setCloudImage("cloud.png"); // <-- replace with your cloud image file
+setCloudImage("cloud.png");
 
 let clouds = [];
-
-// create some starting clouds
 for (let i = 0; i < 3; i++) {
   clouds.push({
     x: Math.random() * canvas.width,
@@ -88,7 +83,7 @@ function updateClouds() {
   });
 }
 
-// ---------------------- BIRD SETTINGS ----------------------
+// ---------------------- BIRD ----------------------
 const bird = {
   x: 50,
   y: 200,
@@ -105,6 +100,7 @@ function resetGame() {
   pipes = [];
   score = 0;
   gameOver = false;
+  paused = false;
 }
 
 function drawBird() {
@@ -135,47 +131,128 @@ function addPipe() {
   pipes.push({ x: canvas.width, width: 40, top: topHeight, bottom: bottomHeight, passed: false });
 }
 
+// ---------------------- REWARD VIDEO ----------------------
+const rewardScore = 67; // score that triggers video
+const rewardVideoSrc = "dance.mp4"; // your video file
+
+function showRewardVideo() {
+  paused = true;
+
+  const overlay = document.createElement("div");
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.background = "rgba(0,0,0,0.8)";
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.justifyContent = "center";
+  overlay.style.alignItems = "center";
+  overlay.style.zIndex = "9999";
+
+  const video = document.createElement("video");
+  video.src = rewardVideoSrc;
+  video.controls = true;
+  video.autoplay = true;
+  video.style.width = "80%";
+  video.style.maxWidth = "600px";
+  video.style.borderRadius = "12px";
+  overlay.appendChild(video);
+
+  const continueBtn = document.createElement("button");
+  continueBtn.textContent = "Continue Playing";
+  continueBtn.style.marginTop = "20px";
+  continueBtn.style.padding = "10px 20px";
+  continueBtn.style.fontSize = "16px";
+  continueBtn.style.borderRadius = "10px";
+  continueBtn.style.cursor = "pointer";
+  continueBtn.style.background = "#4CAF50";
+  continueBtn.style.color = "white";
+
+  continueBtn.addEventListener("click", () => {
+    document.body.removeChild(overlay);
+    startCountdown();
+  });
+
+  video.addEventListener("ended", () => {
+    document.body.removeChild(overlay);
+    startCountdown();
+  });
+
+  overlay.appendChild(continueBtn);
+  document.body.appendChild(overlay);
+}
+
+function startCountdown() {
+  let countdown = 3;
+  const overlay = document.createElement("div");
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.display = "flex";
+  overlay.style.justifyContent = "center";
+  overlay.style.alignItems = "center";
+  overlay.style.background = "rgba(0,0,0,0.7)";
+  overlay.style.color = "white";
+  overlay.style.fontSize = "50px";
+  overlay.style.zIndex = "9998";
+  document.body.appendChild(overlay);
+
+  const interval = setInterval(() => {
+    overlay.textContent = countdown;
+    countdown--;
+    if (countdown < 0) {
+      clearInterval(interval);
+      document.body.removeChild(overlay);
+      paused = false;
+    }
+  }, 1000);
+}
+
 // ---------------------- GAME LOOP ----------------------
 function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // draw clouds first (background)
   updateClouds();
   drawClouds();
 
-  // Bird physics
-  if (!gameOver) {
+  if (!gameOver && !paused) {
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
   }
 
-  // Check collisions with ground/ceiling
   if (bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
 
-  // Move pipes & check collision
-  pipes.forEach(pipe => {
-    if (!gameOver) pipe.x -= 2;
+  if (!paused) {
+    pipes.forEach(pipe => {
+      if (!gameOver) pipe.x -= 2;
 
-    if (
-      bird.x < pipe.x + pipe.width &&
-      bird.x + bird.width > pipe.x &&
-      (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)
-    ) gameOver = true;
+      if (
+        bird.x < pipe.x + pipe.width &&
+        bird.x + bird.width > pipe.x &&
+        (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)
+      ) gameOver = true;
 
-    if (!pipe.passed && pipe.x + pipe.width < bird.x) {
-      score++;
-      pipe.passed = true;
-      if (score > best) {
-        best = score;
-        localStorage.setItem("bestScore", best);
+      if (!pipe.passed && pipe.x + pipe.width < bird.x) {
+        score++;
+        pipe.passed = true;
+        if (score > best) {
+          best = score;
+          localStorage.setItem("bestScore", best);
+        }
+
+        // trigger reward video
+        if (score === rewardScore) showRewardVideo();
       }
+    });
+
+    pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
+    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
+      addPipe();
     }
-  });
-
-  pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
-
-  if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
-    addPipe();
   }
 
   drawPipes();
@@ -198,6 +275,7 @@ function updateGame() {
 
 // ---------------------- FLAP / RESTART ----------------------
 function flap() {
+  if (paused) return;
   if (gameOver) {
     resetGame();
     return;
@@ -214,7 +292,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Start game loop
+// ---------------------- START ----------------------
 updateGame();
 
 // ---------------------- MUSIC ----------------------
