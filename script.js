@@ -132,7 +132,7 @@ function addPipe() {
 }
 
 // ---------------------- REWARD VIDEO ----------------------
-const rewardScore = 67; // score that triggers video
+const rewardScore = 21; // score that triggers video
 const rewardVideoSrc = "fastjairobutfell.mp4"; // your video file
 
 function showRewardVideo() {
