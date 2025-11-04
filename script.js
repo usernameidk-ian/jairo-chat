@@ -75,7 +75,7 @@ db.ref(".info/connected").on("value", function(snapshot) {
 
   userStatusDatabaseRef
     .onDisconnect()
-    .remove() // FIX: remove the user entry instead of setting offline to avoid random IDs
+    .remove() // fix: remove from list when disconnecting
     .then(() => {
       userStatusDatabaseRef.set(isOnlineForDatabase);
     });
@@ -87,8 +87,6 @@ db.ref("/onlineUsers").on("value", (snapshot) => {
   onlineUsersList.innerHTML = ""; // clear
   const users = snapshot.val() || {};
   for (let user in users) {
-    // FIX: only show actual usernames, skip unexpected IDs
-    if (!users.hasOwnProperty(user)) continue;
     const userDiv = document.createElement("div");
     const dot = document.createElement("span");
     dot.style.display = "inline-block";
@@ -97,7 +95,6 @@ db.ref("/onlineUsers").on("value", (snapshot) => {
     dot.style.borderRadius = "50%";
     dot.style.marginRight = "5px";
 
-    // green = online, gray = inactive
     dot.style.backgroundColor = users[user].state === "online" ? "green" : "gray";
 
     userDiv.appendChild(dot);
@@ -129,7 +126,7 @@ let score = 0;
 let best = parseInt(localStorage.getItem("bestScore")) || 0;
 let pipes = [];
 let gameOver = false;
-let paused = false; // for video reward pauses
+let paused = false;
 
 const birdImg = new Image();
 birdImg.src = "jairobird.png";
@@ -142,9 +139,7 @@ pipeBottomImg.src = "pipe-bottom.png";
 
 // ---------------------- CLOUDS ----------------------
 let cloudImg = new Image();
-function setCloudImage(src) {
-  cloudImg.src = src;
-}
+function setCloudImage(src) { cloudImg.src = src; }
 setCloudImage("cloud.png");
 
 let clouds = [];
@@ -177,34 +172,14 @@ function updateClouds() {
 }
 
 // ---------------------- BIRD ----------------------
-const bird = {
-  x: 50,
-  y: 200,
-  width: 40,
-  height: 40,
-  velocity: 0,
-  gravity: 0.5,
-  lift: -8
-};
+const bird = { x:50, y:200, width:40, height:40, velocity:0, gravity:0.5, lift:-8 };
 
-function resetGame() {
-  bird.y = canvas.height / 2;
-  bird.velocity = 0;
-  pipes = [];
-  score = 0;
-  gameOver = false;
-  paused = false;
-}
-
-function drawBird() {
-  ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
-}
-
+function resetGame() { bird.y=canvas.height/2; bird.velocity=0; pipes=[]; score=0; gameOver=false; paused=false; }
+function drawBird() { ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height); }
 function drawPipes() {
   pipes.forEach(pipe => {
     const topScale = pipe.top / pipeTopImg.height;
     ctx.drawImage(pipeTopImg, pipe.x, 0, pipe.width, pipeTopImg.height * topScale);
-
     const bottomScale = pipe.bottom / pipeBottomImg.height;
     ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipeBottomImg.height * bottomScale);
   });
@@ -212,186 +187,70 @@ function drawPipes() {
 
 // ---------------------- PIPE SPAWNING ----------------------
 function addPipe() {
-  const baseGap = 160;
-  const gapVariance = 20;
-  const gap = baseGap + Math.random() * gapVariance;
-
-  const minHeight = 40;
-  const maxHeight = canvas.height - gap - minHeight;
-  const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
-  const bottomHeight = canvas.height - gap - topHeight;
-
-  pipes.push({ x: canvas.width, width: 40, top: topHeight, bottom: bottomHeight, passed: false });
+  const baseGap=160, gapVariance=20, gap=baseGap + Math.random()*gapVariance;
+  const minHeight=40, maxHeight=canvas.height-gap-minHeight;
+  const topHeight=Math.random()*(maxHeight-minHeight)+minHeight;
+  const bottomHeight=canvas.height-gap-topHeight;
+  pipes.push({x:canvas.width, width:40, top:topHeight, bottom:bottomHeight, passed:false});
 }
 
 // ---------------------- REWARD VIDEO ----------------------
-const rewardScore = 21; // score that triggers video
-const rewardVideoSrc = "fastjairobutfell.mp4"; // your video file
+const rewardScore=21, rewardVideoSrc="fastjairobutfell.mp4";
 
 function showRewardVideo() {
   paused = true;
-
-  const overlay = document.createElement("div");
-  overlay.style.position = "fixed";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
-  overlay.style.background = "rgba(0,0,0,0.8)";
-  overlay.style.display = "flex";
-  overlay.style.flexDirection = "column";
-  overlay.style.justifyContent = "center";
-  overlay.style.alignItems = "center";
-  overlay.style.zIndex = "9999";
-
-  const video = document.createElement("video");
-  video.src = rewardVideoSrc;
-  video.controls = true;
-  video.autoplay = true;
-  video.style.width = "80%";
-  video.style.maxWidth = "600px";
-  video.style.borderRadius = "12px";
-  overlay.appendChild(video);
-
-  const continueBtn = document.createElement("button");
-  continueBtn.textContent = "Continue Playing";
-  continueBtn.style.marginTop = "20px";
-  continueBtn.style.padding = "10px 20px";
-  continueBtn.style.fontSize = "16px";
-  continueBtn.style.borderRadius = "10px";
-  continueBtn.style.cursor = "pointer";
-  continueBtn.style.background = "#4CAF50";
-  continueBtn.style.color = "white";
-
-  continueBtn.addEventListener("click", () => {
-    document.body.removeChild(overlay);
-    startCountdown();
-  });
-
-  video.addEventListener("ended", () => {
-    document.body.removeChild(overlay);
-    startCountdown();
-  });
-
-  overlay.appendChild(continueBtn);
-  document.body.appendChild(overlay);
+  const overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999";
+  const video=document.createElement("video");
+  video.src=rewardVideoSrc; video.controls=true; video.autoplay=true; video.style.cssText="width:80%;max-width:600px;border-radius:12px"; overlay.appendChild(video);
+  const continueBtn=document.createElement("button");
+  continueBtn.textContent="Continue Playing";
+  continueBtn.style.cssText="margin-top:20px;padding:10px 20px;font-size:16px;border-radius:10px;cursor:pointer;background:#4CAF50;color:white";
+  continueBtn.addEventListener("click",()=>{document.body.removeChild(overlay); startCountdown();});
+  video.addEventListener("ended",()=>{document.body.removeChild(overlay); startCountdown();});
+  overlay.appendChild(continueBtn); document.body.appendChild(overlay);
 }
 
 function startCountdown() {
-  let countdown = 3;
-  const overlay = document.createElement("div");
-  overlay.style.position = "fixed";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
-  overlay.style.display = "flex";
-  overlay.style.justifyContent = "center";
-  overlay.style.alignItems = "center";
-  overlay.style.background = "rgba(0,0,0,0.7)";
-  overlay.style.color = "white";
-  overlay.style.fontSize = "50px";
-  overlay.style.zIndex = "9998";
+  let countdown=3;
+  const overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.7);color:white;font-size:50px;z-index:9998";
   document.body.appendChild(overlay);
-
-  const interval = setInterval(() => {
-    overlay.textContent = countdown;
-    countdown--;
-    if (countdown < 0) {
-      clearInterval(interval);
-      document.body.removeChild(overlay);
-      paused = false;
-    }
-  }, 1000);
+  const interval=setInterval(()=>{
+    overlay.textContent=countdown; countdown--;
+    if(countdown<0){clearInterval(interval); document.body.removeChild(overlay); paused=false;}
+  },1000);
 }
 
 // ---------------------- GAME LOOP ----------------------
 function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  updateClouds();
-  drawClouds();
-
-  if (!gameOver && !paused) {
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
-  }
-
-  if (bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
-
-  if (!paused) {
-    pipes.forEach(pipe => {
-      if (!gameOver) pipe.x -= 2;
-
-      if (
-        bird.x < pipe.x + pipe.width &&
-        bird.x + bird.width > pipe.x &&
-        (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)
-      ) gameOver = true;
-
-      if (!pipe.passed && pipe.x + pipe.width < bird.x) {
-        score++;
-        pipe.passed = true;
-        if (score > best) {
-          best = score;
-          localStorage.setItem("bestScore", best);
-        }
-
-        if (score === rewardScore) showRewardVideo();
-      }
-    });
-
-    pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
-    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
-      addPipe();
-    }
-  }
-
-  drawPipes();
-  drawBird();
-
-  document.getElementById("score").textContent = score;
-  document.getElementById("best").textContent = best;
-
-  if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Game Over!", 70, 180);
-    ctx.fillText("Click or press Up/Space to restart", 10, 210);
-  }
-
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  updateClouds(); drawClouds();
+  if(!gameOver && !paused){bird.velocity+=bird.gravity; bird.y+=bird.velocity;}
+  if(bird.y+bird.height>canvas.height||bird.y<0) gameOver=true;
+  if(!paused){pipes.forEach(pipe=>{
+    if(!gameOver) pipe.x-=2;
+    if(bird.x<pipe.x+pipe.width && bird.x+bird.width>pipe.x && (bird.y<pipe.top||bird.y+bird.height>canvas.height-pipe.bottom)) gameOver=true;
+    if(!pipe.passed && pipe.x+pipe.width<bird.x){score++; pipe.passed=true; if(score>best){best=score; localStorage.setItem("bestScore",best);} if(score===rewardScore) showRewardVideo();}
+  }); pipes=pipes.filter(pipe=>pipe.x+pipe.width>0); if(pipes.length===0 || pipes[pipes.length-1].x<canvas.width-150){addPipe();}}
+  drawPipes(); drawBird();
+  document.getElementById("score").textContent=score;
+  document.getElementById("best").textContent=best;
+  if(gameOver){ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle="white"; ctx.font="20px Arial"; ctx.fillText("Game Over!",70,180); ctx.fillText("Click or press Up/Space to restart",10,210);}
   requestAnimationFrame(updateGame);
 }
 
-function flap() {
-  if (paused) return;
-  if (gameOver) {
-    resetGame();
-    return;
-  }
-  bird.velocity = bird.lift;
-}
-
-canvas.addEventListener("mousedown", flap);
-document.addEventListener("keydown", (e) => {
-  if ((e.code === "Space" || e.code === "ArrowUp") && document.activeElement !== chatInput) {
-    flap();
-    e.preventDefault();
-  }
-});
+function flap(){if(paused) return; if(gameOver){resetGame(); return;} bird.velocity=bird.lift;}
+canvas.addEventListener("mousedown",flap);
+document.addEventListener("keydown",(e)=>{if((e.code==="Space"||e.code==="ArrowUp") && document.activeElement!==chatInput){flap(); e.preventDefault();}});
 
 // ---------------------- START ----------------------
 updateGame();
 
 // ---------------------- MUSIC ----------------------
-document.addEventListener("click", () => {
-  const bgm = document.getElementById("bgm");
-  if (bgm.paused) bgm.play().catch(() => {});
-}, { once: true });
+document.addEventListener("click",()=>{const bgm=document.getElementById("bgm"); if(bgm.paused) bgm.play().catch(()=>{});},{once:true});
 
-// ---------------------- CHAT + TIMEOUT SYSTEM ----------------------
+// ---------------------- CHAT + TIMEOUT SYSTEM (FIXED) ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
@@ -400,27 +259,5 @@ const clearChatBtn = document.getElementById("clear-chat");
 let timeouts = {};
 let timeoutInterval = null;
 
-// TIMEOUT display element
-const timerEl = document.createElement("p");
-timerEl.id = "timeout-timer";
-timerEl.style = "";
-
-// ---------------------- CHAT LOGIC FIX ----------------------
-sendChat.addEventListener("click", () => {
-  const text = chatInput.value.trim();
-  if (text === "") return;
-  messagesRef.push({
-    username: username,
-    color: userColor,
-    message: text,
-    timestamp: firebase.database.ServerValue.TIMESTAMP
-  });
-  chatInput.value = "";
-});
-
-chatInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendChat.click();
-});
-
-// Listen for chat messages
-messagesRef.on("child_added", (snapshot) => {
+const timerEl=document.createElement("p");
+timerEl.id="timeout-timer";
