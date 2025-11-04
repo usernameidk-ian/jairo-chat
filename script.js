@@ -75,7 +75,7 @@ db.ref(".info/connected").on("value", function(snapshot) {
 
   userStatusDatabaseRef
     .onDisconnect()
-    .set(isOfflineForDatabase)
+    .remove() // FIX: remove the user entry instead of setting offline to avoid random IDs
     .then(() => {
       userStatusDatabaseRef.set(isOnlineForDatabase);
     });
@@ -87,6 +87,8 @@ db.ref("/onlineUsers").on("value", (snapshot) => {
   onlineUsersList.innerHTML = ""; // clear
   const users = snapshot.val() || {};
   for (let user in users) {
+    // FIX: only show actual usernames, skip unexpected IDs
+    if (!users.hasOwnProperty(user)) continue;
     const userDiv = document.createElement("div");
     const dot = document.createElement("span");
     dot.style.display = "inline-block";
@@ -401,4 +403,24 @@ let timeoutInterval = null;
 // TIMEOUT display element
 const timerEl = document.createElement("p");
 timerEl.id = "timeout-timer";
-timerEl.style = ""
+timerEl.style = "";
+
+// ---------------------- CHAT LOGIC FIX ----------------------
+sendChat.addEventListener("click", () => {
+  const text = chatInput.value.trim();
+  if (text === "") return;
+  messagesRef.push({
+    username: username,
+    color: userColor,
+    message: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+  chatInput.value = "";
+});
+
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChat.click();
+});
+
+// Listen for chat messages
+messagesRef.on("child_added", (snapshot) => {
