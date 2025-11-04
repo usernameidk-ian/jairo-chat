@@ -27,7 +27,7 @@ if (username === adminUsername) {
 }
 
 // choose admin icon (image you want)
-const adminIconSrc = "crown.png"; // <-- change this to any image file you want
+const adminIconSrc = "purplestar.png"; // <-- change this to any image file you want
 
 function stringToColor(str) {
   let hash = 0;
