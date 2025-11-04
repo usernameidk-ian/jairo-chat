@@ -2,26 +2,29 @@
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 username = username.trim();
 
-// prevent impersonation (case insensitive, remove spaces)
+// normalize for impersonation check (remove spaces, lowercase)
 const cleanUsername = username.replace(/\s+/g, "").toLowerCase();
-if (cleanName === "bian") {
-  alert("this username is RESERVED. go choose another name.");
-  location.reload();
-}
 
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
 let password = "";
+let isAdmin = false;
+
+// check if exact "bian" for admin
 if (username === adminUsername) {
   password = prompt("Enter admin password:");
-  if (password !== adminPassword) {
+  if (password === adminPassword) {
+    isAdmin = true;
+  } else {
     alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
   }
+} else if (cleanUsername === adminUsername) {
+  // anything that looks like bian but isn't exact
+  alert("this username is RESERVED. go choose another name.");
+  location.reload();
 }
-
-const isAdmin = username === adminUsername && password === adminPassword;
 
 // choose admin icon (image you want)
 const adminIconSrc = "crown.png"; // <-- change this to any image file you want
@@ -398,4 +401,4 @@ let timeoutInterval = null;
 // TIMEOUT display element
 const timerEl = document.createElement("p");
 timerEl.id = "timeout-timer";
-timerEl.style = "
+timerEl.style = ""
