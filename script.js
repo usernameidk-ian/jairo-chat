@@ -1,5 +1,14 @@
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
+username = username.trim();
+
+// prevent impersonation (case insensitive, remove spaces)
+const cleanUsername = username.replace(/\s+/g, "").toLowerCase();
+if (cleanUsername === "bian") {
+  alert("this username is RESERVED. go choose another name.");
+  location.reload();
+}
+
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
@@ -13,6 +22,9 @@ if (username === adminUsername) {
 }
 
 const isAdmin = username === adminUsername && password === adminPassword;
+
+// choose admin icon (image you want)
+const adminIconSrc = "crown.png"; // <-- change this to any image file you want
 
 function stringToColor(str) {
   let hash = 0;
@@ -330,7 +342,7 @@ sendChat.addEventListener("click", () => {
 
   const timeout = timeouts[username];
   if (timeout && timeout.until > Date.now()) {
-    alert("you are timed out, refrain from chatting till ur timeout is done.");
+    alert("youre timed out, refrain from chatting till ur timeout is done.");
     return;
   }
 
@@ -348,7 +360,20 @@ messagesRef.on("child_added", (snapshot) => {
   const p = document.createElement("p");
 
   if (msg.text) {
-    p.textContent = `${msg.username}: ${msg.text}`;
+    // add icon next to admin name
+    let displayName = msg.username;
+    const cleanName = displayName.replace(/\s+/g, "").toLowerCase();
+    if (cleanName === "bian") {
+      const crown = document.createElement("img");
+      crown.src = adminIconSrc;
+      crown.alt = "Admin";
+      crown.style.width = "16px";
+      crown.style.verticalAlign = "middle";
+      crown.style.marginRight = "4px";
+      p.innerHTML = `<span>${crown.outerHTML}${displayName}:</span> ${msg.text}`;
+    } else {
+      p.textContent = `${displayName}: ${msg.text}`;
+    }
     p.style.color = stringToColor(msg.username);
   }
 
