@@ -244,7 +244,6 @@ function updateGame() {
           localStorage.setItem("bestScore", best);
         }
 
-        // trigger reward video
         if (score === rewardScore) showRewardVideo();
       }
     });
@@ -273,7 +272,6 @@ function updateGame() {
   requestAnimationFrame(updateGame);
 }
 
-// ---------------------- FLAP / RESTART ----------------------
 function flap() {
   if (paused) return;
   if (gameOver) {
@@ -284,7 +282,6 @@ function flap() {
 }
 
 canvas.addEventListener("mousedown", flap);
-
 document.addEventListener("keydown", (e) => {
   if ((e.code === "Space" || e.code === "ArrowUp") && document.activeElement !== chatInput) {
     flap();
@@ -301,23 +298,22 @@ document.addEventListener("click", () => {
   if (bgm.paused) bgm.play().catch(() => {});
 }, { once: true });
 
-// ---------------------- CHAT ----------------------
+// ---------------------- CHAT + TIMEOUT SYSTEM ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
 const messagesRef = db.ref("messages");
 const clearChatBtn = document.getElementById("clear-chat");
+let timeouts = {};
+let timeoutInterval = null;
 
-sendChat.addEventListener("click", () => {
-  const text = chatInput.value.trim();
-  if (!text) return;
-  messagesRef.push({ text, username, timestamp: Date.now() });
-  chatInput.value = "";
-});
-chatInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendChat.click();
-});
+// TIMEOUT display element
+const timerEl = document.createElement("p");
+timerEl.id = "timeout-timer";
+timerEl.style = "font-size:12px; color:red; margin-top:5px;";
+chatInput.insertAdjacentElement("afterend", timerEl);
 
+// Admin clear chat
 if (isAdmin) clearChatBtn.style.display = "inline-block";
 if (isAdmin)
   clearChatBtn.addEventListener("click", () => {
@@ -327,8 +323,28 @@ if (isAdmin)
     }
   });
 
+// Send chat (respect timeouts)
+sendChat.addEventListener("click", () => {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  const timeout = timeouts[username];
+  if (timeout && timeout.until > Date.now()) {
+    alert("you are timed out, refrain from chatting till ur timeout is done.");
+    return;
+  }
+
+  messagesRef.push({ text, username, timestamp: Date.now() });
+  chatInput.value = "";
+});
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendChat.click();
+});
+
+// Message added
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
+  const msgKey = snapshot.key;
   const p = document.createElement("p");
 
   if (msg.text) {
@@ -339,14 +355,64 @@ messagesRef.on("child_added", (snapshot) => {
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
-    deleteBtn.style.marginLeft = "10px";
+    deleteBtn.style.marginLeft = "6px";
     deleteBtn.addEventListener("click", () => {
-      messagesRef.child(snapshot.key).remove();
-      p.remove();
+      db.ref("messages").child(msgKey).remove();
     });
     p.appendChild(deleteBtn);
+
+    const timeoutBtn = document.createElement("button");
+    timeoutBtn.textContent = "⏰ Timeout";
+    timeoutBtn.style.marginLeft = "6px";
+    timeoutBtn.addEventListener("click", () => {
+      const choice = prompt("Timeout duration (in seconds):", "30");
+      const duration = parseInt(choice) * 1000;
+      if (!isNaN(duration) && duration > 0) {
+        const until = Date.now() + duration;
+        db.ref("timeouts").child(msg.username).set({ until, by: username });
+      }
+    });
+    p.appendChild(timeoutBtn);
   }
 
+  p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
+
+// Instant deletion
+messagesRef.on("child_removed", (snapshot) => {
+  const key = snapshot.key;
+  const msgEl = [...chatMessages.children].find(el => el.dataset.key === key);
+  if (msgEl) msgEl.remove();
+});
+
+// TIMEOUT live updates
+db.ref("timeouts").on("value", (snapshot) => {
+  timeouts = snapshot.val() || {};
+  updateTimeoutDisplay();
+});
+
+function updateTimeoutDisplay() {
+  clearInterval(timeoutInterval);
+
+  const timeout = timeouts[username];
+  if (!timeout || timeout.until <= Date.now()) {
+    timerEl.textContent = "";
+    return;
+  }
+
+  function update() {
+    const remaining = Math.max(0, timeout.until - Date.now());
+    const seconds = Math.ceil(remaining / 1000);
+    if (seconds > 0) {
+      timerEl.textContent = `You are timed out for ${seconds}s more.`;
+    } else {
+      timerEl.textContent = "";
+      clearInterval(timeoutInterval);
+    }
+  }
+
+  update();
+  timeoutInterval = setInterval(update, 500);
+}
