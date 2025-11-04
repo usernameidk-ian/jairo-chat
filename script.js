@@ -1,33 +1,18 @@
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
-username = username.trim();
-
-// normalize for impersonation check (remove spaces, lowercase)
-const cleanUsername = username.replace(/\s+/g, "").toLowerCase();
-
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
 let password = "";
-let isAdmin = false;
-
-// check if exact "bian" for admin
 if (username === adminUsername) {
   password = prompt("Enter admin password:");
-  if (password === adminPassword) {
-    isAdmin = true;
-  } else {
+  if (password !== adminPassword) {
     alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
   }
-} else if (cleanUsername === adminUsername) {
-  // anything that looks like bian but isn't exact
-  alert("this username is RESERVED. go choose another name.");
-  location.reload();
 }
 
-// choose admin icon (image you want)
-const adminIconSrc = "purplestar.png"; // <-- change this to any image file you want
+const isAdmin = username === adminUsername && password === adminPassword;
 
 function stringToColor(str) {
   let hash = 0;
@@ -40,82 +25,6 @@ function stringToColor(str) {
 }
 
 const userColor = stringToColor(username);
-
-// ---------------------- ONLINE USERS (ADMIN ONLY) ----------------------
-const onlineUsersContainer = document.createElement("div");
-onlineUsersContainer.id = "online-users-container";
-onlineUsersContainer.style = "display:none; border:1px solid #000; padding:5px; margin-bottom:10px; max-height:150px; overflow-y:auto;";
-onlineUsersContainer.innerHTML = "<h3>Online Users</h3>";
-const onlineUsersList = document.createElement("div");
-onlineUsersList.id = "online-users-list";
-onlineUsersContainer.appendChild(onlineUsersList);
-
-// Insert above chat messages
-const chatBox = document.querySelector(".chat-box");
-chatBox.insertBefore(onlineUsersContainer, chatBox.firstChild);
-
-if (isAdmin) onlineUsersContainer.style.display = "block";
-
-// Firebase presence setup
-const userStatusDatabaseRef = db.ref("/onlineUsers/" + username);
-
-const isOfflineForDatabase = {
-  state: "offline",
-  lastChanged: firebase.database.ServerValue.TIMESTAMP,
-};
-
-const isOnlineForDatabase = {
-  state: "online",
-  lastChanged: firebase.database.ServerValue.TIMESTAMP,
-};
-
-// Listen for connection state
-db.ref(".info/connected").on("value", function(snapshot) {
-  if (snapshot.val() === false) return;
-
-  userStatusDatabaseRef
-    .onDisconnect()
-    .set(isOfflineForDatabase)
-    .then(() => {
-      userStatusDatabaseRef.set(isOnlineForDatabase);
-    });
-});
-
-// Listen for all online users changes
-db.ref("/onlineUsers").on("value", (snapshot) => {
-  if (!isAdmin) return; // only admin sees this
-  onlineUsersList.innerHTML = ""; // clear
-  const users = snapshot.val() || {};
-  for (let user in users) {
-    const userDiv = document.createElement("div");
-    const dot = document.createElement("span");
-    dot.style.display = "inline-block";
-    dot.style.width = "10px";
-    dot.style.height = "10px";
-    dot.style.borderRadius = "50%";
-    dot.style.marginRight = "5px";
-
-    // green = online, gray = inactive
-    dot.style.backgroundColor = users[user].state === "online" ? "green" : "gray";
-
-    userDiv.appendChild(dot);
-    const nameSpan = document.createElement("span");
-    nameSpan.textContent = user;
-    userDiv.appendChild(nameSpan);
-
-    onlineUsersList.appendChild(userDiv);
-  }
-});
-
-// Optional: detect tab visibility (inactive = gray)
-document.addEventListener("visibilitychange", () => {
-  if (!isAdmin) return;
-  if (document.hidden) {
-    userStatusDatabaseRef.set({ state: "inactive", lastChanged: firebase.database.ServerValue.TIMESTAMP });
-  } else {
-    userStatusDatabaseRef.set({ state: "online", lastChanged: firebase.database.ServerValue.TIMESTAMP });
-  }
-});
 
 // ---------------------- FLAPPY BIRD SETUP ----------------------
 const canvas = document.getElementById("flappyCanvas");
@@ -401,4 +310,109 @@ let timeoutInterval = null;
 // TIMEOUT display element
 const timerEl = document.createElement("p");
 timerEl.id = "timeout-timer";
-timerEl.style = ""
+timerEl.style = "font-size:12px; color:red; margin-top:5px;";
+chatInput.insertAdjacentElement("afterend", timerEl);
+
+// Admin clear chat
+if (isAdmin) clearChatBtn.style.display = "inline-block";
+if (isAdmin)
+  clearChatBtn.addEventListener("click", () => {
+    if (confirm("Delete all messages?")) {
+      db.ref("messages").remove();
+      chatMessages.innerHTML = "";
+    }
+  });
+
+// Send chat (respect timeouts)
+sendChat.addEventListener("click", () => {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  const timeout = timeouts[username];
+  if (timeout && timeout.until > Date.now()) {
+    alert("you are timed out, refrain from chatting till ur timeout is done.");
+    return;
+  }
+
+  messagesRef.push({ text, username, timestamp: Date.now() });
+  chatInput.value = "";
+});
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendChat.click();
+});
+
+// Message added
+messagesRef.on("child_added", (snapshot) => {
+  const msg = snapshot.val();
+  const msgKey = snapshot.key;
+  const p = document.createElement("p");
+
+  if (msg.text) {
+    p.textContent = `${msg.username}: ${msg.text}`;
+    p.style.color = stringToColor(msg.username);
+  }
+
+  if (isAdmin) {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "❌";
+    deleteBtn.style.marginLeft = "6px";
+    deleteBtn.addEventListener("click", () => {
+      db.ref("messages").child(msgKey).remove();
+    });
+    p.appendChild(deleteBtn);
+
+    const timeoutBtn = document.createElement("button");
+    timeoutBtn.textContent = "⏰ Timeout";
+    timeoutBtn.style.marginLeft = "6px";
+    timeoutBtn.addEventListener("click", () => {
+      const choice = prompt("Timeout duration (in seconds):", "30");
+      const duration = parseInt(choice) * 1000;
+      if (!isNaN(duration) && duration > 0) {
+        const until = Date.now() + duration;
+        db.ref("timeouts").child(msg.username).set({ until, by: username });
+      }
+    });
+    p.appendChild(timeoutBtn);
+  }
+
+  p.dataset.key = msgKey;
+  chatMessages.appendChild(p);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+// Instant deletion
+messagesRef.on("child_removed", (snapshot) => {
+  const key = snapshot.key;
+  const msgEl = [...chatMessages.children].find(el => el.dataset.key === key);
+  if (msgEl) msgEl.remove();
+});
+
+// TIMEOUT live updates
+db.ref("timeouts").on("value", (snapshot) => {
+  timeouts = snapshot.val() || {};
+  updateTimeoutDisplay();
+});
+
+function updateTimeoutDisplay() {
+  clearInterval(timeoutInterval);
+
+  const timeout = timeouts[username];
+  if (!timeout || timeout.until <= Date.now()) {
+    timerEl.textContent = "";
+    return;
+  }
+
+  function update() {
+    const remaining = Math.max(0, timeout.until - Date.now());
+    const seconds = Math.ceil(remaining / 1000);
+    if (seconds > 0) {
+      timerEl.textContent = `You are timed out for ${seconds}s more.`;
+    } else {
+      timerEl.textContent = "";
+      clearInterval(timeoutInterval);
+    }
+  }
+
+  update();
+  timeoutInterval = setInterval(update, 500);
+}
