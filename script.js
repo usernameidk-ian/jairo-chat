@@ -14,6 +14,22 @@ if (username === adminUsername) {
 
 const isAdmin = username === adminUsername && password === adminPassword;
 
+// --- ADMIN ICON FOR CHAT MESSAGES ---
+const adminIconSrc = "purplestar.png"; // the icon image
+
+function addAdminIcon(p, messageUsername) {
+  // Only exact "bian" gets the icon
+  if (messageUsername === adminUsername) {
+    const icon = document.createElement("img");
+    icon.src = adminIconSrc;
+    icon.style.width = "16px";
+    icon.style.height = "16px";
+    icon.style.marginRight = "4px";
+    icon.style.verticalAlign = "middle";
+    p.prepend(icon); // put the icon before username
+  }
+}
+
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++)
@@ -351,6 +367,8 @@ messagesRef.on("child_added", (snapshot) => {
     p.textContent = `${msg.username}: ${msg.text}`;
     p.style.color = stringToColor(msg.username);
   }
+
+  addAdminIcon(p, msg.username);
 
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
