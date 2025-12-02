@@ -1,411 +1,193 @@
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
+
+// keep raw and trimmed variations
+username = username.toString();
+const trimmed = username.trim();            // trimmed (keeps case)
+const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); // normalized for checks
+
+// admin credentials
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
 let password = "";
-if (username === adminUsername) {
+let isAdmin = false;
+
+// impersonation / admin logic:
+// - only exact "bian" (case-sensitive, no extra spaces) can try to login as admin.
+// - anything that normalizes to "bian" but is not exactly "bian" is reserved -> block reload.
+if (cleanName === adminUsername && trimmed !== adminUsername) {
+  alert("this username is RESERVED. go choose another name.");
+  location.reload();
+}
+
+// prompt for admin password only if they entered exactly "bian"
+if (trimmed === adminUsername) {
   password = prompt("Enter admin password:");
-  if (password !== adminPassword) {
+  if (password === adminPassword) {
+    isAdmin = true;
+    // normalize username to exact canonical admin
+    username = adminUsername;
+  } else {
     alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
   }
 }
 
-const isAdmin = username === adminUsername && password === adminPassword;
+// For DB/timeouts we will use cleanName as the identity key (prevents bypass by spaces/case)
+const identityKey = cleanName || username.replace(/\s+/g, "").toLowerCase();
 
 // --- ADMIN ICON FOR CHAT MESSAGES ---
 const adminIconSrc = "purplestar.png"; // the icon image
 
 function addAdminIcon(p, messageUsername) {
-  // Only exact "bian" gets the icon
+  // Only exact "bian" gets the icon (messageUsername is the display name as stored)
   if (messageUsername === adminUsername) {
     const icon = document.createElement("img");
     icon.src = adminIconSrc;
-    icon.style.width = "16px";
-    icon.style.height = "16px";
-    icon.style.marginRight = "4px";
-    icon.style.verticalAlign = "middle";
-    p.prepend(icon); // put the icon before username
+    icon.className = "admin-icon";
+    icon.alt = "admin";
+    p.prepend(icon); // put the icon before username/text
   }
 }
 
 function stringToColor(str) {
   let hash = 0;
-  for (let i = 0; i < str.length; i++)
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   let color = "#";
-  for (let i = 0; i < 3; i++)
-    color += ("00" + ((hash >> (i * 8)) & 0xff).toString(16)).slice(-2);
+  for (let i = 0; i < 3; i++) color += ("00" + ((hash >> (i * 8)) & 0xff).toString(16)).slice(-2);
   return color;
 }
 
 const userColor = stringToColor(username);
 
-// ---------------------- FLAPPY BIRD SETUP ----------------------
-const canvas = document.getElementById("flappyCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 300;
-canvas.height = 400;
-
-let score = 0;
-let best = parseInt(localStorage.getItem("bestScore")) || 0;
-let pipes = [];
-let gameOver = false;
-let paused = false; // for video reward pauses
-
-const birdImg = new Image();
-birdImg.src = "jairobird.png";
-
-const pipeTopImg = new Image();
-pipeTopImg.src = "pipe-top.png";
-
-const pipeBottomImg = new Image();
-pipeBottomImg.src = "pipe-bottom.png";
-
-// ---------------------- CLOUDS ----------------------
-let cloudImg = new Image();
-function setCloudImage(src) {
-  cloudImg.src = src;
-}
-setCloudImage("cloud.png");
-
-let clouds = [];
-for (let i = 0; i < 3; i++) {
-  clouds.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * (canvas.height / 2),
-    width: 60 + Math.random() * 40,
-    height: 30 + Math.random() * 20,
-    speed: 0.5 + Math.random() * 0.5
-  });
-}
-
-function drawClouds() {
-  clouds.forEach(cloud => {
-    ctx.globalAlpha = 0.7;
-    ctx.drawImage(cloudImg, cloud.x, cloud.y, cloud.width, cloud.height);
-    ctx.globalAlpha = 1.0;
-  });
-}
-
-function updateClouds() {
-  clouds.forEach(cloud => {
-    cloud.x -= cloud.speed;
-    if (cloud.x + cloud.width < 0) {
-      cloud.x = canvas.width + Math.random() * 100;
-      cloud.y = Math.random() * (canvas.height / 2);
-    }
-  });
-}
-
-// ---------------------- BIRD ----------------------
-const bird = {
-  x: 50,
-  y: 200,
-  width: 40,
-  height: 40,
-  velocity: 0,
-  gravity: 0.5,
-  lift: -8
-};
-
-function resetGame() {
-  bird.y = canvas.height / 2;
-  bird.velocity = 0;
-  pipes = [];
-  score = 0;
-  gameOver = false;
-  paused = false;
-}
-
-function drawBird() {
-  ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
-}
-
-function drawPipes() {
-  pipes.forEach(pipe => {
-    const topScale = pipe.top / pipeTopImg.height;
-    ctx.drawImage(pipeTopImg, pipe.x, 0, pipe.width, pipeTopImg.height * topScale);
-
-    const bottomScale = pipe.bottom / pipeBottomImg.height;
-    ctx.drawImage(pipeBottomImg, pipe.x, canvas.height - pipe.bottom, pipe.width, pipeBottomImg.height * bottomScale);
-  });
-}
-
-// ---------------------- PIPE SPAWNING ----------------------
-function addPipe() {
-  const baseGap = 160;
-  const gapVariance = 20;
-  const gap = baseGap + Math.random() * gapVariance;
-
-  const minHeight = 40;
-  const maxHeight = canvas.height - gap - minHeight;
-  const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
-  const bottomHeight = canvas.height - gap - topHeight;
-
-  pipes.push({ x: canvas.width, width: 40, top: topHeight, bottom: bottomHeight, passed: false });
-}
-
-// ---------------------- REWARD VIDEO ----------------------
-const rewardScore = 21; // score that triggers video
-const rewardVideoSrc = "fastjairobutfell.mp4"; // your video file
-
-function showRewardVideo() {
-  paused = true;
-
-  const overlay = document.createElement("div");
-  overlay.style.position = "fixed";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
-  overlay.style.background = "rgba(0,0,0,0.8)";
-  overlay.style.display = "flex";
-  overlay.style.flexDirection = "column";
-  overlay.style.justifyContent = "center";
-  overlay.style.alignItems = "center";
-  overlay.style.zIndex = "9999";
-
-  const video = document.createElement("video");
-  video.src = rewardVideoSrc;
-  video.controls = true;
-  video.autoplay = true;
-  video.style.width = "80%";
-  video.style.maxWidth = "600px";
-  video.style.borderRadius = "12px";
-  overlay.appendChild(video);
-
-  const continueBtn = document.createElement("button");
-  continueBtn.textContent = "Continue Playing";
-  continueBtn.style.marginTop = "20px";
-  continueBtn.style.padding = "10px 20px";
-  continueBtn.style.fontSize = "16px";
-  continueBtn.style.borderRadius = "10px";
-  continueBtn.style.cursor = "pointer";
-  continueBtn.style.background = "#4CAF50";
-  continueBtn.style.color = "white";
-
-  continueBtn.addEventListener("click", () => {
-    document.body.removeChild(overlay);
-    startCountdown();
-  });
-
-  video.addEventListener("ended", () => {
-    document.body.removeChild(overlay);
-    startCountdown();
-  });
-
-  overlay.appendChild(continueBtn);
-  document.body.appendChild(overlay);
-}
-
-function startCountdown() {
-  let countdown = 3;
-  const overlay = document.createElement("div");
-  overlay.style.position = "fixed";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
-  overlay.style.width = "100%";
-  overlay.style.height = "100%";
-  overlay.style.display = "flex";
-  overlay.style.justifyContent = "center";
-  overlay.style.alignItems = "center";
-  overlay.style.background = "rgba(0,0,0,0.7)";
-  overlay.style.color = "white";
-  overlay.style.fontSize = "50px";
-  overlay.style.zIndex = "9998";
-  document.body.appendChild(overlay);
-
-  const interval = setInterval(() => {
-    overlay.textContent = countdown;
-    countdown--;
-    if (countdown < 0) {
-      clearInterval(interval);
-      document.body.removeChild(overlay);
-      paused = false;
-    }
-  }, 1000);
-}
-
-// ---------------------- GAME LOOP ----------------------
-function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  updateClouds();
-  drawClouds();
-
-  if (!gameOver && !paused) {
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
-  }
-
-  if (bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
-
-  if (!paused) {
-    pipes.forEach(pipe => {
-      if (!gameOver) pipe.x -= 2;
-
-      if (
-        bird.x < pipe.x + pipe.width &&
-        bird.x + bird.width > pipe.x &&
-        (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)
-      ) gameOver = true;
-
-      if (!pipe.passed && pipe.x + pipe.width < bird.x) {
-        score++;
-        pipe.passed = true;
-        if (score > best) {
-          best = score;
-          localStorage.setItem("bestScore", best);
-        }
-
-        if (score === rewardScore) showRewardVideo();
-      }
-    });
-
-    pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
-    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 150) {
-      addPipe();
-    }
-  }
-
-  drawPipes();
-  drawBird();
-
-  document.getElementById("score").textContent = score;
-  document.getElementById("best").textContent = best;
-
-  if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Game Over!", 70, 180);
-    ctx.fillText("Click or press Up/Space to restart", 10, 210);
-  }
-
-  requestAnimationFrame(updateGame);
-}
-
-function flap() {
-  if (paused) return;
-  if (gameOver) {
-    resetGame();
-    return;
-  }
-  bird.velocity = bird.lift;
-}
-
-canvas.addEventListener("mousedown", flap);
-document.addEventListener("keydown", (e) => {
-  if ((e.code === "Space" || e.code === "ArrowUp") && document.activeElement !== chatInput) {
-    flap();
-    e.preventDefault();
-  }
-});
-
-// ---------------------- START ----------------------
-updateGame();
-
-// ---------------------- MUSIC ----------------------
-document.addEventListener("click", () => {
-  const bgm = document.getElementById("bgm");
-  if (bgm.paused) bgm.play().catch(() => {});
-}, { once: true });
-
-// ---------------------- CHAT + TIMEOUT SYSTEM ----------------------
+// ---------------------- UI ELEMENTS & FIREBASE SETUP ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
-const messagesRef = db.ref("messages");
 const clearChatBtn = document.getElementById("clear-chat");
+const openGameBtn = document.getElementById("open-game");
+const timerEl = document.getElementById("timeout-timer");
+
+chatInput.focus();
+
+// open game in new tab
+if (openGameBtn) {
+  openGameBtn.addEventListener("click", () => {
+    window.open("game.html", "_blank");
+  });
+}
+
+// show admin clear button if admin
+if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
+
+// use existing db variable (from index.html)
+const messagesRef = db.ref("messages");
+
+// timeouts keyed by normalized name
 let timeouts = {};
 let timeoutInterval = null;
 
-// TIMEOUT display element
-const timerEl = document.createElement("p");
-timerEl.id = "timeout-timer";
-timerEl.style = "font-size:12px; color:red; margin-top:5px;";
-chatInput.insertAdjacentElement("afterend", timerEl);
+// insert timer text beneath chat input (already exists in HTML as #timeout-timer)
 
 // Admin clear chat
-if (isAdmin) clearChatBtn.style.display = "inline-block";
-if (isAdmin)
+if (isAdmin && clearChatBtn) {
   clearChatBtn.addEventListener("click", () => {
     if (confirm("Delete all messages?")) {
       db.ref("messages").remove();
       chatMessages.innerHTML = "";
     }
   });
+}
 
-// Send chat (respect timeouts)
+// ---------------------- SEND MESSAGE ----------------------
+// When sending, check timeout using identityKey (normalized)
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  const timeout = timeouts[username];
-  if (timeout && timeout.until > Date.now()) {
+  const myTimeout = timeouts[identityKey];
+  if (myTimeout && myTimeout.until > Date.now()) {
     alert("you are timed out, refrain from chatting till ur timeout is done.");
     return;
   }
 
-  messagesRef.push({ text, username, timestamp: Date.now() });
+  // push original display name for readability, but timeouts/presence use normalized keys
+  messagesRef.push({ text, username: username, timestamp: Date.now() });
   chatInput.value = "";
 });
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendChat.click();
 });
 
-// Message added
+// ---------------------- MESSAGE RECEIVING & RENDERING ----------------------
+// Render messages nicely. Add admin icon only when displayed username === "bian" (exact).
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
   const p = document.createElement("p");
 
-  if (msg.text) {
-    p.textContent = `${msg.username}: ${msg.text}`;
-    p.style.color = stringToColor(msg.username);
+  // message content
+  if (msg && msg.text) {
+    // create username span for better styling control
+    const userSpan = document.createElement("span");
+    userSpan.className = "username";
+    userSpan.textContent = msg.username + ":";
+    userSpan.style.color = stringToColor(msg.username);
+
+    const textSpan = document.createElement("span");
+    textSpan.className = "msgtext";
+    textSpan.textContent = " " + msg.text;
+
+    // add admin icon if applicable (only exact displayed name 'bian')
+    addAdminIcon(p, msg.username);
+
+    p.appendChild(userSpan);
+    p.appendChild(textSpan);
   }
 
-  addAdminIcon(p, msg.username);
-
+  // admin controls (delete/timeout) appended to message node (available only to admin users)
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
-    deleteBtn.style.marginLeft = "6px";
+    deleteBtn.style.marginLeft = "8px";
+    deleteBtn.title = "Delete message";
     deleteBtn.addEventListener("click", () => {
       db.ref("messages").child(msgKey).remove();
     });
     p.appendChild(deleteBtn);
 
     const timeoutBtn = document.createElement("button");
-    timeoutBtn.textContent = "⏰ Timeout";
+    timeoutBtn.textContent = "⏰";
     timeoutBtn.style.marginLeft = "6px";
+    timeoutBtn.title = "Timeout user";
     timeoutBtn.addEventListener("click", () => {
       const choice = prompt("Timeout duration (in seconds):", "30");
-      const duration = parseInt(choice) * 1000;
+      const duration = parseInt(choice, 10) * 1000;
       if (!isNaN(duration) && duration > 0) {
+        // normalize the target user's name for timeout key
+        const targetClean = (msg.username || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         const until = Date.now() + duration;
-        db.ref("timeouts").child(msg.username).set({ until, by: username });
+        db.ref("timeouts").child(targetClean).set({ until, by: username });
       }
     });
     p.appendChild(timeoutBtn);
   }
 
+  // attach key and append
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
-// Instant deletion
+// remove DOM message instantly when deleted in DB
 messagesRef.on("child_removed", (snapshot) => {
   const key = snapshot.key;
   const msgEl = [...chatMessages.children].find(el => el.dataset.key === key);
   if (msgEl) msgEl.remove();
 });
 
-// TIMEOUT live updates
+// ---------------------- TIMEOUTS (live) ----------------------
 db.ref("timeouts").on("value", (snapshot) => {
   timeouts = snapshot.val() || {};
   updateTimeoutDisplay();
@@ -414,14 +196,14 @@ db.ref("timeouts").on("value", (snapshot) => {
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
 
-  const timeout = timeouts[username];
-  if (!timeout || timeout.until <= Date.now()) {
+  const my = timeouts[identityKey];
+  if (!my || my.until <= Date.now()) {
     timerEl.textContent = "";
     return;
   }
 
-  function update() {
-    const remaining = Math.max(0, timeout.until - Date.now());
+  function tick() {
+    const remaining = Math.max(0, my.until - Date.now());
     const seconds = Math.ceil(remaining / 1000);
     if (seconds > 0) {
       timerEl.textContent = `You are timed out for ${seconds}s more.`;
@@ -431,6 +213,24 @@ function updateTimeoutDisplay() {
     }
   }
 
-  update();
-  timeoutInterval = setInterval(update, 500);
+  tick();
+  timeoutInterval = setInterval(tick, 500);
 }
+
+// ---------------------- OPTIONAL: small canvas preview (left panel) ----------------------
+(function miniPreview() {
+  const c = document.getElementById('miniGamePreview');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '16px Arial';
+  ctx.fillText('Game preview', 10, 30);
+})();
+
+// ---------------------- MUSIC (resume on first click) ----------------------
+document.addEventListener('click', () => {
+  const bgm = document.getElementById('bgm');
+  if (bgm && bgm.paused) bgm.play().catch(()=>{});
+}, { once: true });
