@@ -1,68 +1,118 @@
+/* general */
 body {
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #f8e7c9, #f1d6b8);
-  background-size: cover;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg,#f8e7c9,#f1d6b8);
   margin: 0;
-  padding: 0;
-  text-align: center;
-  color: #3e2723;
+  color: #2b2b2b;
+  -webkit-font-smoothing:antialiased;
 }
 
-h1 {
-  margin-top: 20px;
-  color: #5c3317;
+/* header */
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 24px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.topbar h1 { margin:0; font-size:18px; }
+.topbar .controls button {
+  padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;
 }
 
+/* page layout */
 .container {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 50px;
-  margin-top: 40px;
+  gap: 28px;
+  justify-content:center;
+  align-items:flex-start;
+  padding: 28px;
 }
 
-.cookie-area {
-  text-align: center;
-}
+/* left panel */
+.left-panel { width:340px; }
+.game-preview { background:#fff; border-radius:10px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+.game-preview canvas { display:block; margin:0 auto; border-radius:6px; background:#222; }
+.game-note { text-align:center; margin:8px 0 0; font-size:13px; color:#666; }
 
-.shop { display: none; } /* removed shop for flappy */
-
+/* chat */
 .chat-box {
-  background: #fff3e0;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
-  min-width: 220px;
-  max-width: 300px;
-  text-align: left;
-  margin-top: 20px;
+  flex: 1 1 540px;
+  max-width: 720px;
+  background: #2f3136;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  color: #ddd;
+  display:flex;
+  flex-direction:column;
 }
 
-#chat-messages {
-  height: 150px;
+.chat-header { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.chat-header h2 { margin:0; font-size:18px; color:#fff; }
+#clear-chat { background:#4f545c; color:#fff; border-radius:6px; padding:6px 8px; border:none; cursor:pointer; }
+
+/* messages area - discord style */
+.chat-messages {
+  background: linear-gradient(180deg,#36393f,#2f3136);
+  border-radius:8px;
+  padding:12px;
+  height: 420px;
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.35);
 }
 
+/* individual message style */
+.chat-messages p {
+  margin: 6px 0;
+  line-height:1.25;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color: #e8e6e3;
+  font-size:14px;
+}
+.chat-messages img.admin-icon {
+  width:16px;
+  height:16px;
+  display:inline-block;
+  margin-right:6px;
+  border-radius:3px;
+}
+
+/* username color label (we color the text itself in JS with stringToColor) */
+.chat-messages .username {
+  font-weight:700;
+  margin-right:6px;
+}
+
+/* input row */
+.chat-input-row {
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+}
 #chat-input {
-  width: 70%;
-  padding: 8px;
-}
-
-#send-chat {
-  padding: 8px 12px;
-  background: #d2691e;
-  color: white;
+  flex:1;
+  padding:10px;
+  border-radius:8px;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
+  outline:none;
+  font-size:14px;
+}
+#send-chat {
+  padding:10px 14px;
+  border-radius:8px;
+  border:none;
+  background:#7289da;
+  color:white;
+  cursor:pointer;
 }
 
-#send-chat:hover {
-  background: #a0522d;
-}22d;
+/* timeout text */
+.timeout-timer {
+  margin-top:8px;
+  color:#ffb4b4;
+  font-size:13px;
 }
