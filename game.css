@@ -1,25 +1,13 @@
-:root{
-  --bg:#0b0b0b;
-  --panel:#111;
-  --accent:#ffd54f;
-}
-* {box-sizing:border-box}
-html,body{height:100%;margin:0;background:linear-gradient(180deg,#071017,#0b1220);font-family:Arial,Helvetica,sans-serif;color:#fff}
-#topbar{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:40;display:flex;gap:10px;align-items:center}
-#topbar .title{font-weight:700;font-size:18px;margin-right:8px}
-#topbar .controls button{padding:8px 10px;border-radius:6px;border:none;background:#222;color:#fff;cursor:pointer}
-#main{display:flex;gap:14px;align-items:flex-start;justify-content:center;padding-top:70px}
-canvas#gameCanvas{background:#02060a;border:6px solid #111;border-radius:8px;display:block;max-width:100%;height:auto}
-#hud{width:260px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
-.score{font-size:16px}
-.healthbar{width:100%;height:18px;background:#333;border-radius:10px;overflow:hidden;position:relative}
-#healthFill{width:50%;height:100%;background:linear-gradient(90deg,#ff0000,#00ff00);transition:width 0.2s}
-.healthbar::before{content:'';position:absolute;left:0;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#ff0000 0%,#00ff00 50%,#00ff00 100%);opacity:0.3}
-.timeout-timer{color:#ffb4b4}
-.judgment{height:28px;font-weight:700;font-size:20px;color:#ffd54f;text-shadow:0 0 10px #ffd54f}
-.combo{font-size:18px;color:#fff;text-shadow:0 0 5px #00ffff}
-.keys{display:flex;gap:8px;margin-top:6px}
-.keys .key{background:#20242a;padding:8px 12px;border-radius:6px;color:#ddd;border:1px solid rgba(255,255,255,0.03);box-shadow:0 0 10px rgba(0,255,255,0.2)}
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:50}
-.overlay .panel{background:#0e1820;padding:20px;border-radius:10px;text-align:center;max-width:420px}
-.overlay button{margin-top:12px;padding:8px 12px;border-radius:6px;border:none;background:#2d7df3;color:white;cursor:pointer}
+body { margin:0; overflow:hidden; background:#000; font-family:monospace; color:#0f0; }
+#lobbyScreen { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#000; z-index:100; }
+#lobbyScreen h1 { font-size:3em; margin-bottom:30px; text-shadow:0 0 20px #0f0; }
+#lobbyScreen input { padding:15px; font-size:1.5em; background:#111; color:#0f0; border:2px solid #0f0; margin:10px; width:300px; text-align:center; }
+#lobbyScreen button { padding:15px 30px; font-size:1.5em; background:#300; color:#0f0; border:2px solid #0f0; margin:10px; cursor:pointer; }
+#lobbyList { margin-top:20px; color:#0f0; font-size:1.2em; }
+
+#ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.8); padding:20px; border:3px solid #0f0; border-radius:10px; }
+button { background:#300; color:#0f0; border:2px solid #0f0; padding:15px 30px; margin:10px; font-size:1.5em; cursor:pointer; }
+button:disabled { opacity:0.4; cursor:not-allowed; }
+#deathOverlay, #reviveOverlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 1s; }
+#deathOverlay { background:#f00; }
+#reviveOverlay { background:#fff; filter:blur(20px); }
