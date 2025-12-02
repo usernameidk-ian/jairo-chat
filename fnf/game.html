@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
-  <div id="mobile-warning" class="overlay">
+  <div id="mobile-warning" class="overlay" style="display:none;">
     <div class="panel">
       <h2>Not supported on mobile</h2>
-      <p>This game is desktop-only. Please open on a laptop/desktop for best experience.</p>
-      <button id="continue-anyway">Continue (not recommended)</button>
+      <p>This game is desktop-only.</p>
+      <button id="continue-anyway">Continue anyway</button>
     </div>
   </div>
 
@@ -25,22 +25,17 @@
 
   <main id="main">
     <canvas id="gameCanvas" width="960" height="640"></canvas>
-
     <aside id="hud">
       <div class="score">Score: <span id="score">0</span></div>
-      <div class="healthbar">
-        <div id="healthFill"></div>
-      </div>
-      <div class="judgment" id="judge"> </div>
+      <div class="healthbar"><div id="healthFill"></div></div>
+      <div class="judgment" id="judge"></div>
       <div class="keys">
         <div class="key">D</div><div class="key">F</div><div class="key">J</div><div class="key">K</div>
       </div>
     </aside>
   </main>
 
-  <!-- song audio (single track) -->
   <audio id="song" preload="auto">
-    <!-- Replace src with your chosen mp3 file -->
     <source src="song_120bpm.mp3" type="audio/mpeg" />
   </audio>
 
