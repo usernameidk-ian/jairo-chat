@@ -1,39 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>jairo flap bird game</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>jairo — chat</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🐦 jairo flapping bird idk(reach 21 score for a special video.)</h1>
-  
+  <header class="topbar">
+    <h1>yapping (chat)</h1>
+    <div class="controls">
+      <button id="open-game" title="Open the game in a new tab">Play Game</button>
+    </div>
+  </header>
+
   <div class="container">
-    <!-- Flappy Bird Game Area -->
-    <div class="cookie-area">
-      <canvas id="flappyCanvas"></canvas>
-      <p>Score: <span id="score">0</span></p>
-      <p>Best: <span id="best">0</span></p>
+    <!-- Left: Game preview / info -->
+    <aside class="left-panel">
+      <div class="game-preview">
+        <canvas id="miniGamePreview" width="320" height="180"></canvas>
+        <p class="game-note">Game runs in a new tab; click Play Game to open it.</p>
+      </div>
+    </aside>
 
-      <!-- Golden Cookie Container (optional) -->
-      <div id="golden-cookie-container" style="position: relative;"></div>
-    </div>
-    
-    <!-- Chat -->
-    <div class="chat-box">
-      <button id="clear-chat" style="display:none;">🗑 Clear Chat</button>
-      <h2>yapping(chat)</h2>
-      <div id="chat-messages"></div>
+    <!-- Right: Chat -->
+    <main class="chat-box">
+      <div class="chat-header">
+        <h2>Chat</h2>
+        <button id="clear-chat" style="display:none;">🗑 Clear</button>
+      </div>
 
-      <!-- Chat input -->
-      <input type="text" id="chat-input" placeholder="Type a message...">
-      <button id="send-chat">Send</button>
-    </div>
+      <div id="chat-messages" class="chat-messages"></div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"/>
+        <button id="send-chat">Send</button>
+      </div>
+
+      <p id="timeout-timer" class="timeout-timer"></p>
+    </main>
   </div>
 
   <!-- Background Music -->
   <audio id="bgm" loop>
-    <source src="RelaxedScene.mp3" type="audio/mpeg">
+    <source src="nothingyet.mp3" type="audio/mpeg" />
     Your browser does not support audio.
   </audio>
 
@@ -44,7 +53,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
       authDomain: "cookie-clicker-chat.firebaseapp.com",
-      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com", 
+      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
       projectId: "cookie-clicker-chat",
       storageBucket: "cookie-clicker-chat.firebasestorage.app",
       messagingSenderId: "758507208645",
@@ -55,46 +64,5 @@
   </script>
 
   <script src="script.js"></script>
-
-  <!-- Subway Surfers corner video -->
-  <div id="gameplay-container">
-    <video id="gameplay-video" autoplay loop muted playsinline>
-      <source src="cookieturtlerunning.mp4" type="video/mp4">
-      Your browser does not support video.
-    </video>
-  </div>
-
-  <style>
-    #gameplay-container {
-      position: fixed;
-      bottom: 20px;
-      right: 30px;
-      width: 400px;
-      height: 200px;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 1000;
-      cursor: move;
-    }
-    #gameplay-video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    #golden-cookie-container img {
-      position: absolute;
-      width: 100px;
-      cursor: pointer;
-      z-index: 100;
-    }
-    #flappyCanvas {
-      background: #70c5ce;
-      display: block;
-      margin: 0 auto;
-      border: 2px solid #000;
-      border-radius: 10px;
-    }
-  </style>
 </body>
 </html>
