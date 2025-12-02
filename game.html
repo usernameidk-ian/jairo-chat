@@ -1,49 +1,55 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>jairos turf — rhythm</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="game.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jairo's Roulette</title>
+  <link rel="stylesheet" href="game.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
+      authDomain: "cookie-clicker-chat.firebaseapp.com",
+      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
+      projectId: "cookie-clicker-chat",
+      storageBucket: "cookie-clicker-chat.firebasestorage.app",
+      messagingSenderId: "758507208645",
+      appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
 </head>
 <body>
-  <div id="mobile-warning" class="overlay">
-    <div class="panel">
-      <h2>Not supported on mobile</h2>
-      <p>This game is desktop-only. Please open on a laptop/desktop for best experience.</p>
-      <button id="continue-anyway">Continue (not recommended)</button>
-    </div>
+  <div id="lobbyScreen">
+    <h1>JAIROS ROULETTE</h1>
+    <input type="text" id="username" placeholder="Enter your name..." maxlength="12">
+    <button id="createLobby">Create Lobby</button>
+    <button id="joinRandom">Join Random Lobby</button>
+    <div id="lobbyList"></div>
   </div>
 
-  <header id="topbar">
-    <div class="title">jairos turf</div>
-    <div class="controls">
-      <button id="fsBtn">Full Screen</button>
-      <button id="backBtn">Close</button>
+  <div id="gameScreen" style="display:none">
+    <div id="ui">
+      <div id="players"></div>
+      <div id="lives"></div>
+      <div id="shells">Shells: ? live / ? blank</div>
+      <button id="selfBtn">SHOOT SELF</button>
+      <button id="dealerBtn">SHOOT OPPONENT</button>
+      <div id="status">Your turn...</div>
     </div>
-  </header>
+    <div id="deathOverlay"></div>
+    <div id="reviveOverlay"></div>
+  </div>
 
-  <main id="main">
-    <canvas id="gameCanvas" width="960" height="640"></canvas>
+  <audio id="pump" src="https://freesound.org/data/previews/276/276486_5123854-lq.mp3"></audio>
+  <audio id="empty" src="https://freesound.org/data/previews/387/387184_7253504-lq.mp3"></audio>
+  <audio id="boom" src="https://freesound.org/data/previews/397/397355_5123854-lq.mp3"></audio>
+  <audio id="shock" src="https://freesound.org/data/previews/276/276183_5123854-lq.mp3"></audio>
 
-    <aside id="hud">
-      <div class="score">Score: <span id="score">0</span></div>
-      <div class="healthbar">
-        <div id="healthFill"></div>
-      </div>
-      <div class="judgment" id="judge"> </div>
-      <div class="combo" id="combo">0x</div>
-      <div class="keys">
-        <div class="key">D</div><div class="key">F</div><div class="key">J</div><div class="key">K</div>
-      </div>
-    </aside>
-  </main>
-
-  <!-- Custom song here -->
-  <audio id="song" preload="auto">
-    <source src="song_120bpm.mp3" type="audio/mpeg" />
-  </audio>
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
