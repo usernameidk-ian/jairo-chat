@@ -1,1 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Game — jairo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body { height:100%; margin:0; background:#000; display:flex; align-items:center; justify-content:center; }
+    #gameCanvas { background: #000; width:100%; max-width:960px; height:80vh; border:6px solid #222; box-sizing:border-box; display:block; }
+    #topbar { position:fixed; top:10px; left:50%; transform:translateX(-50%); color:white; font-family:Arial, sans-serif; z-index:999; }
+    .small { font-size:14px; opacity:0.85; }
+    #exitBtn { margin-left: 10px; padding:6px 10px; border-radius:6px; background:#fff; border:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="topbar"><span class="small">Game — full screen ready</span> <button id="exitBtn">Close</button></div>
+  <canvas id="gameCanvas"></canvas>
 
+  <script>
+    // Minimal placeholder so the canvas exists; add Pac-Man code here later.
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.min(window.innerWidth * 0.95, 960) * ratio;
+      canvas.height = (window.innerHeight * 0.82) * ratio;
+      canvas.style.width = Math.min(window.innerWidth * 0.95, 960) + 'px';
+      canvas.style.height = (window.innerHeight * 0.82) + 'px';
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#FFD700';
+      ctx.font = '24px Arial';
+      ctx.fillText('Game area — paste Pac-Man / FNF code here', 20, 40);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    document.getElementById('exitBtn').addEventListener('click', () => window.close());
+  </script>
+</body>
+</html>
