@@ -1,232 +1,228 @@
-// jairos turf — tiny FNF-like (desktop only)
-// Keys: D F J K  (lanes 0..3)
-// Up-scroll: notes move upwards to hit line near top
-// Single song, 120 BPM demo chart. Add your images in 'assets/' folder if desired.
+// jairos turf — real FNF clone (upscroll, arrows, bop, combo, GF, stage)
+// Keys: D F J K (lanes 0-3)
+// Custom: change ASSETS src to your uploaded files in assets/
 
-// ---------- CONFIG ----------
 const CONFIG = {
   canvasId: 'gameCanvas',
   audioId: 'song',
   bpm: 120,
   lanes: 4,
   keyMap: { 'd':0, 'f':1, 'j':2, 'k':3 },
-  hitWindow: 0.18,        // seconds for hit
+  hitWindow: 0.18,
   perfectWindow: 0.06,
-  approachTime: 2.0,      // seconds from spawn to hit (time for a note to travel)
-  opponentLead: 0.35,     // opponent "plays" this many seconds before player
+  approachTime: 1.5, // Faster approach for FNF feel
+  opponentLead: 0.15,
   healthMax: 100,
-  healthGain: 6,
-  healthLoss: 8,
+  healthGain: 8,
+  healthLoss: 10,
   canvasWidth: 960,
-  canvasHeight: 640
+  healthStart: 50
 };
 
-// ---------- ASSET FILENAMES (optional custom PNGs) ----------
 const ASSETS = {
-  player: 'assets/player.png',        // optional
-  opponent: 'assets/opponent.png',    // optional
-  note: 'assets/note.png',            // optional (normal)
-  noteBlue: 'assets/note-blue.png'    // optional (power)
+  player: 'assets/player.png', // Your BF PNG
+  opponent: 'assets/opponent.png', // Your Daddy PNG
+  gf: 'assets/gf.png', // Your GF PNG
+  background: 'assets/stage.png', // Your background PNG
+  arrows: 'assets/arrows.png' // Optional arrow sheet
 };
 
-// ---------- Canvas & Audio ----------
+// Canvas & Audio
 const canvas = document.getElementById(CONFIG.canvasId);
 const ctx = canvas.getContext('2d');
 canvas.width = CONFIG.canvasWidth;
 canvas.height = CONFIG.canvasHeight;
 const audio = document.getElementById(CONFIG.audioId);
 
-// ---------- UI ----------
+// UI
 const scoreEl = document.getElementById('score');
 const healthFill = document.getElementById('healthFill');
 const judgeEl = document.getElementById('judge');
+const comboEl = document.getElementById('combo');
 const fsBtn = document.getElementById('fsBtn');
 const backBtn = document.getElementById('backBtn');
-
 fsBtn.onclick = () => {
-  if (!document.fullscreenElement) canvas.requestFullscreen().catch(()=>{});
+  if (!document.fullscreenElement) canvas.requestFullscreen();
   else document.exitFullscreen();
 };
 backBtn.onclick = () => window.close();
 
-// ---------- mobile warning handling ----------
+// Mobile
 const mobileOverlay = document.getElementById('mobile-warning');
 const continueBtn = document.getElementById('continue-anyway');
-function isMobile() {
-  return /Mobi|Android/i.test(navigator.userAgent);
-}
+function isMobile() { return /Mobi|Android/i.test(navigator.userAgent); }
 if (isMobile()) {
   mobileOverlay.style.display = 'flex';
 } else {
   mobileOverlay.style.display = 'none';
 }
-continueBtn && (continueBtn.onclick = () => mobileOverlay.style.display = 'none');
+continueBtn.onclick = () => mobileOverlay.style.display = 'none';
 
-// ---------- simple beatmap (demo) ----------
-// Generate a simple repeating pattern at 120bpm so you can test.
-// Each beat divided into 4 -> 120bpm = 2 beats/sec -> 4 notes per beat produce dense notes.
-// You will likely replace this with an actual chart later.
-const beatsPerSec = CONFIG.bpm / 60;
-const secondsPerBeat = 60 / CONFIG.bpm;
-
-// demo: 16 measures of a simple pattern
+// Custom chart (add your times here)
 let beatmap = [];
 (function generateDemo() {
   const measures = 8;
   let t = 0;
   for(let m=0;m<measures;m++){
-    // pattern: lanes 0,1,2,3 on consecutive 1/2-beats
     for(let i=0;i<8;i++){
       const lane = i % CONFIG.lanes;
-      beatmap.push({ time: t + i * (secondsPerBeat/2), lane });
+      beatmap.push({ time: t + i * (60 / CONFIG.bpm / 2), lane });
     }
-    t += secondsPerBeat * 4; // 4 beats per measure
+    t += 60 / CONFIG.bpm * 4;
   }
 })();
 
-// You can also manually specify absolute times:
-// beatmap = [{time:1.5,lane:0}, {time:2.0,lane:2}, ...]
-
-// ---------- playback & notes state ----------
+// State
 let playStarted = false;
-let notes = beatmap.map(n => Object.assign({}, n)); // copy
-let hitLineY = 110; // target Y (near top) where notes should be hit
-let spawnY = canvas.height + 40;
-let laneWidth = 120;
-let laneGap = 30;
+let notes = beatmap.map(n => ({...n}));
+let hitLineY = 80; // Top hit line (upscroll)
+let spawnY = canvas.height - 50;
+let laneWidth = 100;
+let laneGap = 20;
 let laneStartX = (canvas.width - (CONFIG.lanes * laneWidth + (CONFIG.lanes-1)*laneGap)) / 2;
 let score = 0;
-let health = CONFIG.healthMax * 0.5;
-
-// active judgments display timer
+let health = CONFIG.healthStart;
+let combo = 0;
+let opponentHits = {};
 let lastJudgeTs = 0;
+let bopTime = 0;
+let manualTime = 0;
+let startTime = 0;
+let useManualTimer = false;
 
-// load images if available (optional)
+// Load images
 const imgCache = {};
-function loadImg(src){ return new Promise((res)=>{ const i=new Image(); i.onload=()=>{imgCache[src]=i;res(i)}; i.onerror=()=>res(null); i.src=src; }) }
-Promise.all(Object.values(ASSETS).map(s=>loadImg(s))).then(()=>{/* images loaded if present */});
+function loadImg(src) {
+  return new Promise((res) => {
+    const i = new Image();
+    i.onload = () => { imgCache[src] = i; res(i); };
+    i.onerror = () => res(null);
+    i.src = src;
+  });
+}
+Promise.all(Object.values(ASSETS).map(loadImg));
 
-// convert note time -> screen Y
+// Note Y calc
 function noteYAtTime(noteTime, currentTime) {
-  // time until hit
   const tUntilHit = noteTime - currentTime;
-  const approach = CONFIG.approachTime;
-  // when tUntilHit == 0 => y = hitLineY
-  // when tUntilHit == approach => y = spawnY
-  const ratio = (tUntilHit + 0) / approach; // 1 at spawn, 0 at hit
-  return hitLineY + ratio * (spawnY - hitLineY);
+  const ratio = tUntilHit / CONFIG.approachTime;
+  return hitLineY + (spawnY - hitLineY) * ratio;
 }
 
-// opponent will "play" notes for animation; we record opponent hits to animate
-let opponentHits = {}; // key by index -> true when opponent passed
-
-// main loop
+// Draw frame
 function drawFrame() {
-  const now = audio.currentTime;
+  bopTime += 0.02; // Bop speed
+  let now = audio.currentTime;
+  if (useManualTimer) now = (Date.now() - startTime) / 1000;
+
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // background
-  ctx.fillStyle = '#08121a';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // draw lanes
-  for(let i=0;i<CONFIG.lanes;i++){
-    const x = laneStartX + i*(laneWidth + laneGap);
-    // lane background
-    ctx.fillStyle = '#0e1b23';
-    roundRect(ctx, x, 80, laneWidth, canvas.height-160, 6, true, false);
-    // lane hit zone marker
-    ctx.fillStyle = '#162832';
-    ctx.fillRect(x, hitLineY-6, laneWidth, 6);
-    // draw lane letter
-    ctx.fillStyle = '#99aab5';
-    ctx.font = '18px Arial';
-    ctx.fillText(Object.keys(CONFIG.keyMap)[i] ? Object.keys(CONFIG.keyMap)[i].toUpperCase() : '', x + laneWidth/2 - 6, canvas.height - 30);
+  // Background
+  const bg = imgCache[ASSETS.background];
+  if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  else {
+    ctx.fillStyle = '#12052a'; // FNF purple
+    ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  // draw notes (player's notes are those timed for the audio)
+  // Lanes
+  for(let i=0;i<CONFIG.lanes;i++){
+    const x = laneStartX + i*(laneWidth + laneGap);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x, 0, laneWidth, canvas.height);
+    // Strum line (top hit)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, hitLineY - 4, laneWidth, 8);
+  }
+
+  // Notes
   notes.forEach((note, idx) => {
     const t = note.time;
     const y = noteYAtTime(t, now);
-    // skip notes that are past (a bit beyond)
-    if (y < hitLineY - 200) return;
-    if (y > spawnY + 40) return;
+    if (y < hitLineY - 50 || y > spawnY + 50) return;
 
-    const laneX = laneStartX + note.lane*(laneWidth + laneGap);
-    const cx = laneX + laneWidth/2;
-    // draw note sprite if available:
-    const sprite = imgCache[ASSETS.note];
-    if (sprite) {
-      const s = 42;
-      ctx.drawImage(sprite, cx - s/2, y - s/2, s, s);
-    } else {
-      // fallback: circle
-      ctx.fillStyle = '#ffd54f';
-      ctx.beginPath();
-      ctx.arc(cx, y, 18, 0, Math.PI*2);
-      ctx.fill();
-    }
+    const laneX = laneStartX + note.lane * (laneWidth + laneGap);
+    const cx = laneX + laneWidth / 2;
+    // Arrow colors
+    const colors = ['#a020f0', '#00ffff', '#00ff00', '#ff0000']; // Left, down, up, right
+    ctx.fillStyle = colors[note.lane];
+    ctx.shadowColor = colors[note.lane];
+    ctx.shadowBlur = 15;
 
-    // opponent "lead" visual: if note time - opponentLead < now and not yet registered, mark hit
+    // Draw arrow polygon
+    ctx.save();
+    ctx.translate(cx, y);
+    const arrowPaths = [
+      [[0,-30],[30,0],[0,30],[-20,0]], // Left <
+      [[-20,-20],[20,-20],[0,30]], // Down v
+      [[-20,30],[20,30],[0,-20]], // Up ^
+      [[0,-30],[-30,0],[0,30],[20,0]] // Right >
+    ];
+    ctx.beginPath();
+    const path = arrowPaths[note.lane];
+    ctx.moveTo(path[0][0], path[0][1]);
+    path.forEach(p => ctx.lineTo(p[0], p[1]));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Opponent hit flash
     if (!opponentHits[idx] && (t - CONFIG.opponentLead) <= now) {
       opponentHits[idx] = true;
     }
   });
 
-  // draw opponent (left) & player (right)
-  const opponentX = laneStartX - 120;
-  const playerX = laneStartX + (CONFIG.lanes-1)*(laneWidth+laneGap) + laneWidth + 40;
-  // opponent sprite (optional)
+  // Characters with bop
+  const bop = Math.sin(bopTime * 2) * 5; // Bop amp
+  const opponentX = laneStartX - 150;
+  const gfX = canvas.width / 2 - 100;
+  const playerX = laneStartX + CONFIG.lanes * (laneWidth + laneGap);
+  // GF on speakers
+  ctx.fillStyle = '#333';
+  ctx.fillRect(gfX, canvas.height - 200, 200, 100); // Speaker box
+  const gfImg = imgCache[ASSETS.gf];
+  if (gfImg) ctx.drawImage(gfImg, gfX, canvas.height - gfImg.height - 100 + bop, gfImg.width * 0.8, gfImg.height * 0.8);
+  else {
+    ctx.fillStyle = '#ff69b4';
+    ctx.fillRect(gfX + 50, canvas.height - 150 + bop, 100, 100);
+  }
+  // Opponent
   const oppImg = imgCache[ASSETS.opponent];
-  if (oppImg) ctx.drawImage(oppImg, opponentX-20, hitLineY-60, 80, 80);
+  if (oppImg) ctx.drawImage(oppImg, opponentX, canvas.height - oppImg.height - 50 - bop, oppImg.width * 0.8, oppImg.height * 0.8);
   else {
     ctx.fillStyle = '#ff6b6b';
-    ctx.fillRect(opponentX-8, hitLineY-56, 60, 60);
+    ctx.fillRect(opponentX, canvas.height - 150 - bop, 100, 100);
   }
-  // player
+  // Player
   const plImg = imgCache[ASSETS.player];
-  if (plImg) ctx.drawImage(plImg, playerX-20, hitLineY-60, 80, 80);
+  if (plImg) ctx.drawImage(plImg, playerX, canvas.height - plImg.height - 50 + bop, plImg.width * 0.8, plImg.height * 0.8);
   else {
     ctx.fillStyle = '#4fc3f7';
-    ctx.fillRect(playerX-8, hitLineY-56, 60, 60);
+    ctx.fillRect(playerX, canvas.height - 150 + bop, 100, 100);
   }
 
-  // animate opponent hits (flash lane when opponentHits true and note near hit)
+  // Opponent flash on hit
   notes.forEach((note, idx) => {
-    if (!opponentHits[idx]) return;
-    const t = note.time - CONFIG.opponentLead;
-    const dt = now - t;
-    if (Math.abs(dt) < 0.12) {
-      const laneX = laneStartX + note.lane*(laneWidth + laneGap);
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
-      ctx.fillRect(laneX, hitLineY-80, laneWidth, 80);
+    if (opponentHits[idx]) {
+      const dt = now - (note.time - CONFIG.opponentLead);
+      if (dt < 0.1) {
+        const laneX = laneStartX + note.lane * (laneWidth + laneGap);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(laneX, hitLineY - 50, laneWidth, 50);
+      }
     }
   });
 
-  // HUD: health, score, last judge
+  // HUD update
   scoreEl.innerText = score;
-  healthFill.style.width = Math.max(0, Math.min(100, (health/CONFIG.healthMax)*100)) + '%';
-
-  // clear judgement after 800ms
+  healthFill.style.width = `${(health / CONFIG.healthMax) * 100}%`;
   if (Date.now() - lastJudgeTs > 800) judgeEl.textContent = '';
+  comboEl.textContent = combo > 0 ? `${combo}x` : '';
 
   requestAnimationFrame(drawFrame);
 }
 
-function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-  if (typeof r === 'undefined') r = 5;
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
-
-// ---------- input handling ----------
+// Input
 const activeKeys = {};
 window.addEventListener('keydown', (ev) => {
   if (ev.repeat) return;
@@ -241,45 +237,45 @@ window.addEventListener('keyup', (ev) => {
   if (k in CONFIG.keyMap) activeKeys[k] = false;
 });
 
-// handle a player press on lane (0..3)
+// Press handler
 function handlePress(lane) {
-  // find nearest hittable note in that lane within hitWindow
-  const now = audio.currentTime;
-  const window = CONFIG.hitWindow;
-  // find notes not yet judged and whose time is within window
+  const now = useManualTimer ? (Date.now() - startTime) / 1000 : audio.currentTime;
   let bestIdx = -1;
-  let bestDelta = 1e9;
+  let bestDelta = Infinity;
   notes.forEach((note, idx) => {
-    if (note.__hit) return;
-    if (note.lane !== lane) return;
+    if (note.__hit || note.lane !== lane) return;
     const dt = Math.abs(note.time - now);
-    if (dt <= window && dt < bestDelta) { bestDelta = dt; bestIdx = idx; }
+    if (dt <= CONFIG.hitWindow && dt < bestDelta) {
+      bestDelta = dt;
+      bestIdx = idx;
+    }
   });
   if (bestIdx >= 0) {
-    const note = notes[bestIdx];
-    note.__hit = true;
-    // judge
+    notes[bestIdx].__hit = true;
     let judgement = 'Miss';
+    let points = 0;
+    let hGain = 0;
     if (bestDelta <= CONFIG.perfectWindow) {
-      judgement = 'Perfect';
-      score += 300;
-      health = Math.min(CONFIG.healthMax, health + CONFIG.healthGain);
+      judgement = 'Sick!!';
+      points = 350;
+      hGain = CONFIG.healthGain;
     } else {
       judgement = 'Good';
-      score += 100;
-      health = Math.min(CONFIG.healthMax, health + CONFIG.healthGain * 0.6);
+      points = 200;
+      hGain = CONFIG.healthGain * 0.5;
     }
+    score += points;
+    health = Math.min(CONFIG.healthMax, health + hGain);
+    combo++;
     showJudge(judgement);
   } else {
-    // missed key press
-    score = Math.max(0, score - 10);
-    health -= CONFIG.healthLoss * 0.25;
-    showJudge('Miss');
+    score -= 50;
+    health -= CONFIG.healthLoss * 0.3;
+    combo = 0;
+    showJudge('Shit');
   }
-  // clamp health
-  if (health <= 0) {
-    endSong(false);
-  }
+  health = Math.max(0, health);
+  if (health <= 0) endSong(false);
 }
 
 function showJudge(text) {
@@ -287,68 +283,58 @@ function showJudge(text) {
   lastJudgeTs = Date.now();
 }
 
-// ---------- automatic "miss" marking for notes that passed ----------
+// Miss scanner
 function scanMissedNotes() {
-  const now = audio.currentTime;
+  const now = useManualTimer ? (Date.now() - startTime) / 1000 : audio.currentTime;
   notes.forEach(note => {
     if (note.__hit || note.__missed) return;
-    if ((now - note.time) > CONFIG.hitWindow) {
-      // missed
+    if (now - note.time > CONFIG.hitWindow) {
       note.__missed = true;
       health -= CONFIG.healthLoss;
+      combo = 0;
       showJudge('Miss');
       if (health <= 0) endSong(false);
     }
   });
 }
 
-// ---------- song control ----------
+// Song control
 function startSong() {
   if (playStarted) return;
   playStarted = true;
-  // reset state
   score = 0;
-  health = CONFIG.healthMax * 0.6;
-  notes.forEach(n => { delete n.__hit; delete n.__missed; });
+  health = CONFIG.healthStart;
+  combo = 0;
+  notes = beatmap.map(n => ({...n}));
   opponentHits = {};
   audio.currentTime = 0;
-  audio.play().catch(()=>{ /* autoplay blocked — user must click */ });
+  audio.play().catch(() => {
+    useManualTimer = true;
+    startTime = Date.now();
+  });
   requestAnimationFrame(drawFrame);
-  scanInterval = setInterval(scanMissedNotes, 100);
+  scanInterval = setInterval(scanMissedNotes, 50);
 }
 
 function endSong(won) {
-  // stop audio
-  if (audio && !audio.paused) audio.pause();
+  audio.pause();
   clearInterval(scanInterval);
-  const msg = won ? 'Song complete! Nice.' : 'You lost...';
+  const msg = won ? 'FC! Sick.' : 'Game Over...';
   alert(msg + '\nScore: ' + score);
   playStarted = false;
 }
 
-// start on first user interaction (must be triggered by user gesture for audio on many browsers)
-document.addEventListener('click', function onFirst() {
-  if (!playStarted) {
-    // show instruction then start
-    if (confirm('Start song (jairos turf demo)?')) startSong();
-  }
-  document.removeEventListener('click', onFirst);
-});
+audio.addEventListener('ended', () => endSong(health > 0));
 
-// end when audio ends
-audio.addEventListener('ended', () => {
-  // determine win by remaining health > threshold
-  endSong(health > 10);
-});
+// Start on click
+document.addEventListener('click', () => {
+  if (!playStarted && confirm('Start song?')) startSong();
+}, { once: true });
 
-// scan loop ref
-let scanInterval = null;
-
-// ---------- small debugging: click/tap lane on canvas ----------
+// Canvas click for debug press
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-  // detect lane
+  const x = e.clientX - rect.left;
   for(let i=0;i<CONFIG.lanes;i++){
     const laneX = laneStartX + i*(laneWidth + laneGap);
     if (x >= laneX && x <= laneX + laneWidth) {
@@ -358,11 +344,5 @@ canvas.addEventListener('mousedown', (e) => {
   }
 });
 
-// ---------- utility: load/replace beatmap helper (if you want to paste your chart) ----------
-window.loadBeatmap = function(newMap) {
-  // newMap: [{time:seconds, lane:0..3}, ...]
-  notes = newMap.map(n => ({time: n.time, lane: n.lane}));
-}
-
-// ---------- init draw once ----------
+// Init
 drawFrame();
