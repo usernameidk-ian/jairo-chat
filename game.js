@@ -1,348 +1,193 @@
-// jairos turf — real FNF clone (upscroll, arrows, bop, combo, GF, stage)
-// Keys: D F J K (lanes 0-3)
-// Custom: change ASSETS src to your uploaded files in assets/
+// ===== BUCKSHOT ROULETTE — FULL MULTIPLAYER 3D =====
+let playerName = "";
+let lobbyId = "";
+let isHost = false;
+let myTurn = false;
+let currentShellIsLive = false;
 
-const CONFIG = {
-  canvasId: 'gameCanvas',
-  audioId: 'song',
-  bpm: 120,
-  lanes: 4,
-  keyMap: { 'd':0, 'f':1, 'j':2, 'k':3 },
-  hitWindow: 0.18,
-  perfectWindow: 0.06,
-  approachTime: 1.5, // Faster approach for FNF feel
-  opponentLead: 0.15,
-  healthMax: 100,
-  healthGain: 8,
-  healthLoss: 10,
-  canvasWidth: 960,
-  healthStart: 50
-};
+// DOM
+const lobbyScreen = document.getElementById("lobbyScreen");
+const gameScreen = document.getElementById("gameScreen");
+const deathOverlay = document.getElementById("deathOverlay");
+const reviveOverlay = document.getElementById("reviveOverlay");
 
-const ASSETS = {
-  player: 'assets/player.png', // Your BF PNG
-  opponent: 'assets/opponent.png', // Your Daddy PNG
-  gf: 'assets/gf.png', // Your GF PNG
-  background: 'assets/stage.png', // Your background PNG
-  arrows: 'assets/arrows.png' // Optional arrow sheet
-};
+// 3D Setup
+let scene, camera, renderer, controls, shotgun, dealer;
+function init3D() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x110000);
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+  camera.position.set(0, 4, 10);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
 
-// Canvas & Audio
-const canvas = document.getElementById(CONFIG.canvasId);
-const ctx = canvas.getContext('2d');
-canvas.width = CONFIG.canvasWidth;
-canvas.height = CONFIG.canvasHeight;
-const audio = document.getElementById(CONFIG.audioId);
+  // Table
+  const table = new THREE.Mesh(
+    new THREE.BoxGeometry(12,0.5,10),
+    new THREE.MeshStandardMaterial({color:0x002200, roughness:0.9})
+  );
+  table.position.y = -0.25;
+  scene.add(table);
 
-// UI
-const scoreEl = document.getElementById('score');
-const healthFill = document.getElementById('healthFill');
-const judgeEl = document.getElementById('judge');
-const comboEl = document.getElementById('combo');
-const fsBtn = document.getElementById('fsBtn');
-const backBtn = document.getElementById('backBtn');
-fsBtn.onclick = () => {
-  if (!document.fullscreenElement) canvas.requestFullscreen();
-  else document.exitFullscreen();
-};
-backBtn.onclick = () => window.close();
+  // Shotgun (aimable)
+  shotgun = new THREE.Group();
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,4,16), new THREE.MeshStandardMaterial({color:0x888888}));
+  barrel.rotation.z = Math.PI/2;
+  barrel.position.x = 2;
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(2.5,0.5,0.8), new THREE.MeshStandardMaterial({color:0x8B4513}));
+  stock.position.x = -0.8;
+  shotgun.add(barrel, stock);
+  shotgun.position.y = 0.4;
+  scene.add(shotgun);
 
-// Mobile
-const mobileOverlay = document.getElementById('mobile-warning');
-const continueBtn = document.getElementById('continue-anyway');
-function isMobile() { return /Mobi|Android/i.test(navigator.userAgent); }
-if (isMobile()) {
-  mobileOverlay.style.display = 'flex';
-} else {
-  mobileOverlay.style.display = 'none';
-}
-continueBtn.onclick = () => mobileOverlay.style.display = 'none';
+  // Creepy Dealer (hanging skull with hands)
+  dealer = new THREE.Group();
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.9,16,16), new THREE.MeshStandardMaterial({color:0x111111}));
+  const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), new THREE.MeshStandardMaterial({color:0x222222}));
+  leftHand.position.set(-1.2, -0.8, 0);
+  const rightHand = leftHand.clone();
+  rightHand.position.x = 1.2;
+  dealer.add(skull, leftHand, rightHand);
+  dealer.position.set(0,5,-3);
+  scene.add(dealer);
 
-// Custom chart (add your times here)
-let beatmap = [];
-(function generateDemo() {
-  const measures = 8;
-  let t = 0;
-  for(let m=0;m<measures;m++){
-    for(let i=0;i<8;i++){
-      const lane = i % CONFIG.lanes;
-      beatmap.push({ time: t + i * (60 / CONFIG.bpm / 2), lane });
-    }
-    t += 60 / CONFIG.bpm * 4;
-  }
-})();
+  // Lights
+  scene.add(new THREE.AmbientLight(0x400000, 2));
+  const redLight = new THREE.PointLight(0xff0000, 3, 20);
+  redLight.position.set(0,6,0);
+  scene.add(redLight);
 
-// State
-let playStarted = false;
-let notes = beatmap.map(n => ({...n}));
-let hitLineY = 80; // Top hit line (upscroll)
-let spawnY = canvas.height - 50;
-let laneWidth = 100;
-let laneGap = 20;
-let laneStartX = (canvas.width - (CONFIG.lanes * laneWidth + (CONFIG.lanes-1)*laneGap)) / 2;
-let score = 0;
-let health = CONFIG.healthStart;
-let combo = 0;
-let opponentHits = {};
-let lastJudgeTs = 0;
-let bopTime = 0;
-let manualTime = 0;
-let startTime = 0;
-let useManualTimer = false;
-
-// Load images
-const imgCache = {};
-function loadImg(src) {
-  return new Promise((res) => {
-    const i = new Image();
-    i.onload = () => { imgCache[src] = i; res(i); };
-    i.onerror = () => res(null);
-    i.src = src;
-  });
-}
-Promise.all(Object.values(ASSETS).map(loadImg));
-
-// Note Y calc
-function noteYAtTime(noteTime, currentTime) {
-  const tUntilHit = noteTime - currentTime;
-  const ratio = tUntilHit / CONFIG.approachTime;
-  return hitLineY + (spawnY - hitLineY) * ratio;
-}
-
-// Draw frame
-function drawFrame() {
-  bopTime += 0.02; // Bop speed
-  let now = audio.currentTime;
-  if (useManualTimer) now = (Date.now() - startTime) / 1000;
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // Background
-  const bg = imgCache[ASSETS.background];
-  if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-  else {
-    ctx.fillStyle = '#12052a'; // FNF purple
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-
-  // Lanes
-  for(let i=0;i<CONFIG.lanes;i++){
-    const x = laneStartX + i*(laneWidth + laneGap);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x, 0, laneWidth, canvas.height);
-    // Strum line (top hit)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x, hitLineY - 4, laneWidth, 8);
-  }
-
-  // Notes
-  notes.forEach((note, idx) => {
-    const t = note.time;
-    const y = noteYAtTime(t, now);
-    if (y < hitLineY - 50 || y > spawnY + 50) return;
-
-    const laneX = laneStartX + note.lane * (laneWidth + laneGap);
-    const cx = laneX + laneWidth / 2;
-    // Arrow colors
-    const colors = ['#a020f0', '#00ffff', '#00ff00', '#ff0000']; // Left, down, up, right
-    ctx.fillStyle = colors[note.lane];
-    ctx.shadowColor = colors[note.lane];
-    ctx.shadowBlur = 15;
-
-    // Draw arrow polygon
-    ctx.save();
-    ctx.translate(cx, y);
-    const arrowPaths = [
-      [[0,-30],[30,0],[0,30],[-20,0]], // Left <
-      [[-20,-20],[20,-20],[0,30]], // Down v
-      [[-20,30],[20,30],[0,-20]], // Up ^
-      [[0,-30],[-30,0],[0,30],[20,0]] // Right >
-    ];
-    ctx.beginPath();
-    const path = arrowPaths[note.lane];
-    ctx.moveTo(path[0][0], path[0][1]);
-    path.forEach(p => ctx.lineTo(p[0], p[1]));
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // Opponent hit flash
-    if (!opponentHits[idx] && (t - CONFIG.opponentLead) <= now) {
-      opponentHits[idx] = true;
-    }
+  // Mouse aim
+  document.addEventListener("mousemove", (e) => {
+    const x = (e.clientX / innerWidth) * 2 - 1;
+    shotgun.rotation.y = x * 0.5;
   });
 
-  // Characters with bop
-  const bop = Math.sin(bopTime * 2) * 5; // Bop amp
-  const opponentX = laneStartX - 150;
-  const gfX = canvas.width / 2 - 100;
-  const playerX = laneStartX + CONFIG.lanes * (laneWidth + laneGap);
-  // GF on speakers
-  ctx.fillStyle = '#333';
-  ctx.fillRect(gfX, canvas.height - 200, 200, 100); // Speaker box
-  const gfImg = imgCache[ASSETS.gf];
-  if (gfImg) ctx.drawImage(gfImg, gfX, canvas.height - gfImg.height - 100 + bop, gfImg.width * 0.8, gfImg.height * 0.8);
-  else {
-    ctx.fillStyle = '#ff69b4';
-    ctx.fillRect(gfX + 50, canvas.height - 150 + bop, 100, 100);
-  }
-  // Opponent
-  const oppImg = imgCache[ASSETS.opponent];
-  if (oppImg) ctx.drawImage(oppImg, opponentX, canvas.height - oppImg.height - 50 - bop, oppImg.width * 0.8, oppImg.height * 0.8);
-  else {
-    ctx.fillStyle = '#ff6b6b';
-    ctx.fillRect(opponentX, canvas.height - 150 - bop, 100, 100);
-  }
-  // Player
-  const plImg = imgCache[ASSETS.player];
-  if (plImg) ctx.drawImage(plImg, playerX, canvas.height - plImg.height - 50 + bop, plImg.width * 0.8, plImg.height * 0.8);
-  else {
-    ctx.fillStyle = '#4fc3f7';
-    ctx.fillRect(playerX, canvas.height - 150 + bop, 100, 100);
-  }
-
-  // Opponent flash on hit
-  notes.forEach((note, idx) => {
-    if (opponentHits[idx]) {
-      const dt = now - (note.time - CONFIG.opponentLead);
-      if (dt < 0.1) {
-        const laneX = laneStartX + note.lane * (laneWidth + laneGap);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(laneX, hitLineY - 50, laneWidth, 50);
-      }
-    }
-  });
-
-  // HUD update
-  scoreEl.innerText = score;
-  healthFill.style.width = `${(health / CONFIG.healthMax) * 100}%`;
-  if (Date.now() - lastJudgeTs > 800) judgeEl.textContent = '';
-  comboEl.textContent = combo > 0 ? `${combo}x` : '';
-
-  requestAnimationFrame(drawFrame);
+  animate();
 }
 
-// Input
-const activeKeys = {};
-window.addEventListener('keydown', (ev) => {
-  if (ev.repeat) return;
-  const k = ev.key.toLowerCase();
-  if (k in CONFIG.keyMap) {
-    activeKeys[k] = true;
-    handlePress(CONFIG.keyMap[k]);
-  }
-});
-window.addEventListener('keyup', (ev) => {
-  const k = ev.key.toLowerCase();
-  if (k in CONFIG.keyMap) activeKeys[k] = false;
-});
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  dealer.rotation.y = Math.sin(Date.now()*0.001)*0.15;
+  renderer.render(scene, camera);
+}
 
-// Press handler
-function handlePress(lane) {
-  const now = useManualTimer ? (Date.now() - startTime) / 1000 : audio.currentTime;
-  let bestIdx = -1;
-  let bestDelta = Infinity;
-  notes.forEach((note, idx) => {
-    if (note.__hit || note.lane !== lane) return;
-    const dt = Math.abs(note.time - now);
-    if (dt <= CONFIG.hitWindow && dt < bestDelta) {
-      bestDelta = dt;
-      bestIdx = idx;
+// Death messages
+const deathQuotes = ["oof..", "better luck next time..", "tsk tsk tsk..", "bruh.", "pain.", "couldn't make it huh?", "sucks to suck.", "oh well.."];
+const reviveQuotes = ["but you still have a chance..", "nah, you'd win, right?", "not done yet..", "get up."];
+
+// Join lobby
+function joinLobby() {
+  const lobbyRef = db.ref("buckshot_lobbies").child(lobbyId);
+  lobbyRef.child("players").child(playerName).set({ lives:5, charges:5 });
+  if (isHost) lobbyRef.set({ host:playerName, full:false, live:0, blank:0, turn:null, shellsLoaded:false, round:1 });
+
+  lobbyRef.on("value", snap => {
+    const data = snap.val();
+    if (!data) return location.reload();
+
+    const players = Object.keys(data.players || {});
+    document.getElementById("players").textContent = players.join(" vs ");
+
+    if (players.length === 2 && !data.full) {
+      lobbyRef.update({ full:true });
+      if (isHost) newRound();
     }
+
+    const myData = data.players[playerName];
+    if (myData) {
+      document.getElementById("lives").innerHTML = `Charges: \( {"█".repeat(myData.charges)} ( \){myData.lives} lives)`;
+    }
+
+    document.getElementById("shells").textContent = `Shells: \( {data.live||0} live / \){data.blank||0} blank`;
+    myTurn = data.turn === playerName;
+    document.getElementById("selfBtn").disabled = !myTurn;
+    document.getElementById("dealerBtn").disabled = !myTurn;
+    document.getElementById("status").textContent = myTurn ? "YOUR TURN" : "OPPONENT'S TURN";
   });
-  if (bestIdx >= 0) {
-    notes[bestIdx].__hit = true;
-    let judgement = 'Miss';
-    let points = 0;
-    let hGain = 0;
-    if (bestDelta <= CONFIG.perfectWindow) {
-      judgement = 'Sick!!';
-      points = 350;
-      hGain = CONFIG.healthGain;
+}
+
+// New round
+function newRound() {
+  const live = Math.floor(Math.random()*4)+2;
+  const blank = 8 - live;
+  db.ref("buckshot_lobbies").child(lobbyId).update({
+    live, blank, turn: Object.keys(db.ref("buckshot_lobbies").child(lobbyId).child("players").once("value").then(s=>s.val()))[0], shellsLoaded:true
+  });
+}
+
+// Shoot
+function shoot(self) {
+  if (!myTurn) return;
+  document.getElementById("pump").play();
+  shotgun.scale.set(1.1,1.1,1.1);
+  setTimeout(()=>shotgun.scale.set(1,1,1),200);
+
+  db.ref("buckshot_lobbies").child(lobbyId).once("value").then(snap => {
+    const data = snap.val();
+    const isLive = Math.random() < (data.live / (data.live + data.blank));
+
+    if (isLive) {
+      document.getElementById("boom").play();
+      deathOverlay.style.opacity = 1;
+      setTimeout(() => {
+        deathOverlay.style.opacity = 0;
+        document.body.style.background = "#000";
+        const msg = deathQuotes[Math.floor(Math.random()*deathQuotes.length)];
+        document.getElementById("status").innerHTML = `<div style="font-size:3em;color:#f00">${msg}</div>`;
+
+        const target = self ? playerName : Object.keys(data.players).find(p=>p!==playerName);
+        db.ref("buckshot_lobbies").child(lobbyId).child("players").child(target).child("lives").transaction(v => v-1);
+
+        setTimeout(() => {
+          db.ref("buckshot_lobbies").child(lobbyId).child("players").child(target).once("value").then(psnap => {
+            const lives = psnap.val().lives;
+            if (lives > 0) {
+              document.getElementById("shock").play();
+              reviveOverlay.style.opacity = 1;
+              document.getElementById("status").innerHTML += `<br><br>${reviveQuotes[Math.floor(Math.random()*reviveQuotes.length)]}`;
+              setTimeout(() => {
+                reviveOverlay.style.opacity = 0;
+                renderer.domElement.style.filter = "blur(20px)";
+                setTimeout(() => renderer.domElement.style.filter = "", 3000);
+              }, 1500);
+            } else {
+              endGame(self ? "YOU LOSE" : "YOU WIN");
+            }
+          });
+        }, 2000);
+      }, 1000);
     } else {
-      judgement = 'Good';
-      points = 200;
-      hGain = CONFIG.healthGain * 0.5;
+      document.getElementById("empty").play();
     }
-    score += points;
-    health = Math.min(CONFIG.healthMax, health + hGain);
-    combo++;
-    showJudge(judgement);
-  } else {
-    score -= 50;
-    health -= CONFIG.healthLoss * 0.3;
-    combo = 0;
-    showJudge('Shit');
-  }
-  health = Math.max(0, health);
-  if (health <= 0) endSong(false);
-}
 
-function showJudge(text) {
-  judgeEl.textContent = text;
-  lastJudgeTs = Date.now();
-}
+    const newLive = data.live - (isLive?1:0);
+    const newBlank = data.blank - (isLive?0:1);
+    const nextTurn = Object.keys(data.players).find(p => p !== playerName);
 
-// Miss scanner
-function scanMissedNotes() {
-  const now = useManualTimer ? (Date.now() - startTime) / 1000 : audio.currentTime;
-  notes.forEach(note => {
-    if (note.__hit || note.__missed) return;
-    if (now - note.time > CONFIG.hitWindow) {
-      note.__missed = true;
-      health -= CONFIG.healthLoss;
-      combo = 0;
-      showJudge('Miss');
-      if (health <= 0) endSong(false);
+    if (newLive + newBlank === 0) {
+      newRound();
+    } else {
+      db.ref("buckshot_lobbies").child(lobbyId).update({ live:newLive, blank:newBlank, turn:nextTurn });
     }
   });
 }
 
-// Song control
-function startSong() {
-  if (playStarted) return;
-  playStarted = true;
-  score = 0;
-  health = CONFIG.healthStart;
-  combo = 0;
-  notes = beatmap.map(n => ({...n}));
-  opponentHits = {};
-  audio.currentTime = 0;
-  audio.play().catch(() => {
-    useManualTimer = true;
-    startTime = Date.now();
-  });
-  requestAnimationFrame(drawFrame);
-  scanInterval = setInterval(scanMissedNotes, 50);
+function endGame(msg) {
+  document.getElementById("status").innerHTML = `<div style="font-size:4em;color:#f00">\( {msg}</div><br> \){deathQuotes[Math.floor(Math.random()*deathQuotes.length)]}`;
+  document.getElementById("selfBtn").disabled = true;
+  document.getElementById("dealerBtn").disabled = true;
 }
 
-function endSong(won) {
-  audio.pause();
-  clearInterval(scanInterval);
-  const msg = won ? 'FC! Sick.' : 'Game Over...';
-  alert(msg + '\nScore: ' + score);
-  playStarted = false;
-}
+document.getElementById("selfBtn").onclick = () => shoot(true);
+document.getElementById("dealerBtn").onclick = () => shoot(false);
 
-audio.addEventListener('ended', () => endSong(health > 0));
-
-// Start on click
-document.addEventListener('click', () => {
-  if (!playStarted && confirm('Start song?')) startSong();
-}, { once: true });
-
-// Canvas click for debug press
-canvas.addEventListener('mousedown', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  for(let i=0;i<CONFIG.lanes;i++){
-    const laneX = laneStartX + i*(laneWidth + laneGap);
-    if (x >= laneX && x <= laneX + laneWidth) {
-      handlePress(i);
-      break;
-    }
-  }
-});
-
-// Init
-drawFrame();
+window.onresize = () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+};
