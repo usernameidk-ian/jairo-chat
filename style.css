@@ -1,118 +1,199 @@
-/* general */
+/* ---------------------- GENERAL ---------------------- */
 body {
   font-family: Arial, Helvetica, sans-serif;
-  background: linear-gradient(135deg,#f8e7c9,#f1d6b8);
   margin: 0;
-  color: #2b2b2b;
-  -webkit-font-smoothing:antialiased;
+  color: #fff;
+  background: linear-gradient(135deg, #00ff00 0%, #ff0000 100%);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* header */
+/* ---------------------- HEADER ---------------------- */
 .topbar {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:14px 24px;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  background: rgba(0,0,0,0.7);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
-.topbar h1 { margin:0; font-size:18px; }
+.topbar h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
 .topbar .controls button {
-  padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #4f545c;
+  background: #2f3136;
+  color: #fff;
+  cursor: pointer;
 }
 
-/* page layout */
+/* ---------------------- PAGE LAYOUT ---------------------- */
 .container {
   display: flex;
   gap: 28px;
-  justify-content:center;
-  align-items:flex-start;
+  justify-content: center;
+  align-items: flex-start;
   padding: 28px;
 }
 
-/* left panel */
+/* ---------------------- LEFT PANEL ---------------------- */
 .left-panel { width:340px; }
-.game-preview { background:#fff; border-radius:10px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
-.game-preview canvas { display:block; margin:0 auto; border-radius:6px; background:#222; }
-.game-note { text-align:center; margin:8px 0 0; font-size:13px; color:#666; }
+.game-preview {
+  background: rgba(0,0,0,0.6);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+.game-preview canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+  background: #111;
+}
+.game-note {
+  text-align: center;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #ccc;
+}
 
-/* chat */
+/* ---------------------- CHAT BOX ---------------------- */
 .chat-box {
   flex: 1 1 540px;
   max-width: 720px;
-  background: #2f3136;
-  border-radius: 10px;
+  background: rgba(0,0,0,0.85);
+  border-radius: 12px;
   padding: 12px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-  color: #ddd;
-  display:flex;
-  flex-direction:column;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-.chat-header { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.chat-header h2 { margin:0; font-size:18px; color:#fff; }
-#clear-chat { background:#4f545c; color:#fff; border-radius:6px; padding:6px 8px; border:none; cursor:pointer; }
+/* ---------------------- CHAT HEADER ---------------------- */
+.chat-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.chat-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+#clear-chat {
+  background: #4f545c;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 8px;
+  border: none;
+  cursor: pointer;
+}
 
-/* messages area - discord style */
+/* ---------------------- CHAT MESSAGES ---------------------- */
 .chat-messages {
-  background: linear-gradient(180deg,#36393f,#2f3136);
-  border-radius:8px;
-  padding:12px;
+  background: rgba(50,50,50,0.7);
+  border-radius: 8px;
+  padding: 12px;
   height: 420px;
   overflow-y: auto;
-  border: 1px solid rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* individual message style */
+/* Scrollbar styling */
+.chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #00ff00;
+  border-radius: 4px;
+}
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+/* Individual message */
 .chat-messages p {
   margin: 6px 0;
-  line-height:1.25;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color: #e8e6e3;
-  font-size:14px;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  background: rgba(255,255,255,0.05);
+  padding: 6px 10px;
+  border-radius: 6px;
+  animation: fadeIn 0.25s ease-in-out;
 }
+
+/* Admin icon */
 .chat-messages img.admin-icon {
-  width:16px;
-  height:16px;
-  display:inline-block;
-  margin-right:6px;
-  border-radius:3px;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  margin-right: 6px;
+  border-radius: 3px;
 }
 
-/* username color label (we color the text itself in JS with stringToColor) */
+/* Username */
 .chat-messages .username {
-  font-weight:700;
-  margin-right:6px;
+  font-weight: 700;
+  margin-right: 6px;
 }
 
-/* input row */
+/* Message text */
+.chat-messages .msgtext {
+  word-wrap: break-word;
+  flex: 1;
+  color: #fff;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+/* ---------------------- INPUT ROW ---------------------- */
 .chat-input-row {
-  margin-top:12px;
-  display:flex;
-  gap:8px;
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
 }
 #chat-input {
-  flex:1;
-  padding:10px;
-  border-radius:8px;
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
   border: none;
-  outline:none;
-  font-size:14px;
+  outline: none;
+  font-size: 14px;
+  background: #1e1e1e;
+  color: #fff;
+}
+#chat-input:focus {
+  box-shadow: 0 0 6px #00ff00;
 }
 #send-chat {
-  padding:10px 14px;
-  border-radius:8px;
-  border:none;
-  background:#7289da;
-  color:white;
-  cursor:pointer;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #00ff00;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#send-chat:hover {
+  background: #33ff33;
 }
 
-/* timeout text */
+/* ---------------------- TIMEOUT ---------------------- */
 .timeout-timer {
-  margin-top:8px;
-  color:#ffb4b4;
-  font-size:13px;
+  margin-top: 8px;
+  color: #ffb4b4;
+  font-size: 13px;
 }
