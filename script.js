@@ -1,32 +1,24 @@
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
-
-// keep raw and trimmed variations
 username = username.toString();
-const trimmed = username.trim();            // trimmed (keeps case)
-const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); // normalized for checks
+const trimmed = username.trim();
+const cleanName = trimmed.replace(/\s+/g, "").toLowerCase();
 
-// admin credentials
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
 let password = "";
 let isAdmin = false;
 
-// impersonation / admin logic:
-// - only exact "bian" (case-sensitive, no extra spaces) can try to login as admin.
-// - anything that normalizes to "bian" but is not exactly "bian" is reserved -> block reload.
 if (cleanName === adminUsername && trimmed !== adminUsername) {
   alert("this username is RESERVED. go choose another name.");
   location.reload();
 }
 
-// prompt for admin password only if they entered exactly "bian"
 if (trimmed === adminUsername) {
   password = prompt("Enter admin password:");
   if (password === adminPassword) {
     isAdmin = true;
-    // normalize username to exact canonical admin
     username = adminUsername;
   } else {
     alert("just kidding, you are NOT the real bian, loser.");
@@ -34,20 +26,17 @@ if (trimmed === adminUsername) {
   }
 }
 
-// For DB/timeouts we will use cleanName as the identity key (prevents bypass by spaces/case)
 const identityKey = cleanName || username.replace(/\s+/g, "").toLowerCase();
 
-// --- ADMIN ICON FOR CHAT MESSAGES ---
-const adminIconSrc = "purplestar.png"; // the icon image
+const adminIconSrc = "purplestar.png";
 
 function addAdminIcon(p, messageUsername) {
-  // Only exact "bian" gets the icon (messageUsername is the display name as stored)
   if (messageUsername === adminUsername) {
     const icon = document.createElement("img");
     icon.src = adminIconSrc;
     icon.className = "admin-icon";
     icon.alt = "admin";
-    p.prepend(icon); // put the icon before username/text
+    p.prepend(icon);
   }
 }
 
@@ -71,26 +60,20 @@ const timerEl = document.getElementById("timeout-timer");
 
 chatInput.focus();
 
-// open game in new tab
 if (openGameBtn) {
   openGameBtn.addEventListener("click", () => {
     window.open("game.html", "_blank");
   });
 }
 
-// show admin clear button if admin
 if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
 
-// use existing db variable (from index.html)
 const messagesRef = db.ref("messages");
+const storage = firebase.storage();
 
-// timeouts keyed by normalized name
 let timeouts = {};
 let timeoutInterval = null;
 
-// insert timer text beneath chat input (already exists in HTML as #timeout-timer)
-
-// Admin clear chat
 if (isAdmin && clearChatBtn) {
   clearChatBtn.addEventListener("click", () => {
     if (confirm("Delete all messages?")) {
@@ -100,7 +83,7 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
-// ---------------------- IMAGE INPUT ----------------------
+// ---------------------- IMAGE INPUT WITH STORAGE ----------------------
 const attachBtn = document.createElement("button");
 attachBtn.textContent = "📎";
 attachBtn.style.marginRight = "6px";
@@ -121,16 +104,39 @@ imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const imageData = reader.result; // Base64
-    messagesRef.push({ username, image: imageData, timestamp: Date.now() });
-  };
-  reader.readAsDataURL(file);
+  const myTimeout = timeouts[identityKey];
+  if (myTimeout && myTimeout.until > Date.now()) {
+    alert("You are timed out, cannot send images right now.");
+    return;
+  }
+
+  const filePath = `chat_images/${Date.now()}_${file.name}`;
+  const storageRef = storage.ref(filePath);
+
+  const uploadTask = storageRef.put(file);
+
+  uploadTask.on(
+    "state_changed",
+    (snapshot) => {
+      const percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      console.log(`Upload is ${percent.toFixed(0)}% done`);
+    },
+    (error) => {
+      alert("Upload failed: " + error.message);
+    },
+    () => {
+      uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+        messagesRef.push({
+          username,
+          image: downloadURL,
+          timestamp: Date.now(),
+        });
+      });
+    }
+  );
 });
 
 // ---------------------- SEND MESSAGE ----------------------
-// When sending, check timeout using identityKey (normalized)
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
@@ -141,31 +147,27 @@ sendChat.addEventListener("click", () => {
     return;
   }
 
-  // push original display name for readability, but timeouts/presence use normalized keys
   messagesRef.push({ text, username: username, timestamp: Date.now() });
   chatInput.value = "";
 });
+
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendChat.click();
 });
 
 // ---------------------- MESSAGE RECEIVING & RENDERING ----------------------
-// Render messages nicely. Add admin icon only when displayed username === "bian" (exact).
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
   const p = document.createElement("p");
 
-  // message content
   if (msg) {
-    // username span for better styling control
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
     p.appendChild(userSpan);
 
-    // text
     if (msg.text) {
       const textSpan = document.createElement("span");
       textSpan.className = "msgtext";
@@ -173,7 +175,6 @@ messagesRef.on("child_added", (snapshot) => {
       p.appendChild(textSpan);
     }
 
-    // image
     if (msg.image) {
       const img = document.createElement("img");
       img.src = msg.image;
@@ -181,14 +182,15 @@ messagesRef.on("child_added", (snapshot) => {
       img.style.maxHeight = "200px";
       img.style.borderRadius = "6px";
       img.style.marginLeft = "6px";
+      img.style.cursor = "pointer";
+      img.title = "Click to view full image";
+      img.addEventListener("click", () => window.open(msg.image, "_blank"));
       p.appendChild(img);
     }
 
-    // add admin icon if applicable (only exact displayed name 'bian')
     addAdminIcon(p, msg.username);
   }
 
-  // admin controls (delete/timeout) appended to message node (available only to admin users)
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
@@ -215,16 +217,14 @@ messagesRef.on("child_added", (snapshot) => {
     p.appendChild(timeoutBtn);
   }
 
-  // attach key and append
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
-// remove DOM message instantly when deleted in DB
 messagesRef.on("child_removed", (snapshot) => {
   const key = snapshot.key;
-  const msgEl = [...chatMessages.children].find(el => el.dataset.key === key);
+  const msgEl = [...chatMessages.children].find((el) => el.dataset.key === key);
   if (msgEl) msgEl.remove();
 });
 
@@ -236,7 +236,6 @@ db.ref("timeouts").on("value", (snapshot) => {
 
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
-
   const my = timeouts[identityKey];
   if (!my || my.until <= Date.now()) {
     timerEl.textContent = "";
@@ -259,7 +258,11 @@ function updateTimeoutDisplay() {
 }
 
 // ---------------------- MUSIC (resume on first click) ----------------------
-document.addEventListener('click', () => {
-  const bgm = document.getElementById('bgm');
-  if (bgm && bgm.paused) bgm.play().catch(()=>{});
-}, { once: true });
+document.addEventListener(
+  "click",
+  () => {
+    const bgm = document.getElementById("bgm");
+    if (bgm && bgm.paused) bgm.play().catch(() => {});
+  },
+  { once: true }
+);
