@@ -201,3 +201,13 @@ body::before {
   color: #ffb4b4;
   font-size: 13px;
 }
+
+/* ---------------------- CHAT IMAGES ---------------------- */
+.chat-messages img {
+  max-width: 200px;       /* limit width */
+  max-height: 200px;      /* limit height */
+  border-radius: 6px;     /* rounded corners */
+  margin-left: 6px;       /* spacing from text */
+  display: block;         /* put images on their own line */
+  margin-top: 4px;
+}
