@@ -100,6 +100,35 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
+// ---------------------- IMAGE INPUT ----------------------
+const attachBtn = document.createElement("button");
+attachBtn.textContent = "📎";
+attachBtn.style.marginRight = "6px";
+attachBtn.title = "Attach image";
+attachBtn.style.cursor = "pointer";
+
+const chatRow = document.querySelector(".chat-input-row");
+chatRow.insertBefore(attachBtn, chatInput);
+
+const imageInput = document.createElement("input");
+imageInput.type = "file";
+imageInput.accept = "image/*";
+imageInput.style.display = "none";
+
+attachBtn.addEventListener("click", () => imageInput.click());
+
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const imageData = reader.result; // Base64
+    messagesRef.push({ username, image: imageData, timestamp: Date.now() });
+  };
+  reader.readAsDataURL(file);
+});
+
 // ---------------------- SEND MESSAGE ----------------------
 // When sending, check timeout using identityKey (normalized)
 sendChat.addEventListener("click", () => {
@@ -128,22 +157,35 @@ messagesRef.on("child_added", (snapshot) => {
   const p = document.createElement("p");
 
   // message content
-  if (msg && msg.text) {
-    // create username span for better styling control
+  if (msg) {
+    // username span for better styling control
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
+    p.appendChild(userSpan);
 
-    const textSpan = document.createElement("span");
-    textSpan.className = "msgtext";
-    textSpan.textContent = " " + msg.text;
+    // text
+    if (msg.text) {
+      const textSpan = document.createElement("span");
+      textSpan.className = "msgtext";
+      textSpan.textContent = " " + msg.text;
+      p.appendChild(textSpan);
+    }
+
+    // image
+    if (msg.image) {
+      const img = document.createElement("img");
+      img.src = msg.image;
+      img.style.maxWidth = "200px";
+      img.style.maxHeight = "200px";
+      img.style.borderRadius = "6px";
+      img.style.marginLeft = "6px";
+      p.appendChild(img);
+    }
 
     // add admin icon if applicable (only exact displayed name 'bian')
     addAdminIcon(p, msg.username);
-
-    p.appendChild(userSpan);
-    p.appendChild(textSpan);
   }
 
   // admin controls (delete/timeout) appended to message node (available only to admin users)
@@ -165,7 +207,6 @@ messagesRef.on("child_added", (snapshot) => {
       const choice = prompt("Timeout duration (in seconds):", "30");
       const duration = parseInt(choice, 10) * 1000;
       if (!isNaN(duration) && duration > 0) {
-        // normalize the target user's name for timeout key
         const targetClean = (msg.username || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         const until = Date.now() + duration;
         db.ref("timeouts").child(targetClean).set({ until, by: username });
@@ -216,18 +257,6 @@ function updateTimeoutDisplay() {
   tick();
   timeoutInterval = setInterval(tick, 500);
 }
-
-// ---------------------- OPTIONAL: small canvas preview (left panel) ----------------------
-(function miniPreview() {
-  const c = document.getElementById('miniGamePreview');
-  if (!c) return;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#111';
-  ctx.fillRect(0,0,c.width,c.height);
-  ctx.fillStyle = '#FFD700';
-  ctx.font = '16px Arial';
-  ctx.fillText('Game preview', 10, 30);
-})();
 
 // ---------------------- MUSIC (resume on first click) ----------------------
 document.addEventListener('click', () => {
