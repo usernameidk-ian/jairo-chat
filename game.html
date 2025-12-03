@@ -3,62 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jairos Roulette</title>
+  <title>JAIRO ROULETTE</title>
   <style>
     body { margin:0; overflow:hidden; background:#000; font-family:monospace; color:#0f0; }
-    #lobbyScreen { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:100; }
+    #lobbyScreen, #waitingScreen, #gameScreen { position:absolute; inset:0; }
+    #lobbyScreen { display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:100; background:#000; }
     #lobbyScreen h1 { font-size:3em; margin-bottom:30px; text-shadow:0 0 20px #0f0; }
     #lobbyScreen input { padding:15px; font-size:1.5em; background:#111; color:#0f0; border:2px solid #0f0; margin:10px; width:80vw; max-width:300px; text-align:center; }
     #lobbyScreen button { padding:15px 30px; font-size:1.5em; background:#300; color:#0f0; border:2px solid #0f0; margin:10px; cursor:pointer; }
-    #lobbyList { margin-top:20px; color:#0f0; font-size:1.2em; max-height:200px; overflow-y:auto; }
-    .lobby-item { margin:10px; padding:10px; background:#111; border:1px solid #0f0; }
-    #waitingScreen { display:none; position:absolute; inset:0; background:#000; color:#0f0; display:flex; flex-direction:column; justify-content:center; align-items:center; font-size:2em; text-align:center; }
-    #waitingScreen #dots { font-size:1.5em; animation: dots 1.5s infinite; }
-    @keyframes dots { 0%,100% { content: "."; } 33% { content: ".."; } 66% { content: "..."; } }
+    #lobbyList { margin-top:30px; width:90%; max-width:400px; }
+    .lobby-item { margin:10px; padding:12px; background:#111; border:1px solid #0f0; text-align:center; font-size:1.2em; }
+    #waitingScreen { display:none; flex-direction:column; justify-content:center; align-items:center; background:#000; color:#0f0; font-size:2.5em; text-align:center; }
+    #waitingScreen div { font-size:1.5em; animation:dots 1.5s infinite; }
+    @keyframes dots { 0%,100%{opacity:0} 50%{opacity:1} }
     #ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.8); padding:20px; border:3px solid #0f0; border-radius:10px; }
-    button { background:#300; color:#0f0; border:2px solid #0f0; padding:15px 30px; margin:10px; font-size:1.5em; cursor:pointer; }
+    button { background:#300; color:#0f0; border:2px solid #0f0; padding:12px 24px; margin:8px; font-size:1.4em; cursor:pointer; }
     button:disabled { opacity:0.4; cursor:not-allowed; }
     #startMatch { background:#0a0 !important; }
     #deathOverlay, #reviveOverlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 1s; }
     #deathOverlay { background:#f00; }
     #reviveOverlay { background:#fff; filter:blur(20px); }
+    #status { margin-top:15px; font-size:1.8em; }
   </style>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
-      authDomain: "cookie-clicker-chat.firebaseapp.com",
-      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
-      projectId: "cookie-clicker-chat",
-      storageBucket: "cookie-clicker-chat.firebasestorage.app",
-      messagingSenderId: "758507208645",
-      appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-  </script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
+
+  <!-- LOBBY -->
   <div id="lobbyScreen">
     <h1>JAIRO ROULETTE</h1>
     <input type="text" id="username" placeholder="Enter your name..." maxlength="12">
     <button id="createLobby">Create Lobby</button>
     <div style="margin:20px">
-      <input type="text" id="lobbyIdInput" placeholder="Or enter lobby ID to join..." maxlength="10">
+      <input type="text" id="lobbyIdInput" placeholder="Or enter lobby ID..." maxlength="10">
       <button id="joinSpecific">Join Lobby</button>
     </div>
     <h3>Open Lobbies</h3>
     <div id="lobbyList"></div>
   </div>
 
+  <!-- WAITING -->
   <div id="waitingScreen">
-    <h1>Waiting for another player(ur not btw, this things broken)</h1>
-    <div id="dots">...</div>
+    <div>Waiting for opponent<div>...</div></div>
   </div>
 
+  <!-- GAME -->
   <div id="gameScreen" style="display:none">
     <div id="ui">
       <div id="players"></div>
@@ -67,7 +60,7 @@
       <button id="selfBtn">SHOOT SELF</button>
       <button id="dealerBtn">SHOOT DEALER</button>
       <button id="startMatch" style="display:none">START MATCH</button>
-      <div id="status">Your turn...</div>
+      <div id="status">Loading...</div>
     </div>
     <div id="deathOverlay"></div>
     <div id="reviveOverlay"></div>
@@ -79,6 +72,20 @@
   <audio id="shock" src="https://freesound.org/data/previews/276/276183_5123854-lq.mp3"></audio>
 
   <script>
+    // ===== FIREBASE =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
+      authDomain: "cookie-clicker-chat.firebaseapp.com",
+      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
+      projectId: "cookie-clicker-chat",
+      storageBucket: "cookie-clicker-chat.firebasestorage.app",
+      messagingSenderId: "758507208645",
+      appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ===== GLOBALS =====
     let playerName = "";
     let lobbyId = "";
     let isHost = false;
@@ -90,75 +97,87 @@
     const gameScreen = document.getElementById("gameScreen");
     const deathOverlay = document.getElementById("deathOverlay");
     const reviveOverlay = document.getElementById("reviveOverlay");
-    const lobbyList = document.getElementById("lobbyList");
-    const lobbyIdInput = document.getElementById("lobbyIdInput");
 
-    const deathQuotes = ["oof..", "better luck next time..", "tsk tsk tsk..", "bruh.", "u lwk suck.", "couldn't make it huh?", "sucks to suck.", "oh well.."];
-    const reviveQuotes = ["but you still have a chance..", "nah, you'd win, right?", "not done yet..", "get up."];
+    const deathQuotes = ["oof..", "better luck next time..", "bruh.", "pain.", "sucks to suck.", "oh well.."];
+    const reviveQuotes = ["not done yet..", "nah you'd win..", "get up."];
 
-    // Update lobby list
+    // ===== LOBBY LIST =====
     db.ref("buckshot_lobbies").on("value", snap => {
-      lobbyList.innerHTML = "";
+      const list = document.getElementById("lobbyList");
+      list.innerHTML = "";
       const lobbies = snap.val() || {};
       Object.entries(lobbies).forEach(([id, data]) => {
-        if (!data.full && Object.keys(data.players || {}).length < 2) {
-          const div = document.createElement("div");
-          div.className = "lobby-item";
-          div.innerHTML = `<strong>Lobby \( {id.slice(-4)}</strong> - \){Object.keys(data.players || {}).length}/2 players - <button onclick="joinSpecific('${id}')">Join</button>`;
-          lobbyList.appendChild(div);
-        }
+        if (data.full) return;
+        const players = Object.keys(data.players || {});
+        if (players.length >= 2) return;
+
+        const div = document.createElement("div");
+        div.className = "lobby-item";
+        const hostName = data.host || players[0] || "???";
+        div.innerHTML = `<strong>\( {hostName}'s lobby</strong> ( \){players.length}/2) <button onclick="joinLobby('${id}')">Join</button>`;
+        list.appendChild(div);
       });
     });
 
-    // Create lobby
+    // ===== CREATE LOBBY =====
     document.getElementById("createLobby").onclick = () => {
       playerName = document.getElementById("username").value.trim() || "Player" + Math.floor(Math.random()*9999);
-      lobbyId = "L" + Date.now().toString().slice(-6);
+      lobbyId = "L" + Date.now().toString(36).toUpperCase();
       isHost = true;
       lobbyScreen.style.display = "none";
       waitingScreen.style.display = "flex";
-      joinLobby();
+      createAndJoinLobby();
     };
 
-    // Join specific
+    // ===== JOIN SPECIFIC =====
     document.getElementById("joinSpecific").onclick = () => {
       playerName = document.getElementById("username").value.trim() || "Player" + Math.floor(Math.random()*9999);
-      lobbyId = lobbyIdInput.value.trim().toUpperCase();
-      if (lobbyId) {
-        lobbyScreen.style.display = "none";
-        waitingScreen.style.display = "flex";
-        joinLobby();
-      }
+      lobbyId = document.getElementById("lobbyIdInput").value.trim().toUpperCase();
+      if (!lobbyId) return alert("Enter a lobby ID");
+      lobbyScreen.style.display = "none";
+      waitingScreen.style.display = "flex";
+      createAndJoinLobby();
     };
-    window.joinSpecific = (id) => {
-      lobbyIdInput.value = id;
+
+    window.joinLobby = (id) => {
+      document.getElementById("lobbyIdInput").value = id;
       document.getElementById("joinSpecific").click();
     };
 
-    function joinLobby() {
+    // ===== ACTUAL JOIN / CREATE LOGIC =====
+    function createAndJoinLobby() {
       const lobbyRef = db.ref("buckshot_lobbies/" + lobbyId);
-      lobbyRef.child("players/" + playerName).set({ lives:5, charges:5 });
-      if (isHost) {
-        lobbyRef.set({ host:playerName, full:false, live:0, blank:0, turn:null, shellsLoaded:false, round:1 });
-      }
 
+      // Add player
+      lobbyRef.child("players/" + playerName).set({ lives: 5, charges: 5 });
+
+      // If we're the first one → create lobby data
+      lobbyRef.child("host").set(playerName); // always set host (host = creator)
+
+      // Listen to lobby state
       lobbyRef.on("value", snap => {
         const data = snap.val();
-        if (!data) return location.reload();
+        if (!data) { location.reload(); return; }
 
         const players = Object.keys(data.players || {});
-        if (players.length === 2 && !data.full) {
-          lobbyRef.update({ full:true });
+        document.getElementById("players").textContent = players.join(" vs ");
+
+        // === BOTH PLAYERS ARE IN → START GAME ===
+        if (players.length === 2 && !data.gameStarted) {
+          lobbyRef.update({ full: true, gameStarted: true });
           waitingScreen.style.display = "none";
           gameScreen.style.display = "block";
           init3D();
-          if (isHost) document.getElementById("startMatch").style.display = "inline-block";
-          newRound();
+          if (isHost) {
+            document.getElementById("startMatch").style.display = "inline-block";
+          }
         }
 
-        document.getElementById("players").textContent = players.join(" vs ");
-        const myData = data.players[playerName];
-        if (myData) document.getElementById("lives").innerHTML = `Charges: \( {"█".repeat(myData.charges)} ( \){myData.lives} lives left)`;
+        // Update UI
+        const myData = data.players?.[playerName];
+        if (myData) {
+          document.getElementById("lives").innerHTML = `Charges: \( {"█".repeat(myData.charges)} ( \){myData.lives} lives)`;
+        }
 
         document.getElementById("shells").textContent = `Shells: \( {data.live||0} live / \){data.blank||0} blank`;
         myTurn = data.turn === playerName;
@@ -168,73 +187,79 @@
       });
     }
 
-    // Host start
+    // ===== START MATCH (Host only) =====
     document.getElementById("startMatch").onclick = () => {
       newRound();
       document.getElementById("startMatch").style.display = "none";
     };
 
+    // ===== NEW ROUND =====
     function newRound() {
-      const live = Math.floor(Math.random()*4)+2;
+      const live = Math.floor(Math.random() * 4) + 2; // 2-5 live
       const blank = 8 - live;
+      const players = Object.keys((firebase.database().ref("buckshot_lobbies/"+lobbyId+"/players").once("value").then(s=>s.val()||{})));
+      const firstTurn = players[Math.floor(Math.random()*2)];
+
       db.ref("buckshot_lobbies/" + lobbyId).update({
-        live, blank, turn: Object.keys(db.ref("buckshot_lobbies/" + lobbyId + "/players").once("value").then(s=>s.val()))[0], shellsLoaded:true
+        live, blank, turn: firstTurn, currentShell: 1
       });
     }
 
-    function shoot(self) {
+    // ===== SHOOT =====
+    function shoot(atSelf) {
       if (!myTurn) return;
       document.getElementById("pump").play();
-      shotgun.scale.set(1.1,1.1,1.1);
-      setTimeout(()=>shotgun.scale.set(1,1,1),200);
+      shotgun.scale.set(1.15,1.15,1.15);
+      setTimeout(()=>shotgun.scale.set(1,1,1), 200);
 
       db.ref("buckshot_lobbies/" + lobbyId).once("value").then(snap => {
         const data = snap.val();
-        const isLive = Math.random() < (data.live / (data.live + data.blank));
+        if (!data.live && !data.blank) return;
+
+        const total = data.live + data.blank;
+        const isLive = Math.random() < (data.live / total);
+
+        const targetName = atSelf ? playerName : Object.keys(data.players).find(p => p !== playerName);
 
         if (isLive) {
           document.getElementById("boom").play();
           deathOverlay.style.opacity = 1;
           setTimeout(() => {
             deathOverlay.style.opacity = 0;
-            document.body.style.background = "#000";
-            const msg = deathQuotes[Math.floor(Math.random()*deathQuotes.length)];
-            document.getElementById("status").innerHTML = `<div style="font-size:3em;color:#f00">${msg}</div>`;
+            const q = deathQuotes[Math.floor(Math.random()*deathQuotes.length)];
+            document.getElementById("status").innerHTML = `<div style="font-size:3em;color:#f00">${q}</div>`;
 
-            const target = self ? playerName : Object.keys(data.players).find(p=>p!==playerName);
-            db.ref("buckshot_lobbies/" + lobbyId + "/players/" + target + "/lives").transaction(v => v-1);
+            // Damage
+            db.ref("buckshot_lobbies/" + lobbyId + "/players/" + targetName + "/lives").transaction(v => (v||5)-1);
 
             setTimeout(() => {
-              db.ref("buckshot_lobbies/" + lobbyId + "/players/" + target).once("value").then(psnap => {
-                const lives = psnap.val().lives;
-                if (lives > 0) {
+              db.ref("buckshot_lobbies/" + lobbyId + "/players/" + targetName + "/lives").once("value").then(s => {
+                if (s.val() <= 0) {
+                  endGame(atSelf ? "YOU LOSE" : "YOU WIN");
+                } else {
                   document.getElementById("shock").play();
                   reviveOverlay.style.opacity = 1;
-                  document.getElementById("status").innerHTML += `<br><br>${reviveQuotes[Math.floor(Math.random()*reviveQuotes.length)]}`;
-                  setTimeout(() => {
-                    reviveOverlay.style.opacity = 0;
-                    renderer.domElement.style.filter = "blur(20px)";
-                    setTimeout(() => renderer.domElement.style.filter = "", 3000);
-                  }, 1500);
-                } else {
-                  endGame(self ? "YOU LOSE" : "YOU WIN");
+                  setTimeout(() => { reviveOverlay.style.opacity = 0; }, 1500);
+                  document.getElementById("status").innerHTML += `<br>${reviveQuotes[Math.floor(Math.random()*reviveQuotes.length)]}`;
                 }
               });
-            }, 2000);
+            }, 1800);
           }, 1000);
         } else {
           document.getElementById("empty").play();
         }
 
-        const newLive = data.live - (isLive?1:0);
-        const newBlank = data.blank - (isLive?0:1);
-        const nextTurn = Object.keys(data.players).find(p => p !== playerName);
-
-        if (newLive + newBlank === 0) {
-          newRound();
+        // Consume shell
+        const updates = {
+          live: data.live - (isLive ? 1 : 0),
+          blank: data.blank - (isLive ? 0 : 1),
+        };
+        if (updates.live + updates.blank === 0) {
+          setTimeout(newRound, 1500);
         } else {
-          db.ref("buckshot_lobbies/" + lobbyId).update({ live:newLive, blank:newBlank, turn:nextTurn });
+          updates.turn = Object.keys(data.players).find(p => p !== playerName);
         }
+        db.ref("buckshot_lobbies/" + lobbyId).update(updates);
       });
     }
 
@@ -247,9 +272,66 @@
     document.getElementById("selfBtn").onclick = () => shoot(true);
     document.getElementById("dealerBtn").onclick = () => shoot(false);
 
+    // ===== 3D SCENE =====
     function init3D() {
-      // [3D code from previous — table, shotgun, dealer, lights, mouse aim, animate]
-      // ... (paste the full 3D block from my earlier message to complete)
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x110000);
+      camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+      camera.position.set(0, 4, 10);
+      renderer = new THREE.WebGLRenderer({antialias:true});
+      renderer.setSize(innerWidth, innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      // Table
+      const table = new THREE.Mesh(
+        new THREE.BoxGeometry(12,0.5,10),
+        new THREE.MeshStandardMaterial({color:0x002200})
+      );
+      table.position.y = -0.25;
+      scene.add(table);
+
+      // Shotgun
+      shotgun = new THREE.Group();
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,4,16), new THREE.MeshStandardMaterial({color:0x888888}));
+      barrel.rotation.z = Math.PI/2; barrel.position.x = 2;
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(2.5,0.5,0.8), new THREE.MeshStandardMaterial({color:0x8B4513}));
+      stock.position.x = -0.8;
+      shotgun.add(barrel, stock);
+      shotgun.position.y = 0.4;
+      scene.add(shotgun);
+
+      // Dealer (creepy skull)
+      dealer = new THREE.Group();
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(0.9,16,16), new THREE.MeshStandardMaterial({color:0x111111}));
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), new THREE.MeshStandardMaterial({color:0x222222}));
+      const left = hand.clone(); left.position.set(-1.2,-0.8,0);
+      const right = hand.clone(); right.position.set(1.2,-0.8,0);
+      dealer.add(skull, left, right);
+      dealer.position.set(0,5,-3);
+      scene.add(dealer);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0x400000, 2));
+      const red = new THREE.PointLight(0xff0000, 3, 20);
+      red.position.set(0,6,0);
+      scene.add(red);
+
+      // Mouse aim
+      document.addEventListener("mousemove", e => {
+        const x = (e.clientX / innerWidth) * 2 - 1;
+        shotgun.rotation.y = x * 0.5;
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        dealer.rotation.y = Math.sin(Date.now()*0.001)*0.15;
+        renderer.render(scene, camera);
+      }
+      animate();
     }
 
     window.onresize = () => {
