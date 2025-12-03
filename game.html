@@ -1,31 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JAIRO ROULETTE</title>
+  <meta charset="utf-8" />
+  <title>JAIRO ROULETTE — fixed lobby & turns</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+    /* Basic UI */
     body { margin:0; overflow:hidden; background:#000; font-family:monospace; color:#0f0; }
     #lobbyScreen, #waitingScreen, #gameScreen { position:absolute; inset:0; }
     #lobbyScreen { display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:100; background:#000; }
-    #lobbyScreen h1 { font-size:3em; margin-bottom:30px; text-shadow:0 0 20px #0f0; }
-    #lobbyScreen input { padding:15px; font-size:1.5em; background:#111; color:#0f0; border:2px solid #0f0; margin:10px; width:80vw; max-width:300px; text-align:center; }
-    #lobbyScreen button { padding:15px 30px; font-size:1.5em; background:#300; color:#0f0; border:2px solid #0f0; margin:10px; cursor:pointer; }
-    #lobbyList { margin-top:30px; width:90%; max-width:400px; }
-    .lobby-item { margin:10px; padding:12px; background:#111; border:1px solid #0f0; text-align:center; font-size:1.2em; }
-    #waitingScreen { display:none; flex-direction:column; justify-content:center; align-items:center; background:#000; color:#0f0; font-size:2.5em; }
-    #waitingScreen div { font-size:1.5em; animation:dots 1.5s infinite; }
-    @keyframes dots { 0%,100%{opacity:0} 50%{opacity:1} }
-    #ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.9); padding:20px; border:3px solid #0f0; border-radius:10px; width:340px; }
-    button { background:#300; color:#0f0; border:2px solid #0f0; padding:12px 24px; margin:8px; font-size:1.4em; cursor:pointer; }
-    button:disabled { opacity:0.4; cursor:not-allowed; }
-    #startMatch { background:#0a0 !important; display:none; }
-    #deathOverlay, #reviveOverlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 1s; }
-    #deathOverlay { background:#f00; }
-    #reviveOverlay { background:#fff; filter:blur(20px); }
-    #status { margin-top:15px; font-size:1.8em; }
+    #lobbyScreen h1 { font-size:3em; margin-bottom:20px; text-shadow:0 0 20px #0f0; letter-spacing:4px; }
+    #lobbyScreen input { padding:12px; font-size:1.1em; background:#111; color:#0f0; border:2px solid #0f0; margin:8px; width:70vw; max-width:340px; text-align:center; }
+    #lobbyScreen button { padding:12px 22px; font-size:1.05em; background:#300; color:#0f0; border:2px solid #0f0; margin:8px; cursor:pointer; }
+    #lobbyList { margin-top:20px; width:90%; max-width:500px; }
+    .lobby-item { margin:10px; padding:12px; background:#111; border:1px solid #0f0; text-align:center; font-size:1.05em; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .lobby-item button { padding:8px 14px; font-size:1em; }
+
+    #waitingScreen { display:none; flex-direction:column; justify-content:center; align-items:center; background:#000; color:#0f0; font-size:2em; }
+    #waitingScreen div { font-size:1.5em; animation:dots 1.2s infinite; }
+    @keyframes dots { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+    /* Game UI overlay */
+    #ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.85); padding:18px; border:3px solid #0f0; border-radius:10px; width:320px; color:#0f0; }
+    #ui .row { margin-bottom:12px; }
+    #ui button { background:#300; color:#0f0; border:2px solid #0f0; padding:10px 16px; margin-right:6px; cursor:pointer; font-size:1em; }
+    button:disabled { opacity:0.35; cursor:not-allowed; }
+
+    #status { margin-top:10px; font-size:1.05em; }
+
+    /* overlays */
+    #deathOverlay, #reviveOverlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.8s; z-index:40; }
+    #deathOverlay { background:rgba(255,0,0,0.85); }
+    #reviveOverlay { background:rgba(255,255,255,0.85); filter:blur(14px); }
+
+    /* canvas container */
+    #threeContainer { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; }
+    canvas.threeCanvas { width:100%; height:100%; display:block; }
+
+    /* small HUD styling adjustments */
+    #players { font-weight:bold; margin-bottom:8px; }
+    #lives, #shells { font-size:0.95em; margin-bottom:6px; }
   </style>
 
+  <!-- libs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
@@ -33,258 +50,478 @@
 </head>
 <body>
 
+  <!-- LOBBY -->
   <div id="lobbyScreen">
     <h1>JAIRO ROULETTE</h1>
-    <input type="text" id="username" placeholder="Enter your name..." maxlength="15">
-    <button id="createLobby">Create Lobby</button>
-    <div style="margin:20px">
-      <input type="text" id="lobbyIdInput" placeholder="Or enter lobby ID..." maxlength="10">
+    <input id="username" placeholder="Enter your name..." maxlength="15" />
+    <div>
+      <button id="createLobby">Create Lobby</button>
+      <input id="lobbyIdInput" placeholder="Or enter lobby ID..." maxlength="10" style="width:170px;"/>
       <button id="joinSpecific">Join Lobby</button>
     </div>
-    <h3>Open Lobbies</h3>
+
+    <h3 style="color:#0f0; margin-top:20px;">Open Lobbies</h3>
     <div id="lobbyList"></div>
   </div>
 
-  <div id="waitingScreen">
-    <div>Waiting for opponent<div>...</div></div>
-  </div>
+  <!-- WAITING -->
+  <div id="waitingScreen"><div>Waiting for opponent<span>...</span></div></div>
 
+  <!-- GAME SCREEN -->
   <div id="gameScreen" style="display:none">
     <div id="ui">
       <div id="players">Loading...</div>
       <div id="lives">Charges: █████ (5 lives)</div>
       <div id="shells">Shells: 0 live / 0 blank</div>
-      <button id="selfBtn" disabled>SHOOT SELF</button>
-      <button id="dealerBtn" disabled>SHOOT DEALER</button>
-      <button id="startMatch">START MATCH</button>
+
+      <div class="row">
+        <button id="selfBtn" disabled>SHOOT SELF</button>
+        <button id="dealerBtn" disabled>SHOOT DEALER</button>
+        <button id="startMatch" style="display:none">START MATCH (host)</button>
+      </div>
+
       <div id="status">Waiting for host...</div>
     </div>
+
+    <div id="threeContainer"></div>
+
     <div id="deathOverlay"></div>
     <div id="reviveOverlay"></div>
   </div>
 
-  <!-- Working sounds (tested right now) -->
-  <audio id="pump" src="https://freesound.org/data/previews/421/421469_5121234-lq.mp3"></audio>
-  <audio id="empty" src="https://freesound.org/data/previews/276/276132_5123854-lq.mp3"></audio>
-  <audio id="boom" src="https://freesound.org/data/previews/342/342706_5689360-lq.mp3"></audio>
-  <audio id="shock" src="https://freesound.org/data/previews/419/419420_5121236-lq.mp3"></audio>
+  <!-- audio (replace src with your mp3 files) -->
+  <audio id="pump" src="pump.mp3"></audio>
+  <audio id="empty" src="empty.mp3"></audio>
+  <audio id="boom" src="boom.mp3"></audio>
+  <audio id="shock" src="shock.mp3"></audio>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
-      authDomain: "cookie-clicker-chat.firebaseapp.com",
-      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
-      projectId: "cookie-clicker-chat",
-      storageBucket: "cookie-clicker-chat.firebasestorage.app",
-      messagingSenderId: "758507208645",
-      appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script>
+/* ---------------- FireBase init ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
+  authDomain: "cookie-clicker-chat.firebaseapp.com",
+  databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
+  projectId: "cookie-clicker-chat",
+  storageBucket: "cookie-clicker-chat.firebasestorage.app",
+  messagingSenderId: "758507208645",
+  appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    let playerName = "", lobbyId = "", isHost = false;
-    let scene, camera, renderer, controls, shotgun, dealer;
+/* ---------------- UI refs ---------------- */
+const el = {
+  lobbyScreen: document.getElementById('lobbyScreen'),
+  waiting: document.getElementById('waitingScreen'),
+  game: document.getElementById('gameScreen'),
+  lobbyList: document.getElementById('lobbyList'),
+  players: document.getElementById('players'),
+  lives: document.getElementById('lives'),
+  shells: document.getElementById('shells'),
+  status: document.getElementById('status'),
+  startBtn: document.getElementById('startMatch'),
+  selfBtn: document.getElementById('selfBtn'),
+  dealerBtn: document.getElementById('dealerBtn')
+};
 
-    const el = {
-      lobby: document.getElementById("lobbyScreen"),
-      waiting: document.getElementById("waitingScreen"),
-      game: document.getElementById("gameScreen"),
-      players: document.getElementById("players"),
-      lives: document.getElementById("lives"),
-      shells: document.getElementById("shells"),
-      status: document.getElementById("status"),
-      startBtn: document.getElementById("startMatch")
-    };
+let playerName = "", lobbyId = "", isHost = false;
+let localListeners = []; // keep refs to off() later
+let scene, camera, renderer, controls, shotgun, dealer;
+let threeInitDone = false;
 
-    // LOBBY LIST — now shows correct 1/2
-    db.ref("buckshot_lobbies").on("value", snap => {
-      document.getElementById("lobbyList").innerHTML = "";
-      const lobbies = snap.val() || {};
-      Object.entries(lobbies).forEach(([id, data]) => {
-        if (data.full) return;
-        const count = Object.keys(data.players || {}).length;
-        if (count >= 2) return;
-        const div = document.createElement("div");
-        div.className = "lobby-item";
-        div.innerHTML = (data.host || "Someone") + "'s lobby (" + count + "/2) <button onclick=\"joinLobby('" + id + "')\">Join</button>";
-        document.getElementById("lobbyList").appendChild(div);
-      });
+/* ---------------- Lobby listing (show open lobbies) ---------------- */
+function refreshLobbies() {
+  const ref = db.ref('buckshot_lobbies');
+  // show simple open lobbies (not full)
+  ref.off('value'); // avoid duplicates
+  ref.on('value', snap => {
+    el.lobbyList.innerHTML = '';
+    const data = snap.val() || {};
+    Object.entries(data).forEach(([id, d]) => {
+      if (!d) return;
+      if (d.full) return; // skip full ones
+      const players = Object.keys(d.players || {}).length;
+      if (players >= 2) return;
+      const div = document.createElement('div');
+      div.className = 'lobby-item';
+      div.innerHTML = `<div style="text-align:left">${(d.host||'Host')}'s lobby (${players}/2)</div>`;
+      const btn = document.createElement('button');
+      btn.textContent = 'Join';
+      btn.onclick = () => {
+        document.getElementById('lobbyIdInput').value = id;
+        document.getElementById('joinSpecific').click();
+      };
+      div.appendChild(btn);
+      el.lobbyList.appendChild(div);
     });
+  });
+}
+refreshLobbies();
 
-    window.joinLobby = id => {
-      document.getElementById("lobbyIdInput").value = id;
-      document.getElementById("joinSpecific").click();
-    };
+/* ---------------- Join / Create handlers ---------------- */
+document.getElementById('createLobby').onclick = () => {
+  isHost = true;
+  playerName = (document.getElementById('username').value || '').trim() || 'Host' + Math.floor(Math.random()*9999);
+  lobbyId = 'L' + Date.now().toString(36).toUpperCase().slice(-6);
+  createAndJoin();
+};
 
-    document.getElementById("createLobby").onclick = () => joinGame(true);
-    document.getElementById("joinSpecific").onclick = () => {
-      lobbyId = document.getElementById("lobbyIdInput").value.trim().toUpperCase();
-      if (!lobbyId) return alert("Enter lobby ID");
-      joinGame(false);
-    };
+document.getElementById('joinSpecific').onclick = () => {
+  isHost = false;
+  playerName = (document.getElementById('username').value || '').trim() || 'Player' + Math.floor(Math.random()*9999);
+  lobbyId = (document.getElementById('lobbyIdInput').value || '').trim().toUpperCase();
+  if (!lobbyId) return alert('Enter a lobby ID or create one.');
+  joinExisting();
+};
 
-    function joinGame(host) {
-      playerName = document.getElementById("username").value.trim() || "Player" + Math.floor(Math.random()*9999);
-      isHost = host;
-      if (host) lobbyId = "L" + Date.now().toString(36).toUpperCase();
+/* ---------------- Create & join flow ---------------- */
+function createAndJoin() {
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  // initialize lobby atomically
+  lobbyRef.set({
+    host: playerName,
+    players: { [playerName]: { lives: 5, charges: 5, chargesLeft:5 } },
+    full: false,
+    gameStarted: false,
+    live: 0,
+    blank: 0,
+    turn: null
+  }).then(() => {
+    startWaitingAndListen();
+  }).catch(e => {
+    console.error(e); alert('Error creating lobby');
+  });
+}
 
-      el.lobby.style.display = "none";
-      el.waiting.style.display = "flex";
+function joinExisting() {
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  lobbyRef.once('value').then(snap => {
+    if (!snap.exists()) return alert('Lobby not found.');
+    const data = snap.val();
+    const players = Object.keys(data.players || {});
+    if (players.length >= 2) return alert('Lobby already full.');
+    lobbyRef.child('players/' + playerName).set({ lives:5, charges:5, chargesLeft:5 })
+      .then(() => startWaitingAndListen())
+      .catch(e => { console.error(e); alert('Error joining lobby'); });
+  });
+}
 
-      const lobbyRef = db.ref("buckshot_lobbies/" + lobbyId);
+/* ---------------- Start waiting & set listeners ---------------- */
+function startWaitingAndListen() {
+  // hide lobby UI
+  el.lobbyScreen.style.display = 'none';
+  el.waiting.style.display = 'flex';
 
-      // Register player
-      lobbyRef.child("players/" + playerName).set({ lives: 5, charges: 5 });
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
 
-      // If host → initialize lobby data
-      if (host) {
-        lobbyRef.set({
-          host: playerName,
-          full: false,
-          gameStarted: false,
-          live: 0,
-          blank: 0,
-          turn: null
-        });
-      }
+  // remove previous listeners if any
+  localListeners.forEach(r => r.off && r.off());
+  localListeners = [];
 
-      // Listen for everything
-      lobbyRef.on("value", snap => {
-        const data = snap.val();
-        if (!data || !data.players) return;
-
-        const players = Object.keys(data.players);
-        el.players.textContent = players.join(" vs ");
-
-        // When second player joins → start game for BOTH
-        if (players.length === 2 && !data.gameStarted) {
-          lobbyRef.update({ full: true, gameStarted: true });
-          el.waiting.style.display = "none";
-          el.game.style.display = "block";
-          init3D();
-          if (isHost) el.startBtn.style.display = "block";
-        }
-
-        // Update my stats
-        const me = data.players[playerName];
-        if (me) el.lives.textContent = "Charges: " + "█".repeat(me.charges) + " (" + me.lives + " lives)";
-
-        el.shells.textContent = "Shells: " + (data.live || 0) + " live / " + (data.blank || 0) + " blank";
-
-        // Turn logic
-        const myTurn = data.turn === playerName;
-        document.getElementById("selfBtn").disabled = !myTurn;
-        document.getElementById("dealerBtn").disabled = !myTurn;
-        el.status.textContent = myTurn ? "YOUR TURN" : "OPPONENT'S TURN";
+  // main listener for lobby changes
+  const onLobby = lobbyRef.on('value', snap => {
+    const data = snap.val();
+    if (!data) return; // cleaned up
+    const players = Object.keys(data.players || {});
+    // show players count in waiting screen (basic)
+    if (players.length === 2 && !data.gameStarted) {
+      // mark full and start the game (host should set turn but we'll choose deterministically here)
+      lobbyRef.update({ full: true, gameStarted: true }).then(() => {
+        // pick a first turn (random among the two)
+        const first = players[Math.floor(Math.random() * players.length)];
+        lobbyRef.update({ turn: first }).catch(e => console.error('turn set error', e));
       });
     }
 
-    // Host starts the first round
-    el.startBtn.onclick = () => {
-      el.startBtn.style.display = "none";
-      const live = Math.floor(Math.random() * 4) + 2;
-      const blank = 8 - live;
-      db.ref("buckshot_lobbies/" + lobbyId + "/players").once("value", s => {
-        const players = Object.keys(s.val());
-        const first = players[Math.floor(Math.random() * 2)];
-        db.ref("buckshot_lobbies/" + lobbyId).update({ live, blank, turn: first });
-      });
-    };
+    // when gameStarted becomes true -> show game screen & init3D
+    if (data.gameStarted) {
+      el.waiting.style.display = 'none';
+      el.game.style.display = 'block';
+      el.players.textContent = (Object.keys(data.players || {})).join(' vs ');
+      // show host-only start button
+      if (isHost) el.startBtn.style.display = 'inline-block';
+      // init 3D (only once per client)
+      if (!threeInitDone) {
+        init3D();
+        threeInitDone = true;
+      }
+    }
+  });
 
-    function shoot(self) {
-      if (document.getElementById("selfBtn").disabled) return;
-      document.getElementById("pump").play();
-      shotgun.scale.set(1.15,1.15,1.15);
-      setTimeout(() => shotgun.scale.set(1,1,1), 200);
+  localListeners.push(lobbyRef);
 
-      db.ref("buckshot_lobbies/" + lobbyId).once("value").then(snap => {
-        const data = snap.val();
-        const isLive = Math.random() < (data.live / (data.live + data.blank));
-        const target = self ? playerName : Object.keys(data.players).find(p => p !== playerName);
+  // separate listener for turn changes to enable/disable buttons
+  const onTurn = lobbyRef.child('turn').on('value', snap => {
+    const turnNow = snap.val();
+    const myTurn = turnNow === playerName;
+    el.selfBtn.disabled = !myTurn;
+    el.dealerBtn.disabled = !myTurn;
+    el.status.textContent = myTurn ? 'YOUR TURN' : "OPPONENT'S TURN";
+  });
+  localListeners.push(lobbyRef.child('turn'));
 
-        if (isLive) {
-          document.getElementById("boom").play();
-          document.getElementById("deathOverlay").style.opacity = 1;
-          setTimeout(() => {
-            document.getElementById("deathOverlay").style.opacity = 0;
-            el.status.innerHTML = "<span style='font-size:3em;color:#f00'>BANG!</span>";
-            db.ref("buckshot_lobbies/" + lobbyId + "/players/" + target + "/lives").transaction(v => v - 1);
-          }, 1000);
-        } else {
-          document.getElementById("empty").play();
-        }
+  // listener for players/stats live updates
+  const onPlayers = lobbyRef.child('players').on('value', snap => {
+    const p = snap.val() || {};
+    el.players.textContent = Object.keys(p).join(' vs ');
+    const me = p[playerName] || {};
+    el.lives.innerHTML = `Charges: ${'█'.repeat(me.chargesLeft || me.charges || 0)} (${me.lives || 0} lives)`;
+  });
+  localListeners.push(lobbyRef.child('players'));
 
-        const newLive = data.live - (isLive ? 1 : 0);
-        const newBlank = data.blank - (isLive ? 0 : 1);
-        const updates = { live: newLive, blank: newBlank };
+  // listener for shells (live/blank)
+  const onShells = lobbyRef.child('live').on('value', () => {
+    lobbyRef.once('value').then(snap => {
+      const d = snap.val() || {};
+      el.shells.textContent = `Shells: ${d.live||0} live / ${d.blank||0} blank`;
+    });
+  });
+  localListeners.push(lobbyRef.child('live'));
 
-        if (newLive + newBlank === 0) {
-          setTimeout(() => el.startBtn.onclick(), 1500);
-        } else {
-          updates.turn = Object.keys(data.players).find(p => p !== playerName);
-        }
-        db.ref("buckshot_lobbies/" + lobbyId).update(updates);
-      });
+  // listen for game over / host end conditions
+  // (we can add later)
+}
+
+/* ---------------- Host startMatch (reload shells & set first turn if needed) ---------------- */
+el.startBtn.onclick = () => {
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  // pick live between 2 and 5 (example), blanks to make total 8
+  const live = Math.floor(Math.random() * 4) + 2;
+  const blank = 8 - live;
+  lobbyRef.update({ live, blank }).then(() => {
+    el.startBtn.style.display = 'none';
+    el.status.textContent = 'Match started';
+  });
+};
+
+/* ---------------- Shooting mechanics ---------------- */
+function shoot(self) {
+  const pump = document.getElementById('pump');
+  const empty = document.getElementById('empty');
+  const boom = document.getElementById('boom');
+  const shock = document.getElementById('shock');
+
+  pump.play().catch(()=>{});
+  // simple visual recoil if 3D present
+  if (shotgun) {
+    shotgun.scale.set(1.12,1.12,1.12);
+    setTimeout(()=>shotgun.scale.set(1,1,1), 180);
+  }
+
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  lobbyRef.transaction(curr => {
+    if (!curr) return curr;
+    // protect when no shells
+    const total = (curr.live||0) + (curr.blank||0);
+    // determine outcome randomly according to live proportion
+    const isLive = Math.random() < ((curr.live || 0) / Math.max(total,1));
+    // choose target
+    const players = Object.keys(curr.players || {});
+    const target = self ? playerName : players.find(p => p !== playerName);
+
+    // apply result
+    if (isLive) {
+      // decrement lives for the target (transaction safe)
+      if (curr.players && curr.players[target]) {
+        curr.players[target].lives = (curr.players[target].lives || 0) - 1;
+      }
+      curr.live = Math.max(0, (curr.live||0) - 1);
+      // record lastOutcome for clients to show VFX (non-critical)
+      curr.lastOutcome = 'live';
+      curr.lastKilled = target;
+    } else {
+      curr.blank = Math.max(0, (curr.blank||0) - 1);
+      curr.lastOutcome = 'blank';
     }
 
-    document.getElementById("selfBtn").onclick = () => shoot(true);
-    document.getElementById("dealerBtn").onclick = () => shoot(false);
-
-    function init3D() {
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x000000);
-      camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-      camera.position.set(0, 4, 10);
-      renderer = new THREE.WebGLRenderer({antialias:true});
-      renderer.setSize(innerWidth, innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-
-      const table = new THREE.Mesh(new THREE.BoxGeometry(12,0.5,10), new THREE.MeshStandardMaterial({color:0x002200}));
-      table.position.y = -0.25; scene.add(table);
-
-      shotgun = new THREE.Group();
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,4,16), new THREE.MeshStandardMaterial({color:0x888888}));
-      barrel.rotation.z = Math.PI/2; barrel.position.x = 2;
-      const stock = new THREE.Mesh(new THREE.BoxGeometry(2.5,0.5,0.8), new THREE.MeshStandardMaterial({color:0x8B4513}));
-      stock.position.x = -0.8;
-      shotgun.add(barrel, stock);
-      shotgun.position.y = 0.4; scene.add(shotgun);
-
-      dealer = new THREE.Group();
-      const skull = new THREE.Mesh(new THREE.SphereGeometry(0.9,16,16), new THREE.MeshStandardMaterial({color:0x111111}));
-      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), new THREE.MeshStandardMaterial({color:0x222222}));
-      const left = hand.clone(); left.position.set(-1.2,-0.8,0);
-      const right = hand.clone(); right.position.set(1.2,-0.8,0);
-      dealer.add(skull, left, right);
-      dealer.position.set(0,5,-3); scene.add(dealer);
-
-      scene.add(new THREE.AmbientLight(0x400000, 2));
-      const red = new THREE.PointLight(0xff0000, 3, 20); red.position.set(0,6,0); scene.add(red);
-
-      document.addEventListener("mousemove", e => {
-        const x = (e.clientX / innerWidth) * 2 - 1;
-        shotgun.rotation.y = x * 0.5;
-      });
-
-      function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        dealer.rotation.y = Math.sin(Date.now()*0.001)*0.15;
-        renderer.render(scene, camera);
-      }
-      animate();
+    // rotate turn to the other player (if there are exactly 2 players)
+    if (players.length === 2) {
+      curr.turn = players.find(p => p !== playerName);
     }
+    return curr;
+  }, (error, committed, snapshot) => {
+    if (error) {
+      console.error('transaction error', error);
+      return;
+    }
+    if (!committed) return;
+    const data = snapshot.val();
+    // show visuals depending on lastOutcome
+    if (data.lastOutcome === 'live') {
+      document.getElementById('boom').play().catch(()=>{});
+      // quick red flash overlay
+      document.getElementById('deathOverlay').style.opacity = 1;
+      setTimeout(()=>{ document.getElementById('deathOverlay').style.opacity = 0; }, 900);
 
-    window.onresize = () => {
-      if (camera) {
-        camera.aspect = innerWidth/innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(innerWidth, innerHeight);
+      // check the killed player's lives — if >0 show revive overlay, else end game (handled via listener)
+      const killed = data.lastKilled;
+      if (killed && data.players && data.players[killed] && data.players[killed].lives > 0) {
+        setTimeout(()=> {
+          document.getElementById('shock').play().catch(()=>{});
+          document.getElementById('reviveOverlay').style.opacity = 1;
+          setTimeout(()=> document.getElementById('reviveOverlay').style.opacity = 0, 1200);
+        }, 800);
       }
-    };
-  </script>
+    } else {
+      document.getElementById('empty').play().catch(()=>{});
+    }
+  });
+}
+
+/* hook buttons */
+el.selfBtn.onclick = () => {
+  // disable immediately to avoid multi-clicks; DB transaction sets next turn
+  el.selfBtn.disabled = true;
+  el.dealerBtn.disabled = true;
+  shoot(true);
+};
+el.dealerBtn.onclick = () => {
+  el.selfBtn.disabled = true;
+  el.dealerBtn.disabled = true;
+  shoot(false);
+};
+
+/* ---------------- Game end detection (simple) ---------------- */
+function watchGameOver() {
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  lobbyRef.child('players').on('value', snap => {
+    const players = snap.val() || {};
+    // if any player reaches 0 lives -> determine winner
+    const entries = Object.entries(players);
+    if (entries.length < 2) return;
+    const [pA, pB] = entries;
+    const livesA = pA[1].lives || 0;
+    const livesB = pB[1].lives || 0;
+    if (livesA <= 0 || livesB <= 0) {
+      // show final state
+      let msg;
+      if (livesA <= 0 && livesB <= 0) msg = 'DRAW';
+      else if (livesA <= 0) msg = (pB[0] === playerName ? 'YOU WIN' : 'YOU LOSE');
+      else msg = (pA[0] === playerName ? 'YOU WIN' : 'YOU LOSE');
+
+      document.getElementById('status').innerHTML = `<div style="font-size:2em;color:#f00">${msg}</div>`;
+      el.selfBtn.disabled = true;
+      el.dealerBtn.disabled = true;
+      // leave lobby auto after short delay
+      setTimeout(() => {
+        // cleanup listeners
+        cleanupAndReturn();
+      }, 5000);
+    }
+  });
+}
+
+/* ---------------- cleanup + return to lobby screen ---------------- */
+function cleanupAndReturn() {
+  const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
+  // remove this player from lobby players; if host remove lobby entirely
+  if (isHost) {
+    lobbyRef.remove();
+  } else {
+    lobbyRef.child('players/' + playerName).remove();
+    // mark full=false
+    lobbyRef.update({ full: false, gameStarted: false, turn: null }).catch(()=>{});
+  }
+
+  // remove local listeners
+  localListeners.forEach(r => r.off && r.off());
+  localListeners = [];
+
+  // dispose three renderer
+  try {
+    if (renderer) {
+      renderer.dispose();
+      if (renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
+  } catch(e){}
+
+  // reset UI
+  threeInitDone = false;
+  el.game.style.display = 'none';
+  el.lobbyScreen.style.display = 'flex';
+  el.waiting.style.display = 'none';
+  refreshLobbies();
+}
+
+/* ------------------ 3D init (both clients) ------------------ */
+function init3D() {
+  // Ensure we only add one renderer per client (avoid duplicates)
+  if (renderer) {
+    try {
+      renderer.dispose();
+      if (renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+    } catch(e){}
+    renderer = null;
+  }
+
+  // create renderer and add to container
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.className = 'threeCanvas';
+  document.getElementById('threeContainer').appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 4, 10);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Basic table and shotgun model
+  const table = new THREE.Mesh(new THREE.BoxGeometry(12,0.5,10), new THREE.MeshStandardMaterial({color:0x002200}));
+  table.position.y = -0.25; scene.add(table);
+
+  shotgun = new THREE.Group();
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,4,12), new THREE.MeshStandardMaterial({color:0x888888}));
+  barrel.rotation.z = Math.PI/2; barrel.position.x = 2;
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.45,0.8), new THREE.MeshStandardMaterial({color:0x8B4513}));
+  stock.position.x = -0.8;
+  shotgun.add(barrel, stock);
+  shotgun.position.y = 0.4;
+  scene.add(shotgun);
+
+  dealer = new THREE.Group();
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.9,16,16), new THREE.MeshStandardMaterial({color:0x111111}));
+  const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.3,1,0.3), new THREE.MeshStandardMaterial({color:0x222222}));
+  leftHand.position.set(-1.2,-0.8,0);
+  const rightHand = leftHand.clone();
+  rightHand.position.x = 1.2;
+  dealer.add(skull, leftHand, rightHand);
+  dealer.position.set(0,5,-3);
+  scene.add(dealer);
+
+  scene.add(new THREE.AmbientLight(0x404040, 2));
+  const red = new THREE.PointLight(0xff0000, 2, 20); red.position.set(0,6,0); scene.add(red);
+
+  // mouse aim
+  document.addEventListener('mousemove', e => {
+    const x = (e.clientX / window.innerWidth) * 2 - 1;
+    if (shotgun) shotgun.rotation.y = x * 0.5;
+  });
+
+  // animation loop
+  (function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    if (dealer) dealer.rotation.y = Math.sin(Date.now() * 0.001) * 0.12;
+    renderer.render(scene, camera);
+  })();
+
+  // Watch game over changes
+  watchGameOver();
+}
+
+/* ---------------- window resize cleanup ---------------- */
+window.addEventListener('resize', () => {
+  if (camera && renderer) {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+});
+</script>
 </body>
 </html>
