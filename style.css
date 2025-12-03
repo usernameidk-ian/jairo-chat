@@ -149,7 +149,9 @@ body::before {
 
 /* Message text */
 .chat-messages .msgtext {
-  word-wrap: break-word;
+  word-wrap: break-word;     /* wrap long words */
+  overflow-wrap: anywhere;   /* wrap anywhere if needed */
+  white-space: pre-wrap;     /* preserve line breaks and wrap text */
   flex: 1;
   color: #fff;
 }
