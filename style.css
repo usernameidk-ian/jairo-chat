@@ -3,8 +3,21 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   color: #fff;
-  background: linear-gradient(135deg, #00ff00 0%, #ff0000 100%);
   -webkit-font-smoothing: antialiased;
+
+  /* Custom wallpaper background */
+  background: url('snowmaninsnow.png') no-repeat center center fixed;
+  background-size: cover;
+  position: relative;
+}
+
+/* Overlay gradient for green-to-red Christmas vibe */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,255,0,0.2) 0%, rgba(255,0,0,0.2) 100%);
+  z-index: 0;
 }
 
 /* ---------------------- HEADER ---------------------- */
@@ -15,6 +28,8 @@ body {
   padding: 14px 24px;
   background: rgba(0,0,0,0.7);
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 1;
+  position: relative;
 }
 .topbar h1 {
   margin: 0;
@@ -37,40 +52,27 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding: 28px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ---------------------- LEFT PANEL ---------------------- */
-.left-panel { width:340px; }
-.game-preview {
-  background: rgba(0,0,0,0.6);
-  border-radius: 10px;
-  padding: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-}
-.game-preview canvas {
-  display: block;
-  margin: 0 auto;
-  border-radius: 6px;
-  background: #111;
-}
-.game-note {
-  text-align: center;
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: #ccc;
+/* ---------------------- LEFT PANEL (hidden) ---------------------- */
+.left-panel {
+  display: none; /* removed the game preview */
 }
 
 /* ---------------------- CHAT BOX ---------------------- */
 .chat-box {
-  flex: 1 1 540px;
+  flex: 1 1 720px;
   max-width: 720px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.85); /* semi-transparent */
   border-radius: 12px;
   padding: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
   color: #fff;
   display: flex;
   flex-direction: column;
+  z-index: 1;
 }
 
 /* ---------------------- CHAT HEADER ---------------------- */
@@ -96,7 +98,7 @@ body {
 
 /* ---------------------- CHAT MESSAGES ---------------------- */
 .chat-messages {
-  background: rgba(50,50,50,0.7);
+  background: rgba(50,50,50,0.5); /* semi-transparent to show wallpaper */
   border-radius: 8px;
   padding: 12px;
   height: 420px;
