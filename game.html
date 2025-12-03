@@ -293,37 +293,7 @@
         });
       }
 
-      // update UI stats
-      const myData = data.players ? data.players[playerName] : null;
-      if (myData) {
-        // ensure charges/lives present
-        el.lives.innerHTML = `Charges: ${'█'.repeat(Math.max(0, myData.charges || 0))} (${Math.max(0, myData.lives || 0)} lives)`;
-      }
-      el.shells.textContent = `Shells: ${data.live || 0} live / ${data.blank || 0} blank`;
 
-// ===== TURN HANDLING FIX =====
-if (data.players && Object.keys(data.players).length === 2) {
-  const currentTurn = data.turn || Object.keys(data.players)[0];
-  if (data.turn !== currentTurn) {
-    // if Firebase didn’t set turn yet, pick first player
-    db.ref('buckshot_lobbies/' + id).update({ turn: currentTurn });
-  }
-  const isMyTurnNow = currentTurn === playerName;
-  
-  // update buttons and status
-  document.getElementById('selfBtn').disabled = !isMyTurnNow;
-  document.getElementById('dealerBtn').disabled = !isMyTurnNow;
-  el.status.textContent = isMyTurnNow ? 'YOUR TURN' : "OPPONENT'S TURN";
-
-  // ensure myTurn variable stays correct for shooting function
-  myTurn = isMyTurnNow;
-}
-
-      // if someone died -> check end condition
-      const alivePlayers = players.filter(p => (data.players && data.players[p] && (data.players[p].lives || 0) > 0));
-      if (alivePlayers.length === 1 && data.gameStarted) {
-        const winner = alivePlayers[0];
-        endGame(winner === playerName ? 'YOU WIN' : 'YOU LOSE');
       }
     });
   }
@@ -343,7 +313,37 @@ if (data.players && Object.keys(data.players).length === 2) {
     });
   });
 
-  /***** newRound helper (called when shells depleted) *****/
+  /***** newRound helper // update UI stats
+if (data.players) {
+  // show all players' lives & charges
+  const livesText = Object.entries(data.players).map(([p, d]) => {
+    return `${p}: ${d.lives || 0} lives (${'█'.repeat(d.charges || 0)})`;
+  }).join(' | ');
+  el.lives.textContent = livesText;
+}
+el.shells.textContent = `Shells: ${data.live || 0} live / ${data.blank || 0} blank`;
+
+// ===== TURN HANDLING =====
+if (data.players && Object.keys(data.players).length === 2) {
+  const currentTurn = data.turn || Object.keys(data.players)[0];
+  if (data.turn !== currentTurn) db.ref('buckshot_lobbies/' + id).update({ turn: currentTurn });
+  const isMyTurnNow = currentTurn === playerName;
+  
+  document.getElementById('selfBtn').disabled = !isMyTurnNow || (data.players[playerName]?.lives || 0) <= 0;
+  document.getElementById('dealerBtn').disabled = !isMyTurnNow || (data.players[playerName]?.lives || 0) <= 0;
+  el.status.textContent = isMyTurnNow ? 'YOUR TURN' : "OPPONENT'S TURN";
+  myTurn = isMyTurnNow;
+}
+
+// ===== CHECK END GAME =====
+const alivePlayers = Object.entries(data.players || {}).filter(([_, d]) => (d.lives || 0) > 0).map(([p]) => p);
+if (alivePlayers.length === 0 && data.gameStarted) {
+  endGame("DRAW");
+} else if (alivePlayers.length === 1 && data.gameStarted) {
+  const winner = alivePlayers[0];
+  endGame(winner === playerName ? "YOU WIN" : "YOU LOSE");
+}(called when shells depleted) *****/
+    
   function newRound() {
     if (!lobbyId) return;
     const lobbyRef = db.ref('buckshot_lobbies/' + lobbyId);
