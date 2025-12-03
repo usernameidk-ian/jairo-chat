@@ -301,11 +301,14 @@
       }
       el.shells.textContent = `Shells: ${data.live || 0} live / ${data.blank || 0} blank`;
 
-      // set turn flags (safely)
-      myTurn = data.turn === playerName;
-      document.getElementById('selfBtn').disabled = !myTurn;
-      document.getElementById('dealerBtn').disabled = !myTurn;
-      el.status.textContent = myTurn ? 'YOUR TURN' : 'OPPONENT\'S TURN';
+      // FIXED TURN SYSTEM — this is the real fix
+const isMyTurnNow = data.turn === playerName;
+
+// Force re-enable buttons every single time Firebase updates
+document.getElementById('selfBtn').disabled = !isMyTurnNow;
+document.getElementById('dealerBtn').disabled = !isMyTurnNow;
+
+el.status.textContent = isMyTurnNow ? 'YOUR TURN' : "OPPONENT'S TURN";
 
       // if someone died -> check end condition
       const alivePlayers = players.filter(p => (data.players && data.players[p] && (data.players[p].lives || 0) > 0));
