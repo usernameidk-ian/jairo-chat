@@ -42,7 +42,10 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
   <script>
+    // Initialize Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
       authDomain: "cookie-clicker-chat.firebaseapp.com",
@@ -54,6 +57,7 @@
     };
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const storage = firebase.storage();
   </script>
 
   <script src="script.js"></script>
