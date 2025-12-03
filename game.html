@@ -313,7 +313,7 @@
     });
   });
 
-   newRound helper // update UI stats
+// newRound helper - update UI stats
 if (data.players) {
   // show all players' lives & charges
   const livesText = Object.entries(data.players).map(([p, d]) => {
@@ -342,7 +342,8 @@ if (alivePlayers.length === 0 && data.gameStarted) {
 } else if (alivePlayers.length === 1 && data.gameStarted) {
   const winner = alivePlayers[0];
   endGame(winner === playerName ? "YOU WIN" : "YOU LOSE");
-}(called when shells depleted) 
+  }
+});
     
   function newRound() {
     if (!lobbyId) return;
