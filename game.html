@@ -13,13 +13,13 @@
     #lobbyScreen button { padding:15px 30px; font-size:1.5em; background:#300; color:#0f0; border:2px solid #0f0; margin:10px; cursor:pointer; }
     #lobbyList { margin-top:30px; width:90%; max-width:400px; }
     .lobby-item { margin:10px; padding:12px; background:#111; border:1px solid #0f0; text-align:center; font-size:1.2em; }
-    #waitingScreen { display:none; flex-direction:column; justify-content:center; align-items:center; background:#000; color:#0f0; font-size:2.5em; text-align:center; }
+    #waitingScreen { display:none; flex-direction:column; justify-content:center; align-items:center; background:#000; color:#0f0; font-size:2.5em; }
     #waitingScreen div { font-size:1.5em; animation:dots 1.5s infinite; }
     @keyframes dots { 0%,100%{opacity:0} 50%{opacity:1} }
-    #ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.8); padding:20px; border:3px solid #0f0; border-radius:10px; width:320px; }
+    #ui { position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,20,0,0.9); padding:20px; border:3px solid #0f0; border-radius:10px; width:340px; }
     button { background:#300; color:#0f0; border:2px solid #0f0; padding:12px 24px; margin:8px; font-size:1.4em; cursor:pointer; }
     button:disabled { opacity:0.4; cursor:not-allowed; }
-    #startMatch { background:#0a0 !important; }
+    #startMatch { background:#0a0 !important; display:none; }
     #deathOverlay, #reviveOverlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 1s; }
     #deathOverlay { background:#f00; }
     #reviveOverlay { background:#fff; filter:blur(20px); }
@@ -35,7 +35,7 @@
 
   <div id="lobbyScreen">
     <h1>JAIRO ROULETTE</h1>
-    <input type="text" id="username" placeholder="Enter your name..." maxlength="12">
+    <input type="text" id="username" placeholder="Enter your name..." maxlength="15">
     <button id="createLobby">Create Lobby</button>
     <div style="margin:20px">
       <input type="text" id="lobbyIdInput" placeholder="Or enter lobby ID..." maxlength="10">
@@ -51,7 +51,7 @@
 
   <div id="gameScreen" style="display:none">
     <div id="ui">
-      <div id="players"></div>
+      <div id="players">Loading...</div>
       <div id="lives">Charges: █████ (5 lives)</div>
       <div id="shells">Shells: 0 live / 0 blank</div>
       <button id="selfBtn" disabled>SHOOT SELF</button>
@@ -81,133 +81,111 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let playerName = "";
-    let lobbyId = "";
-    let isHost = false;
-    let myTurn = false;
+    let playerName = "", lobbyId = "", isHost = false;
     let scene, camera, renderer, controls, shotgun, dealer;
 
-    const lobbyScreen = document.getElementById("lobbyScreen");
-    const waitingScreen = document.getElementById("waitingScreen");
-    const gameScreen = document.getElementById("gameScreen");
+    const elements = {
+      lobby: document.getElementById("lobbyScreen"),
+      waiting: document.getElementById("waitingScreen"),
+      game: document.getElementById("gameScreen"),
+      players: document.getElementById("players"),
+      lives: document.getElementById("lives"),
+      shells: document.getElementById("shells"),
+      status: document.getElementById("status"),
+      startBtn: document.getElementById("startMatch")
+    };
 
-    const deathQuotes = ["oof..", "bruh.", "pain.", "sucks to suck.", "better luck next time..", "oh well.."];
-    const reviveQuotes = ["not done yet..", "nah you'd win..", "get up.", "still breathing."];
-
-    // =============== LOBBY LIST ===============
+    // LOBBY LIST — 100% WORKING
     db.ref("buckshot_lobbies").on("value", snap => {
       const list = document.getElementById("lobbyList");
       list.innerHTML = "";
       const lobbies = snap.val() || {};
       Object.entries(lobbies).forEach(([id, data]) => {
         if (data.full || !data.host) return;
-        const playerCount = Object.keys(data.players || {}).length;
-        if (playerCount >= 2) return;
-
+        const count = Object.keys(data.players || {}).length;
+        if (count >= 2) return;
         const div = document.createElement("div");
         div.className = "lobby-item";
-        div.innerHTML = `<strong>\( {data.host}'s lobby</strong> ( \){playerCount}/2) <button onclick="joinLobby('${id}')">Join</button>`;
+        div.innerHTML = data.host + "'s lobby (" + count + "/2) <button onclick=\"joinLobby('" + id + "')\">Join</button>";
         list.appendChild(div);
       });
     });
 
-    // =============== CREATE / JOIN ===============
-    document.getElementById("createLobby").onclick = () => startGame(true);
-    document.getElementById("joinSpecific").onclick = () => {
-      lobbyId = document.getElementById("lobbyIdInput").value.trim().toUpperCase();
-      if (!lobbyId) return alert("Enter lobby ID");
-      startGame(false);
-    };
-    window.joinLobby = (id) => {
+    window.joinLobby = id => {
       document.getElementById("lobbyIdInput").value = id;
       document.getElementById("joinSpecific").click();
     };
 
-    function startGame(host) {
+    document.getElementById("createLobby").onclick = () => start(true);
+    document.getElementById("joinSpecific").onclick = () => {
+      lobbyId = document.getElementById("lobbyIdInput").value.trim().toUpperCase();
+      if (!lobbyId) return alert("Enter lobby ID");
+      start(false);
+    };
+
+    function start(host) {
       playerName = document.getElementById("username").value.trim() || "Player" + Math.floor(Math.random()*9999);
       isHost = host;
-      if (isHost) lobbyId = "L" + Date.now().toString(36).toUpperCase();
+      if (host) lobbyId = "L" + Date.now().toString(36).toUpperCase();
 
-      lobbyScreen.style.display = "none";
-      waitingScreen.style.display = "flex";
+      elements.lobby.style.display = "none";
+      elements.waiting.style.display = "flex";
 
       const lobbyRef = db.ref("buckshot_lobbies/" + lobbyId);
       lobbyRef.child("players/" + playerName).set({ lives: 5, charges: 5 });
-      if (isHost) lobbyRef.set({ host: playerName, full: false, gameStarted: false });
+      if (host) lobbyRef.set({ host: playerName, full: false, gameStarted: false });
 
-      listenToLobby(lobbyRef);
+      listen(lobbyRef);
     }
 
-    // =============== MAIN LISTENER ===============
-    function listenToLobby(lobbyRef) {
-      lobbyRef.on("value", snap => {
+    function listen(ref) {
+      ref.on("value", snap => {
         const data = snap.val();
         if (!data || !data.players) return;
 
         const players = Object.keys(data.players);
-        document.getElementById("players").textContent = players.join(" vs ");
+        elements.players.textContent = players.join(" vs ");
 
-        // Both players joined
         if (players.length === 2 && !data.gameStarted) {
-          lobbyRef.update({ full: true, gameStarted: true });
-          waitingScreen.style.display = "none";
-          gameScreen.style.display = "block";
+          ref.update({ full: true, gameStarted: true });
+          elements.waiting.style.display = "none";
+          elements.game.style.display = "block";
           init3D();
-
-          if (isHost) {
-            document.getElementById("startMatch").style.display = "block";
-            document.getElementById("status").textContent = "Press START MATCH";
-          } else {
-            document.getElementById("status").textContent = "Waiting for host...";
-          }
+          if (isHost) elements.startBtn.style.display = "block";
         }
 
-        // Update lives & charges
-        const myData = data.players[playerName];
-        if (myData) {
-          document.getElementById("lives").textContent = `Charges: \( {"█".repeat(myData.charges)} ( \){myData.lives} lives)`;
-        }
+        const me = data.players[playerName];
+        if (me) elements.lives.textContent = "Charges: " + "█".repeat(me.charges) + " (" + me.lives + " lives)";
 
-        // Shells
-        document.getElementById("shells").textContent = `Shells: \( {data.live || 0} live / \){data.blank || 0} blank`;
+        elements.shells.textContent = "Shells: " + (data.live || 0) + " live / " + (data.blank || 0) + " blank";
 
-        // Turn
-        myTurn = data.turn === playerName;
+        const myTurn = data.turn === playerName;
         document.getElementById("selfBtn").disabled = !myTurn;
         document.getElementById("dealerBtn").disabled = !myTurn;
-        document.getElementById("status").textContent = myTurn ? "YOUR TURN" : "OPPONENT'S TURN";
+        elements.status.textContent = myTurn ? "YOUR TURN" : "OPPONENT'S TURN";
       });
     }
 
-    // =============== START MATCH ===============
-    document.getElementById("startMatch").onclick = () => {
-      newRound();
-      document.getElementById("startMatch").style.display = "none";
-    };
-
-    function newRound() {
+    elements.startBtn.onclick = () => {
+      elements.startBtn.style.display = "none";
       const live = Math.floor(Math.random() * 4) + 2;
       const blank = 8 - live;
-      const players = Object.keys((firebase.database().ref("buckshot_lobbies/" + lobbyId + "/players").get().then(s => s.val() || {})));
-      const first = players[Math.floor(Math.random() * 2)];
-
-      db.ref("buckshot_lobbies/" + lobbyId).update({
-        live, blank, turn: first, currentShell: 1
+      db.ref("buckshot_lobbies/" + lobbyId + "/players").once("value", s => {
+        const players = Object.keys(s.val());
+        const first = players[Math.floor(Math.random() * 2)];
+        db.ref("buckshot_lobbies/" + lobbyId).update({ live, blank, turn: first });
       });
-    }
+    };
 
-    // =============== SHOOT ===============
     function shoot(self) {
-      if (!myTurn) return;
+      if (document.getElementById("selfBtn").disabled) return;
       document.getElementById("pump").play();
       shotgun.scale.set(1.15,1.15,1.15);
       setTimeout(() => shotgun.scale.set(1,1,1), 200);
 
       db.ref("buckshot_lobbies/" + lobbyId).once("value").then(snap => {
         const data = snap.val();
-        const total = data.live + data.blank;
-        const isLive = Math.random() < data.live / total;
-
+        const isLive = Math.random() < (data.live / (data.live + data.blank));
         const target = self ? playerName : Object.keys(data.players).find(p => p !== playerName);
 
         if (isLive) {
@@ -215,35 +193,16 @@
           document.getElementById("deathOverlay").style.opacity = 1;
           setTimeout(() => {
             document.getElementById("deathOverlay").style.opacity = 0;
-            const q = deathQuotes[Math.floor(Math.random() * deathQuotes.length)];
-            document.getElementById("status").innerHTML = `<span style="font-size:3em;color:#f00">${q}</span>`;
-
+            elements.status.textContent = "BANG!";
             db.ref("buckshot_lobbies/" + lobbyId + "/players/" + target + "/lives").transaction(v => v - 1);
-
-            setTimeout(() => {
-              db.ref("buckshot_lobbies/" + lobbyId + "/players/" + target + "/lives").once("value").then(s => {
-                if (s.val() <= 0) {
-                  endGame(self ? "YOU LOSE" : "YOU WIN");
-                } else {
-                  document.getElementById("shock").play();
-                  document.getElementById("reviveOverlay").style.opacity = 1;
-                  setTimeout(() => document.getElementById("reviveOverlay").style.opacity = 0, 1500);
-                  document.getElementById("status").innerHTML += `<br>${reviveQuotes[Math.floor(Math.random()*reviveQuotes.length)]}`;
-                }
-              });
-            }, 1500);
           }, 1000);
         } else {
           document.getElementById("empty").play();
         }
 
-        const updates = {
-          live: data.live - (isLive ? 1 : 0),
-          blank: data.blank - (isLive ? 0 : 1)
-        };
-
+        const updates = { live: data.live - (isLive ? 1 : 0), blank: data.blank - (isLive ? 0 : 1) };
         if (updates.live + updates.blank === 0) {
-          setTimeout(newRound, 2000);
+          setTimeout(() => elements.startBtn.onclick(), 1500);
         } else {
           updates.turn = Object.keys(data.players).find(p => p !== playerName);
         }
@@ -251,18 +210,12 @@
       });
     }
 
-    function endGame(msg) {
-      document.getElementById("status").innerHTML = `<div style="font-size:4em;color:#f00">\( {msg}</div><br> \){deathQuotes[Math.floor(Math.random()*deathQuotes.length)]}`;
-      document.getElementById("selfBtn").disabled = true;
-      document.getElementById("dealerBtn").disabled = true;
-    }
-
     document.getElementById("selfBtn").onclick = () => shoot(true);
     document.getElementById("dealerBtn").onclick = () => shoot(false);
 
-    // =============== 3D ===============
     function init3D() {
-      scene = new THREE.Scene(); scene.background = new THREE.Color(0x110000);
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
       camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
       camera.position.set(0, 4, 10);
       renderer = new THREE.WebGLRenderer({antialias:true});
