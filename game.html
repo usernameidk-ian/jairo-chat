@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jairo Spin — Demo</title>
+<title>Jairo Spin — Game</title>
 <style>
+/* CSS from the original advanced version is kept here */
   :root{
     --bg1:#062; --bg2:#600;
     --panel-bg: rgba(0,0,0,.75);
@@ -19,7 +20,7 @@
   header {display:flex;align-items:center;justify-content:space-between; gap:12px;}
   h1{margin:0;font-size:20px;letter-spacing:0.6px}
   .controls {display:flex; gap:8px; align-items:center}
-  .btn {
+  .btn { /* Removed Reset/Seed buttons, keeping btn style for general use */
     background: linear-gradient(180deg,#111,#000);
     border:1px solid rgba(255,255,255,0.06);
     color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
@@ -69,9 +70,13 @@
   .card-mini { background:rgba(0,0,0,0.45); padding:6px; border-radius:8px; display:flex; gap:8px; align-items:center }
   .card-mini img{width:44px;height:44px;border-radius:6px;object-fit:cover}
   .card-mini .meta { font-size:12px }
-  .rarity-common{border:1px solid rgba(255,255,255,0.02)}
-  .rarity-rare{box-shadow:0 0 8px rgba(0,120,255,0.08)}
-  .rarity-legendary{box-shadow:0 0 12px rgba(255,200,40,0.12)}
+  /* Rarity color classes for inventory items */
+  .rarity-common{border:1px solid #666}
+  .rarity-uncommon{border:1px solid #00cc66}
+  .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px rgba(30, 144, 255,0.2)}
+  .rarity-ultrarare{border:1px solid #8e2de2; box-shadow:0 0 8px rgba(142, 45, 226,0.2)}
+  .rarity-legendary{border:1px solid #ff9f1c; box-shadow:0 0 12px rgba(255,159,28,0.3)}
+  .rarity-mythic{border:1px solid #ffde59; box-shadow:0 0 16px rgba(255,222,89,0.4)}
 
   /* overlay spinner UI */
   .overlay {
@@ -147,11 +152,9 @@
 <body>
 <div class="app">
   <header>
-    <h1>Jairo Spin — Demo</h1>
+    <h1>Jairo Spin — Game</h1>
     <div class="controls">
-      <button class="btn" id="resetBtn">Reset Inventory</button>
-      <button class="btn" id="seedBtn">Seed Example Jairos</button>
-    </div>
+      </div>
   </header>
 
   <div class="panel">
@@ -169,7 +172,6 @@
         </div>
 
         <div class="big-spin" id="bigSpin">
-          <!-- visual center placeholder (you can style) -->
           <div class="center-hint">Jairos will parade across the screen</div>
           <button class="spin-button primary" id="spinBtn">SPIN</button>
         </div>
@@ -182,10 +184,9 @@
     </div>
 
     <div class="center">
-      <!-- spinner overlay will appear on spin -->
       <div style="opacity:0.85; color:#ddd; font-size:13px; text-align:center;">Press spin to start the reveal sequence</div>
       <div style="height:12px"></div>
-      <div style="color:#aaa; font-size:13px">Result</div>
+      <div style="color:#aaa; font-size:13px">Last Result</div>
       <div id="lastResult" style="width:240px;height:240px;border-radius:12px;background:rgba(255,255,255,0.02);display:grid;place-items:center">
         <img id="lastImg" src="" alt="" style="width:180px;height:180px;border-radius:10px;object-fit:cover;display:none" />
         <div id="lastName" style="display:block;color:#ddd">—</div>
@@ -201,18 +202,15 @@
   </div>
 </div>
 
-<!-- overlay spinner -->
 <div class="overlay" id="overlay">
   <div class="spinner-window">
     <div class="spinner-track">
       <div class="spinner-inner" id="spinnerInner"></div>
     </div>
-    <!-- center marker -->
     <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:160px; height:160px; border-radius:12px; pointer-events:none; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04)"></div>
   </div>
 </div>
 
-<!-- reveal modal -->
 <div class="reveal-modal" id="revealModal">
   <div class="reveal-card" id="revealCard">
     <img id="revealImg" src="" alt="" />
@@ -225,54 +223,66 @@
 
 <script>
 /*
-  Single-file Jairo Spin demo.
-  - localStorage used for inventory (key: 'jairo_demo_inv')
-  - Jairos are seeded with `seedExampleJairos()` (call the seed button)
-  - Replace placeholder images by setting each jairo.image to a real URL.
+  Updated Jairo Spin demo with 24 Jairos, stacking inventory, and removed debug/reset features.
 */
 
 // ----------------------------
 // Data & config
 // ----------------------------
 const JAIROS_KEY = 'jairo_demo_inv';
-let jairos = []; // will hold objects {id,name,rarity,image}
-let inventory = {}; // id -> count
+let inventory = {}; // id -> {object, count: N}
 let spinStats = { spins:0, spinsSinceLastOverload:0 };
 
-// rarity weights (sum ~1)
-const WEIGHTS = {
-  mythic: 0.001,
-  legendary: 0.01,
-  ultrarare: 0.04,
-  rare: 0.10,
-  uncommon: 0.25,
-  common: 0.599
-};
-
-// small helper to normalize weights (if you edit)
-function normalizedWeights(w){
-  const sum = Object.values(w).reduce((a,b)=>a+b,0) || 1;
-  const out = {};
-  for(const k in w) out[k] = w[k]/sum;
-  return out;
-}
-const N_WEIGHTS = normalizedWeights(WEIGHTS);
-
 // ----------------------------
-// Placeholder image generator
-// produces SVG dataURL with text so UI works without real images
+// 24 JAIROS DATA POOL
+// The image paths are set to '/jairos/' + filename
 // ----------------------------
-function makePlaceholder(name, color="#666", size=512){
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>
-    <rect width='100%' height='100%' rx='20' fill='${color}'/>
-    <g font-family='Arial' font-weight='700' fill='white' text-anchor='middle'>
-      <text x='50%' y='48%' font-size='42'>${escapeHtml(name)}</text>
-      <text x='50%' y='70%' font-size='20' fill='rgba(255,255,255,0.85)'>Jairo</text>
-    </g>
-  </svg>`;
-  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-}
-function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+const JAIROS = [
+    // COMMON (60%)
+    { id: 'j01', name: "Sleepy Jairo", rarity: "common", image: "jairos/sleepy.png", chance: 60 },
+    { id: 'j02', name: "Side-eye Jairo", rarity: "common", image: "jairos/sideeye.png", chance: 60 },
+    { id: 'j03', name: "Tired Jairo", rarity: "common", image: "jairos/tired.png", chance: 60 },
+    { id: 'j04', name: "Eating Chips Jairo", rarity: "common", image: "jairos/chips.png", chance: 60 },
+
+    // UNCOMMON (25%)
+    { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25 },
+    { id: 'j06', name: "Confused Jairo", rarity: "uncommon", image: "jairos/confused.png", chance: 25 },
+    { id: 'j07', name: "Scared Jairo", rarity: "uncommon", image: "jairos/scared.png", chance: 25 },
+    { id: 'j08', name: "Shocked Jairo", rarity: "uncommon", image: "jairos/shocked.png", chance: 25 },
+
+    // RARE (10%)
+    { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10 },
+    { id: 'j10', name: "Evil Jairo", rarity: "rare", image: "jairos/evil.png", chance: 10 },
+    { id: 'j11', name: "Sunglasses Jairo", rarity: "rare", image: "jairos/sunglasses.png", chance: 10 },
+    { id: 'j12', name: "Drip Jairo", rarity: "rare", image: "jairos/drip.png", chance: 10 },
+
+    // ULTRA RARE (4%)
+    { id: 'j13', name: "Golden Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4 },
+    { id: 'j14', name: "Glitched Jairo", rarity: "ultrarare", image: "jairos/glitch.png", chance: 4 },
+    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4 },
+    { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4 },
+
+    // LEGENDARY (1%)
+    { id: 'j17', name: "Galaxy Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1 },
+    { id: 'j18', name: "God Jairo", rarity: "legendary", image: "jairos/god.png", chance: 1 },
+    { id: 'j19', name: "Santa Jairo", rarity: "legendary", image: "jairos/santa.png", chance: 1 },
+    { id: 'j20', name: "Shadow Jairo", rarity: "legendary", image: "jairos/shadow.png", chance: 1 },
+
+    // MYTHIC (0.1% - note: 0.1 is 10x smaller than 1)
+    { id: 'j21', name: "Rainbow Jairo", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.1 },
+    { id: 'j22', name: "Corrupted Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.1 },
+    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.1 },
+    { id: 'j24', name: "Jairo Ascended", rarity: "mythic", image: "jairos/ascended.png", chance: 0.1 },
+];
+
+// Combine all chances to create the normalized weights structure
+const CHANCE_SUM = JAIROS.reduce((sum, j) => sum + j.chance, 0);
+const N_WEIGHTS = {};
+JAIROS.forEach(j => {
+    // Group by rarity to calculate the rarity weights
+    N_WEIGHTS[j.rarity] = (N_WEIGHTS[j.rarity] || 0) + (j.chance / CHANCE_SUM);
+});
+// Rarity weights object now contains the chance of pulling any item from that tier
 
 // ----------------------------
 // Helpers: pick rarity & jairo
@@ -280,6 +290,7 @@ function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function pickRarity(weights){
   const r = Math.random();
   let cum = 0;
+  // Use the calculated rarity chance
   for(const k of Object.keys(weights)){
     cum += weights[k];
     if(r < cum) return k;
@@ -287,16 +298,30 @@ function pickRarity(weights){
   // fallback
   return Object.keys(weights)[Object.keys(weights).length-1];
 }
-function pickJairo(){
-  // pick rarity
-  const rarity = pickRarity(N_WEIGHTS);
-  const pool = jairos.filter(j=> j.rarity === rarity);
+
+function pickJairo(rarityOverride = null){
+  // 1. Pick Rarity Tier (if no override)
+  const rarity = rarityOverride || pickRarity(N_WEIGHTS);
+
+  // 2. Filter the pool to items of that rarity
+  const pool = JAIROS.filter(j=> j.rarity === rarity);
   if(pool.length === 0) {
-    // fallback: pick any
-    return jairos[Math.floor(Math.random() * jairos.length)];
+    // If rarity filter failed, just pick a random jairo from the whole list
+    return JAIROS[Math.floor(Math.random() * JAIROS.length)];
   }
+
+  // 3. Select a specific Jairo from the pool based on its relative chance within that pool
+  const poolTotalChance = pool.reduce((sum, j) => sum + j.chance, 0);
+  let r = Math.random() * poolTotalChance;
+  for(const jairo of pool) {
+      if (r < jairo.chance) return jairo;
+      r -= jairo.chance;
+  }
+
+  // Final fallback (should not be reached)
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
 
 // ----------------------------
 // Storage & inventory
@@ -304,16 +329,26 @@ function pickJairo(){
 function loadInventory(){
   try{
     const raw = localStorage.getItem(JAIROS_KEY);
+    // Inventory structure is now {id: {jairo object properties, count: N}}
     inventory = raw ? JSON.parse(raw) : {};
   }catch(e){ inventory = {}; }
 }
+
 function saveInventory(){
   localStorage.setItem(JAIROS_KEY, JSON.stringify(inventory));
 }
-function giveJairo(id){
-  inventory[id] = (inventory[id]||0) + 1;
+
+function giveJairo(jairo){
+  const isNew = !inventory[jairo.id];
+  if(isNew){
+      // Store the full jairo object plus the count
+      inventory[jairo.id] = {...jairo, count: 1};
+  } else {
+      inventory[jairo.id].count++;
+  }
   saveInventory();
   renderInventory();
+  return isNew;
 }
 
 // ----------------------------
@@ -337,24 +372,22 @@ const lastName = document.getElementById('lastName');
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { revealModal.style.display='none'; });
 
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(!confirm('Reset inventory and stats?')) return;
-  localStorage.removeItem(JAIROS_KEY);
-  inventory = {}; saveInventory(); renderInventory();
-  spinStats = {spins:0,spinsSinceLastOverload:0}; updateStatsUI();
-});
-document.getElementById('seedBtn').addEventListener('click', ()=>{
-  seedExampleJairos(); renderInventory(); renderInvPreview();
-});
-
 // render inventory previews (tiny)
 function renderInvPreview(){
   invPreview.innerHTML='';
-  const owned = Object.keys(inventory);
-  if(owned.length===0){ invPreview.textContent = 'You have none yet.'; return; }
-  owned.forEach(id=>{
-    const j = jairos.find(x=>x.id===id);
-    if(!j) return;
+  const ownedIds = Object.keys(inventory);
+  if(ownedIds.length===0){ invPreview.textContent = 'You have none yet.'; return; }
+  
+  // Sort by rarity rank for a cleaner preview
+  ownedIds.sort((a,b)=>{
+    const ra = rarityRank(inventory[a].rarity);
+    const rb = rarityRank(inventory[b].rarity);
+    return ra - rb;
+  });
+  
+  // Only show the first few in the preview
+  ownedIds.slice(0, 8).forEach(id=>{
+    const j = inventory[id];
     const el = document.createElement('div');
     el.style.width='72px'; el.style.height='72px'; el.style.borderRadius='8px'; el.style.overflow='hidden';
     el.style.background='rgba(255,255,255,0.03)'; el.style.display='grid'; el.style.placeItems='center';
@@ -363,35 +396,43 @@ function renderInvPreview(){
   });
 }
 
-// inventory list detailed
+// inventory list detailed (with count!)
 function renderInventory(){
   inventoryList.innerHTML='';
   const ids = Object.keys(inventory);
+
   // sort by rarity
   ids.sort((a,b)=>{
-    const ra = rarityRank(jairos.find(x=>x.id===a)?.rarity);
-    const rb = rarityRank(jairos.find(x=>x.id===b)?.rarity);
+    const ra = rarityRank(inventory[a].rarity);
+    const rb = rarityRank(inventory[b].rarity);
     return ra - rb;
   });
+
   if(ids.length===0){
     inventoryList.innerHTML = '<div style="color:#aaa">No jairos yet. Spin to get some!</div>';
     lastImg.style.display='none'; lastName.textContent='—';
     return;
   }
+
   ids.forEach(id=>{
-    const j = jairos.find(x=>x.id===id);
-    if(!j) return;
-    const node = document.createElement('div'); node.className='card-mini rarity-'+j.rarity;
+    const j = inventory[id];
+    const node = document.createElement('div'); 
+    // Use the stored rarity for the CSS class
+    node.className=`card-mini rarity-${j.rarity}`; 
     const img = document.createElement('img'); img.src=j.image;
     const meta = document.createElement('div'); meta.className='meta';
-    meta.innerHTML = `<div style="font-weight:700">${j.name}</div><div style="color:#ccc">${j.rarity} • ${inventory[id]}x</div>`;
+    
+    // Display the count next to the name
+    meta.innerHTML = `<div style="font-weight:700">${j.name}</div><div style="color:#ccc">${j.rarity.toUpperCase()} • **x${j.count}**</div>`;
+    
     node.appendChild(img); node.appendChild(meta);
     inventoryList.appendChild(node);
   });
+
   // update last result preview
   const lastId = ids[ids.length-1];
-  const lj = jairos.find(x=>x.id===lastId);
-  if(lj){ lastImg.src = lj.image; lastImg.style.display='block'; lastName.textContent = `${lj.name} (${inventory[lastId]}x)`; }
+  const lj = inventory[lastId];
+  if(lj){ lastImg.src = lj.image; lastImg.style.display='block'; lastName.textContent = `${lj.name} (x${lj.count})`; }
 }
 
 // nice ordering
@@ -401,12 +442,13 @@ function rarityRank(r){ const order=['mythic','legendary','ultrarare','rare','un
 // Spinner build & animation
 // ----------------------------
 let spinning = false;
+
 function startSpin(){
   if(spinning) return;
-  if(jairos.length === 0){ alert('No jairos defined yet. Click "Seed Example Jairos" to populate demos.'); return; }
+  if(JAIROS.length === 0){ alert('Error: Jairo list is empty.'); return; }
   spinning = true;
 
-  // overload logic: when >=50 spins since last, 25% chance to trigger overload (as user requested)
+  // overload logic: when >=50 spins since last, 25% chance to trigger overload
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
     if(Math.random() < 0.25){
@@ -424,57 +466,43 @@ function startSpin(){
 
   // pick final result (apply overload boost if true)
   const final = overload ? pickWithBoost() : pickJairo();
-
-  // Prepare items for the carousel: include owned ones (revealed) plus silhouettes for not-yet-owned
+  
+  // Prepare items for the carousel
   const pool = buildSpinnerPool(final);
   populateSpinner(pool);
 
   // show overlay & animate scroll
   overlay.style.display = 'flex';
 
-  // start with items arranged so we can animate a long translate
-  // compute index of chosen item in the repeated array (we set it near the middle repeat for safety)
   const items = Array.from(spinnerInner.children);
+  // Find the index of one of the chosen items near the middle repeats
   let chosenIndex = -1;
-  for(let i=0;i<items.length;i++){
+  for(let i=Math.floor(items.length/2); i<items.length; i++){
     if(items[i].dataset.jairoId === final.id){
       chosenIndex = i; break;
     }
   }
-  if(chosenIndex === -1) chosenIndex = Math.floor(items.length/2);
-
-  // animate: first a continuous fast scroll (by changing transform via requestAnimationFrame)
-  // then slow down and snap so chosen item is centered.
+  if(chosenIndex === -1) chosenIndex = Math.floor(items.length/2); // Fallback
 
   const track = spinnerInner;
-  // item width + gap calc
   const item = track.querySelector('.spin-item');
-  const itemStyle = getComputedStyle(item);
-  const gap = 12;
-  const itemW = item.offsetWidth + gap;
+  const itemW = item.offsetWidth + 12; // 12 is the gap
 
-  // We will loop by translating negative X. We want chosen item to land at center of spinner-window.
   const container = document.querySelector('.spinner-window');
   const centerX = container.offsetWidth/2;
-  // left offset of chosen item relative to track start = chosenIndex * itemW + itemW/2
   const baseOffset = chosenIndex * itemW + (itemW/2);
-  // target translate so chosen center aligns with centerX:
   const targetTranslate = centerX - baseOffset;
 
-  // start fast auto-scrolling by setting CSS transition short repeated moves
-  // We'll animate using JS for controlled easing:
   let animStart = performance.now();
-  const totalDuration = 2800 + Math.random()*900; // total spin time
-  const startTranslate = 0; // track starts at 0
-  const extraCycles = 2 + Math.floor(Math.random()*3); // how many cycles before slowing
-  const totalDistance = -(items.length * itemW * extraCycles) + targetTranslate; // negative value
+  const totalDuration = 2800 + Math.random()*900;
+  const startTranslate = 0;
+  const extraCycles = 2 + Math.floor(Math.random()*3);
+  const totalDistance = -(items.length * itemW * extraCycles) + targetTranslate;
 
-  // easing function (easeOutCubic)
   function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
 
   function frame(now){
     const t = Math.min(1, (now - animStart) / totalDuration);
-    // apply easing and progress
     const eased = easeOutCubic(t);
     const current = startTranslate + (totalDistance * eased);
     track.style.transform = `translateX(${current}px)`;
@@ -492,22 +520,19 @@ function startSpin(){
   requestAnimationFrame(frame);
 }
 
-// build spinner pool (mix owned and silhouettes). Ensure final is included multiple times.
+// build spinner pool (mix owned and silhouettes).
 function buildSpinnerPool(final){
-  // include a bunch of items so the spinner looks varied.
-  // Strategy: take all jairos, but for ones not owned, will show silhouette class.
-  // repeat list to have sufficient length and insert the final multiple times to increase chance it appears centrally.
-  // Create base array
-  const base = jairos.slice();
-  // Shuffle
+  // Strategy: take all JAIROS list
+  const base = JAIROS.slice();
   shuffleArray(base);
-  // Build pool by repeating
+  
   const pool = [];
   const repeats = 6;
   for(let r=0;r<repeats;r++){
     base.forEach(j=> pool.push(j));
   }
-  // Insert final a few extra times at random spots near middle to ensure it's present
+  
+  // Insert final a few extra times at random spots near middle
   const mid = Math.floor(pool.length/2);
   pool.splice(mid,0, final);
   pool.splice(mid+3,0, final);
@@ -521,123 +546,62 @@ function populateSpinner(pool){
   spinnerInner.innerHTML = '';
   pool.forEach(j=>{
     const div = document.createElement('div'); div.className = 'spin-item';
-    // if user owns -> revealed class; else silhouette
-    const owned = Boolean(inventory[j.id]);
+    // Check if the ID exists in the inventory (i.e., count > 0)
+    const owned = inventory[j.id] && inventory[j.id].count > 0;
     if(owned) div.classList.add('revealed'); else div.classList.add('silhouette');
     div.dataset.jairoId = j.id;
     const img = document.createElement('img'); img.src = j.image; img.alt = j.name;
     div.appendChild(img);
-    // reveal glow overlay
     const glow = document.createElement('div'); glow.className='reveal-glow';
     div.appendChild(glow);
     spinnerInner.appendChild(div);
   });
-  // ensure track starts at 0 transform
   spinnerInner.style.transition = 'none';
   spinnerInner.style.transform = `translateX(0px)`;
-  // small timeout to allow layout before animations start
   setTimeout(()=> spinnerInner.style.transition = '', 30);
 }
 
-// reveal final result visually and add to inventory (with different effect if new)
+// reveal final result visually and add to inventory (stacking handled by giveJairo)
 function revealFinal(final){
-  const isNew = !inventory[final.id];
-  if(isNew){
-    giveJairo(final.id);
-  } else {
-    // still increment (we want dupes tracked)
-    giveJairo(final.id);
-  }
-  // show reveal modal with animation
+  const isNew = giveJairo(final); // this updates inventory and saves it
+
   revealImg.src = final.image;
   revealName.textContent = final.name;
-  revealRarity.textContent = final.rarity.toUpperCase();
+  revealRarity.textContent = final.rarity.toUpperCase() + (isNew ? " (NEW!)" : "");
   revealModal.style.display = 'flex';
-  // small pop animation
+  
   const img = revealImg;
   img.style.transform = 'scale(.6)';
   img.style.opacity = '0';
   setTimeout(()=>{ img.style.transition='transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s'; img.style.transform='scale(1)'; img.style.opacity='1'; }, 40);
+  
   renderInventory(); renderInvPreview();
 }
 
 // ----------------------------
-// Utility: weighted pick with overload boost (increases rares chances)
+// Utility: weighted pick with overload boost
 // ----------------------------
 function pickWithBoost(){
-  // create boosted weights: raise chance for rare+ tiers
-  const boosted = Object.assign({}, N_WEIGHTS);
-  boosted.rare = (boosted.rare || 0) + 0.08;
-  boosted.ultrarare = (boosted.ultrarare || 0) + 0.03;
-  boosted.legendary = (boosted.legendary || 0) + 0.01;
-  // renormalize
-  return pickByWeights(renormalize(boosted));
-}
-function pickByWeights(weights){
-  const r = Math.random();
-  let cum=0;
-  for(const k of Object.keys(weights)){
-    cum += weights[k];
-    if(r < cum) {
-      const pool = jairos.filter(j=> j.rarity === k);
-      if(pool.length) return pool[Math.floor(Math.random()*pool.length)];
-      break;
-    }
+  const BOOSTED_CHANCES = {};
+  
+  // Clone current total chances to start
+  for(const rarity in N_WEIGHTS) {
+      BOOSTED_CHANCES[rarity] = N_WEIGHTS[rarity] * CHANCE_SUM;
   }
-  // fallback
-  return jairos[Math.floor(Math.random()*jairos.length)];
-}
-function renormalize(obj){
-  const sum = Object.values(obj).reduce((a,b)=>a+b,0) || 1;
-  const out = {};
-  for(const k in obj) out[k] = obj[k]/sum;
-  return out;
-}
+  
+  // Apply raw chance increases
+  BOOSTED_CHANCES.rare = (BOOSTED_CHANCES.rare || 0) + 8; // was 0.08 of sum=1
+  BOOSTED_CHANCES.ultrarare = (BOOSTED_CHANCES.ultrarare || 0) + 3; // was 0.03
+  BOOSTED_CHANCES.legendary = (BOOSTED_CHANCES.legendary || 0) + 1; // was 0.01
 
-// ----------------------------
-// Demo seeding (creates many jairos so you can test)
-// ----------------------------
-function seedExampleJairos(){
-  jairos = [];
-  // We'll create a bunch of names; you will later replace images with real artwork.
-  const rarities = [
-    {k:'common', c:20},
-    {k:'uncommon', c:12},
-    {k:'rare', c:8},
-    {k:'ultrarare', c:4},
-    {k:'legendary', c:3},
-    {k:'mythic', c:1}
-  ];
-  let idCounter = 1;
-  rarities.forEach(r=>{
-    for(let i=0;i<r.c;i++){
-      const id = 'j'+(idCounter++);
-      const name = `${r.k.slice(0,3).toUpperCase()} Jairo ${i+1}`;
-      const color = randomColorForRarity(r.k);
-      const img = makePlaceholder(name, color, 512);
-      jairos.push({ id, name, rarity: r.k, image: img });
-    }
-  });
-  // shuffle
-  shuffleArray(jairos);
-  // load inventory if any
-  loadInventory();
-  renderInventory();
-  renderInvPreview();
-  updateStatsUI();
-  alert('Seeded ' + jairos.length + ' sample Jairos.');
-}
+  // Re-calculate the normalized weights for the boost
+  const boostSum = Object.values(BOOSTED_CHANCES).reduce((a,b)=>a+b,0);
+  const N_BOOSTED_WEIGHTS = {};
+  for(const k in BOOSTED_CHANCES) N_BOOSTED_WEIGHTS[k] = BOOSTED_CHANCES[k]/boostSum;
 
-// small color helper
-function randomColorForRarity(r){
-  switch(r){
-    case 'mythic': return '#ffde59';
-    case 'legendary': return '#ff9f1c';
-    case 'ultrarare': return '#8e2de2';
-    case 'rare': return '#1e90ff';
-    case 'uncommon': return '#00cc66';
-    default: return '#666';
-  }
+  const boostedRarity = pickRarity(N_BOOSTED_WEIGHTS);
+  // Now pick a Jairo from that boosted rarity tier
+  return pickJairo(boostedRarity);
 }
 
 // ----------------------------
@@ -646,15 +610,13 @@ function randomColorForRarity(r){
 function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function updateStatsUI(){ spinCountEl.textContent = spinStats.spins; overloadMeterEl.textContent = spinStats.spinsSinceLastOverload; }
 
-// pick final with base weights
-function pickJairo(){ return pickByWeights(N_WEIGHTS); }
-
 // ----------------------------
 // Init
 // ----------------------------
 loadInventory();
-seedExampleJairos(); // pre-seed so demo works immediately
 updateStatsUI();
+renderInventory();
+renderInvPreview();
 
 // ----------------------------
 // small touch: click overlay to cancel if spinner stuck (dev only)
