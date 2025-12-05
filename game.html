@@ -12,7 +12,7 @@
     --accent: #00ff66;
     --glass: rgba(255,255,255,0.03);
     
-    /* NEW: Rarity Glow Colors */
+    /* Rarity Glow Colors */
     --glow-common: rgba(102, 102, 102, 0.4);
     --glow-uncommon: rgba(0, 204, 102, 0.4);
     --glow-rare: rgba(30, 144, 255, 0.4);
@@ -52,6 +52,29 @@
   .right {
     width:260px;
   }
+  
+  /* JairoDex Tracker styles */
+  .dex-tracker {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--glass);
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .dex-tracker strong { font-size: 16px; color: var(--accent); }
+  .dex-bar {
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .dex-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #00783f, var(--accent));
+    transition: width 0.5s ease-out;
+  }
 
   /* Spin button / card */
   .spin-card {
@@ -79,7 +102,7 @@
   .card-mini img{width:44px;height:44px;border-radius:6px;object-fit:cover}
   .card-mini .meta { font-size:12px }
   
-  /* Rarity Glows for Inventory & Preview Items (Updated to use defined colors) */
+  /* Rarity Glows for Inventory & Preview Items */
   .rarity-common{border:1px solid #666}
   .rarity-uncommon{border:1px solid #00cc66; box-shadow:0 0 6px var(--glow-uncommon)}
   .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px var(--glow-rare)}
@@ -171,6 +194,7 @@
 
   .reveal-card img { width:220px; height:220px; object-fit:cover; border-radius:10px; display:block; margin:0 auto; }
   .reveal-card .name { margin-top:12px; font-weight:800; font-size:20px; color:var(--accent); }
+  .reveal-card .quote { font-style: italic; font-size: 14px; color: #bbb; margin: 4px 0 8px 0; } /* NEW: Quote style */
   .small { font-size:13px; color:#bbb }
 
   @media (max-width:820px){
@@ -206,6 +230,12 @@
           <div class="center-hint">Jairos will parade across the screen</div>
           <button class="spin-button primary" id="spinBtn">SPIN</button>
         </div>
+      </div>
+      
+      <div class="dex-tracker">
+          JairoDex Completion: <strong id="dexCount">0/24</strong>
+          <div class="dex-bar"><div id="dexProgress" class="dex-progress" style="width:0%"></div></div>
+          <div class="small" id="dexPercent">0% Complete</div>
       </div>
 
       <div style="margin-top:12px">
@@ -246,6 +276,7 @@
   <div class="reveal-card" id="revealCard">
     <img id="revealImg" src="" alt="" />
     <div class="name" id="revealName">NAME</div>
+    <div class="quote" id="revealQuote">QUOTE</div> 
     <div class="small" id="revealRarity">RARITY</div>
     <div style="height:12px"></div>
     <button class="btn primary" id="claimBtn">Nice!</button>
@@ -258,7 +289,7 @@
 
 <script>
 /*
-  Updated Jairo Spin demo with Rarity Glows
+  Updated Jairo Spin demo with Rarity Glows, Jairo Quotes, and JairoDex Tracker
 */
 
 // ----------------------------
@@ -267,48 +298,47 @@
 const JAIROS_KEY = 'jairo_demo_inv';
 let inventory = {}; // id -> {object, count: N}
 let spinStats = { spins:0, spinsSinceLastOverload:0 };
+const TOTAL_JAIROS = 24; // Constant for JairoDex tracking
 
 // ----------------------------
-// 24 JAIROS DATA POOL
-// The image paths are set to '/jairos/' + filename
-// NOTE: Name changes from user incorporated here
+// 24 JAIROS DATA POOL (with new quotes!)
 // ----------------------------
 const JAIROS = [
     // COMMON (60%)
-    { id: 'j01', name: "Sleepy Jairo", rarity: "common", image: "jairos/sleepy.png", chance: 60 },
-    { id: 'j02', name: "Side-eye Jairo", rarity: "common", image: "jairos/sideeye.png", chance: 60 },
-    { id: 'j03', name: "Tired Jairo", rarity: "common", image: "jairos/tired.png", chance: 60 },
-    { id: 'j04', name: "Chip Jairo", rarity: "common", image: "jairos/chips.png", chance: 60 },
+    { id: 'j01', name: "Sleepy Jairo", rarity: "common", image: "jairos/sleepy.png", chance: 60, quote: "Five more minutes." },
+    { id: 'j02', name: "Side-eye Jairo", rarity: "common", image: "jairos/sideeye.png", chance: 60, quote: "What're you lookin at?" },
+    { id: 'j03', name: "Tired Jairo", rarity: "common", image: "jairos/tired.png", chance: 60, quote: "The ONE day I don't have my coffee.." },
+    { id: 'j04', name: "Chip Jairo", rarity: "common", image: "jairos/chips.png", chance: 60, quote: "what the." },
 
     // UNCOMMON (25%)
-    { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25 },
-    { id: 'j06', name: "Confused Jairo", rarity: "uncommon", image: "jairos/confused.png", chance: 25 },
-    { id: 'j07', name: "Scared Jairo", rarity: "uncommon", image: "jairos/scared.png", chance: 25 },
-    { id: 'j08', name: "Shocked Jairo", rarity: "uncommon", image: "jairos/shocked.png", chance: 25 },
+    { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25, quote: "MAN IM ANGRY, [insert something someone angry would say]" },
+    { id: 'j06', name: "Confused Jairo", rarity: "uncommon", image: "jairos/confused.png", chance: 25, quote: "wait, which one was I supposed to be?" },
+    { id: 'j07', name: "Scared Jairo", rarity: "uncommon", image: "jairos/scared.png", chance: 25, quote: "was that a door opening? I heard a noise..?" },
+    { id: 'j08', name: "Shocked Jairo", rarity: "uncommon", image: "jairos/shocked.png", chance: 25, quote: "WHAT" },
 
     // RARE (10%)
-    { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10 },
-    { id: 'j10', name: "Evil Jairo", rarity: "rare", image: "jairos/evil.png", chance: 10 },
-    { id: 'j11', name: "Sunglasses Jairo", rarity: "rare", image: "jairos/sunglasses.png", chance: 10 },
-    { id: 'j12', name: "Drip Jairo", rarity: "rare", image: "jairos/drip.png", chance: 10 },
+    { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10, quote: "focus on the grind, not the spin.[this is a sigma thing to say right?" },
+    { id: 'j10', name: "Evil Jairo", rarity: "rare", image: "jairos/evil.png", chance: 10, quote: "The plan is working. soon.. they'll be gone." },
+    { id: 'j11', name: "Sunglasses Jairo", rarity: "rare", image: "jairos/sunglasses.png", chance: 10, quote: "too bright, also i look cool." },
+    { id: 'j12', name: "Drip Jairo", rarity: "rare", image: "jairos/drip.png", chance: 10, quote: "this isn't just accessories and stuff, it's a statement." },
 
     // ULTRA RARE (4%)
-    { id: 'j13', name: "Rich Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4 },
-    { id: 'j14', name: "Glitched Jairo", rarity: "ultrarare", image: "jairos/glitch.png", chance: 4 },
-    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4 },
-    { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4 },
+    { id: 'j13', name: "Rich Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4, quote: "TODAY IN THIS VIDEO, I WILL BLIND 1,000 PEOPLE." },
+    { id: 'j14', name: "Glitched Jairo", rarity: "ultrarare", image: "jairos/glitch.png", chance: 4, quote: "ERROR." },
+    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4, quote: "Im bricked up. no like, I look like bricks, weirdo." },
+    { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4, quote: "I'm gonna John Wick all over the place." },
 
     // LEGENDARY (1%)
-    { id: 'j17', name: "Galaxy Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1 },
-    { id: 'j18', name: "God Jairo", rarity: "legendary", image: "jairos/god.png", chance: 1 },
-    { id: 'j19', name: "Santa Jairo", rarity: "legendary", image: "jairos/santa.png", chance: 1 },
-    { id: 'j20', name: "Shadow the Hedgehog Jairo", rarity: "legendary", image: "jairos/shadow.png", chance: 1 },
+    { id: 'j17', name: "Planet Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1, quote: "A planet with other planets orbiting me." },
+    { id: 'j18', name: "Universe Jairo", rarity: "legendary", image: "jairos/god.png", chance: 1, quote: "I have galaxies inside me, cuz im a universe, duh." },
+    { id: 'j19', name: "Santa Jairo", rarity: "legendary", image: "jairos/santa.png", chance: 1, quote: "Ho ho ho! Did you wish for a Legendary? Well here you go!" },
+    { id: 'j20', name: "Shadow the Hedgehog Jairo", rarity: "legendary", image: "jairos/shadow.png", chance: 1, quote: "I'm the ultimate life form, I go wherever I want." },
 
     // MYTHIC (0.1% - note: 0.1 is 10x smaller than 1)
-    { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.1 },
-    { id: 'j22', name: "Corrupted Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.1 },
-    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.1 },
-    { id: 'j24', name: "Jairo Ascended", rarity: "mythic", image: "jairos/ascended.png", chance: 0.1 },
+    { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.1, quote: "We don't even make a full rainbow.." },
+    { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.1, quote: "Who am I? What am I..?" },
+    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.1, quote: "Who made me look like this? I look hella cringe." },
+    { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.1, quote: "Watching over everything, with no one noticing." },
 ];
 
 // Combine all chances to create the normalized weights structure
@@ -318,43 +348,32 @@ JAIROS.forEach(j => {
     // Group by rarity to calculate the rarity weights
     N_WEIGHTS[j.rarity] = (N_WEIGHTS[j.rarity] || 0) + (j.chance / CHANCE_SUM);
 });
-// Rarity weights object now contains the chance of pulling any item from that tier
 
 // ----------------------------
-// Helpers: pick rarity & jairo
+// Helpers: pick rarity & jairo (functions remain unchanged)
 // ----------------------------
 function pickRarity(weights){
   const r = Math.random();
   let cum = 0;
-  // Use the calculated rarity chance
   for(const k of Object.keys(weights)){
     cum += weights[k];
     if(r < cum) return k;
   }
-  // fallback
   return Object.keys(weights)[Object.keys(weights).length-1];
 }
 
 function pickJairo(rarityOverride = null){
-  // 1. Pick Rarity Tier (if no override)
   const rarity = rarityOverride || pickRarity(N_WEIGHTS);
-
-  // 2. Filter the pool to items of that rarity
   const pool = JAIROS.filter(j=> j.rarity === rarity);
   if(pool.length === 0) {
-    // If rarity filter failed, just pick a random jairo from the whole list
     return JAIROS[Math.floor(Math.random() * JAIROS.length)];
   }
-
-  // 3. Select a specific Jairo from the pool based on its relative chance within that pool
   const poolTotalChance = pool.reduce((sum, j) => sum + j.chance, 0);
   let r = Math.random() * poolTotalChance;
   for(const jairo of pool) {
       if (r < jairo.chance) return jairo;
       r -= jairo.chance;
   }
-
-  // Final fallback (should not be reached)
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -365,7 +384,6 @@ function pickJairo(rarityOverride = null){
 function loadInventory(){
   try{
     const raw = localStorage.getItem(JAIROS_KEY);
-    // Inventory structure is now {id: {jairo object properties, count: N}}
     inventory = raw ? JSON.parse(raw) : {};
   }catch(e){ inventory = {}; }
 }
@@ -377,13 +395,13 @@ function saveInventory(){
 function giveJairo(jairo){
   const isNew = !inventory[jairo.id];
   if(isNew){
-      // Store the full jairo object plus the count
       inventory[jairo.id] = {...jairo, count: 1};
   } else {
       inventory[jairo.id].count++;
   }
   saveInventory();
   renderInventory();
+  renderJairoDexStats(); // NEW: Update stats when inventory changes
   return isNew;
 }
 
@@ -394,18 +412,24 @@ const spinBtn = document.getElementById('spinBtn');
 const overlay = document.getElementById('overlay');
 const spinnerInner = document.getElementById('spinnerInner');
 const revealModal = document.getElementById('revealModal');
-const revealCard = document.getElementById('revealCard'); // NEW
+const revealCard = document.getElementById('revealCard'); 
 const revealImg = document.getElementById('revealImg');
 const revealName = document.getElementById('revealName');
+const revealQuote = document.getElementById('revealQuote'); // NEW
 const revealRarity = document.getElementById('revealRarity');
 const claimBtn = document.getElementById('claimBtn');
 const invPreview = document.getElementById('invPreview');
 const inventoryList = document.getElementById('inventoryList');
 const spinCountEl = document.getElementById('spinCount');
 const overloadMeterEl = document.getElementById('overloadMeter');
-const lastResultEl = document.getElementById('lastResult'); // NEW
+const lastResultEl = document.getElementById('lastResult'); 
 const lastImg = document.getElementById('lastImg');
 const lastName = document.getElementById('lastName');
+
+// JairoDex UI Elements (NEW)
+const dexCountEl = document.getElementById('dexCount');
+const dexProgressEl = document.getElementById('dexProgress');
+const dexPercentEl = document.getElementById('dexPercent');
 
 // Audio elements
 const spinAudio = document.getElementById('spinAudio');
@@ -415,9 +439,20 @@ const revealAudio = document.getElementById('revealAudio');
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { 
     revealModal.style.display='none'; 
-    // Reset glow classes on the modal card for the next reveal
     revealCard.className = 'reveal-card'; 
 });
+
+
+// JairoDex completion tracker (NEW FUNCTION)
+function renderJairoDexStats(){
+    const ownedUnique = Object.keys(inventory).length;
+    const percent = Math.floor((ownedUnique / TOTAL_JAIROS) * 100);
+
+    dexCountEl.textContent = `${ownedUnique}/${TOTAL_JAIROS}`;
+    dexPercentEl.textContent = `${percent}% Complete`;
+    dexProgressEl.style.width = `${percent}%`;
+}
+
 
 // render inventory previews (tiny)
 function renderInvPreview(){
@@ -436,7 +471,6 @@ function renderInvPreview(){
   ownedIds.slice(0, 8).forEach(id=>{
     const j = inventory[id];
     const el = document.createElement('div');
-    // ADDED RARITY CLASS TO PREVIEW ITEMS
     el.className = `rarity-${j.rarity}`; 
     el.style.width='72px'; el.style.height='72px'; el.style.borderRadius='8px'; el.style.overflow='hidden';
     el.style.background='rgba(255,255,255,0.03)'; el.style.display='grid'; el.style.placeItems='center';
@@ -460,7 +494,6 @@ function renderInventory(){
   if(ids.length===0){
     inventoryList.innerHTML = '<div style="color:#aaa">No jairos yet. Spin to get some!</div>';
     lastImg.style.display='none'; lastName.textContent='—';
-    // Clear last result glow
     lastResultEl.className = '';
     return;
   }
@@ -468,7 +501,6 @@ function renderInventory(){
   ids.forEach(id=>{
     const j = inventory[id];
     const node = document.createElement('div');
-    // Use the stored rarity for the CSS class
     node.className=`card-mini rarity-${j.rarity}`;
     const img = document.createElement('img'); img.src=j.image;
     const meta = document.createElement('div'); meta.className='meta';
@@ -480,14 +512,13 @@ function renderInventory(){
     inventoryList.appendChild(node);
   });
 
-  // update last result preview (using the highest rarity item in inventory as proxy for "last")
+  // update last result preview
   const lastId = ids[ids.length-1];
   const lj = inventory[lastId];
   if(lj){ 
       lastImg.src = lj.image; 
       lastImg.style.display='block'; 
       lastName.textContent = `${lj.name} (x${lj.count})`; 
-      // ADDED LAST RESULT GLOW
       lastResultEl.className = `rarity-${lj.rarity}-bg`;
   }
 }
@@ -504,14 +535,14 @@ function startSpin(){
   if(spinning) return;
   if(JAIROS.length === 0){ alert('Error: Jairo list is empty.'); return; }
   spinning = true;
-  spinBtn.disabled = true; // Disable button while spinning
+  spinBtn.disabled = true; 
 
   // --- AUDIO START ---
   spinAudio.currentTime = 0;
   spinAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
 
-  // overload logic: when >=50 spins since last, 25% chance to trigger overload
+  // overload logic
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
     if(Math.random() < 0.25){
@@ -527,32 +558,29 @@ function startSpin(){
   spinStats.spins++;
   updateStatsUI();
 
-  // pick final result (apply overload boost if true)
+  // pick final result 
   const final = overload ? pickWithBoost() : pickJairo();
 
   // Prepare items for the carousel
   const pool = buildSpinnerPool(final);
-  populateSpinner(pool); // Re-populating with a long track
+  populateSpinner(pool); 
 
   // show overlay & animate scroll
   overlay.style.display = 'flex';
 
   const items = Array.from(spinnerInner.children);
-  // Find the index of one of the chosen items near the middle repeats
   let chosenIndex = -1;
-  // Start search near the center of the pool
   const startIndex = Math.floor(items.length * 0.4); 
   for(let i=startIndex; i<items.length; i++){
     if(items[i].dataset.jairoId === final.id){
       chosenIndex = i; break;
     }
   }
-  if(chosenIndex === -1) chosenIndex = startIndex; // Fallback
+  if(chosenIndex === -1) chosenIndex = startIndex; 
 
   const track = spinnerInner;
-  // Get item width dynamically (we assume all are the same size)
   const item = track.querySelector('.spin-item');
-  const itemW = item ? (item.offsetWidth + 12) : 152; // 12 is the gap, 152 is fallback
+  const itemW = item ? (item.offsetWidth + 12) : 152; 
 
   const container = document.querySelector('.spinner-window');
   const centerX = container.offsetWidth/2;
@@ -562,7 +590,7 @@ function startSpin(){
   let animStart = performance.now();
   const totalDuration = 2800 + Math.random()*900;
   const startTranslate = 0;
-  const extraCycles = 4 + Math.floor(Math.random()*4); // Increased cycles for safer animation
+  const extraCycles = 4 + Math.floor(Math.random()*4); 
   const totalDistance = -(items.length * itemW * extraCycles) + targetTranslate;
 
   function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
@@ -576,7 +604,6 @@ function startSpin(){
       requestAnimationFrame(frame);
     } else {
       // stop - show reveal
-      // Ensure audio stops if it hasn't already
       spinAudio.pause(); 
       spinAudio.currentTime = 0;
 
@@ -584,27 +611,24 @@ function startSpin(){
         revealFinal(final);
         overlay.style.display = 'none';
         spinning = false;
-        spinBtn.disabled = false; // Re-enable button
+        spinBtn.disabled = false; 
       }, 400);
     }
   }
   requestAnimationFrame(frame);
 }
 
-// build spinner pool (mix owned and silhouettes).
+// build spinner pool (mix owned and silhouettes). (function remains unchanged)
 function buildSpinnerPool(final){
-  // Strategy: take all JAIROS list
   const base = JAIROS.slice();
   shuffleArray(base);
 
   const pool = [];
-  // Significantly increase repeats for visual fix (e.g., 20 repeats)
   const repeats = 20; 
   for(let r=0;r<repeats;r++){
     base.forEach(j=> pool.push(j));
   }
 
-  // Insert final a few extra times at random spots near middle
   const mid = Math.floor(pool.length/2);
   pool.splice(mid,0, final);
   pool.splice(mid+3,0, final);
@@ -613,12 +637,11 @@ function buildSpinnerPool(final){
   return pool;
 }
 
-// fill spinnerInner element
+// fill spinnerInner element (function remains unchanged)
 function populateSpinner(pool){
   spinnerInner.innerHTML = '';
   pool.forEach(j=>{
     const div = document.createElement('div'); div.className = 'spin-item';
-    // Check if the ID exists in the inventory (i.e., count > 0)
     const owned = inventory[j.id] && inventory[j.id].count > 0;
     if(owned) div.classList.add('revealed'); else div.classList.add('silhouette');
     div.dataset.jairoId = j.id;
@@ -633,9 +656,9 @@ function populateSpinner(pool){
   setTimeout(()=> spinnerInner.style.transition = '', 30);
 }
 
-// reveal final result visually and add to inventory (stacking handled by giveJairo)
+// reveal final result visually and add to inventory
 function revealFinal(final){
-  const isNew = giveJairo(final); // this updates inventory and saves it
+  const isNew = giveJairo(final); 
 
   // --- AUDIO START ---
   revealAudio.currentTime = 0;
@@ -645,6 +668,7 @@ function revealFinal(final){
   // 1. Set text and image
   revealImg.src = final.image;
   revealName.textContent = final.name;
+  revealQuote.textContent = `"${final.quote}"`; // NEW: Set the quote text
   revealRarity.textContent = final.rarity.toUpperCase() + (isNew ? " (NEW!)" : "");
   
   // 2. Clear old glow and apply new glow to the modal card
@@ -659,33 +683,28 @@ function revealFinal(final){
   setTimeout(()=>{ img.style.transition='transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s'; img.style.transform='scale(1)'; img.style.opacity='1'; }, 40);
 
   // 4. Update side panels
-  renderInventory(); 
-  renderInvPreview();
+  // renderInventory and renderInvPreview are called inside giveJairo now
 }
 
 // ----------------------------
-// Utility: weighted pick with overload boost
+// Utility: weighted pick with overload boost (function remains unchanged)
 // ----------------------------
 function pickWithBoost(){
   const BOOSTED_CHANCES = {};
 
-  // Clone current total chances to start
   for(const rarity in N_WEIGHTS) {
       BOOSTED_CHANCES[rarity] = N_WEIGHTS[rarity] * CHANCE_SUM;
   }
 
-  // Apply raw chance increases
-  BOOSTED_CHANCES.rare = (BOOSTED_CHANCES.rare || 0) + 8; // was 0.08 of sum=1
-  BOOSTED_CHANCES.ultrarare = (BOOSTED_CHANCES.ultrarare || 0) + 3; // was 0.03
-  BOOSTED_CHANCES.legendary = (BOOSTED_CHANCES.legendary || 0) + 1; // was 0.01
+  BOOSTED_CHANCES.rare = (BOOSTED_CHANCES.rare || 0) + 8; 
+  BOOSTED_CHANCES.ultrarare = (BOOSTED_CHANCES.ultrarare || 0) + 3; 
+  BOOSTED_CHANCES.legendary = (BOOSTED_CHANCES.legendary || 0) + 1; 
 
-  // Re-calculate the normalized weights for the boost
   const boostSum = Object.values(BOOSTED_CHANCES).reduce((a,b)=>a+b,0);
   const N_BOOSTED_WEIGHTS = {};
   for(const k in BOOSTED_CHANCES) N_BOOSTED_WEIGHTS[k] = BOOSTED_CHANCES[k]/boostSum;
 
   const boostedRarity = pickRarity(N_BOOSTED_WEIGHTS);
-  // Now pick a Jairo from that boosted rarity tier
   return pickJairo(boostedRarity);
 }
 
@@ -693,7 +712,10 @@ function pickWithBoost(){
 // small utilities
 // ----------------------------
 function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
-function updateStatsUI(){ spinCountEl.textContent = spinStats.spins; overloadMeterEl.textContent = spinStats.spinsSinceLastOverload; }
+function updateStatsUI(){ 
+    spinCountEl.textContent = spinStats.spins; 
+    overloadMeterEl.textContent = spinStats.spinsSinceLastOverload; 
+}
 
 // ----------------------------
 // Init
@@ -702,6 +724,7 @@ loadInventory();
 updateStatsUI();
 renderInventory();
 renderInvPreview();
+renderJairoDexStats(); // NEW: Initial call to show 0/24 progress
 
 // ----------------------------
 // small touch: click overlay to cancel if spinner stuck (dev only)
