@@ -11,6 +11,14 @@
     --panel-bg: rgba(0,0,0,.75);
     --accent: #00ff66;
     --glass: rgba(255,255,255,0.03);
+    
+    /* NEW: Rarity Glow Colors */
+    --glow-common: rgba(102, 102, 102, 0.4);
+    --glow-uncommon: rgba(0, 204, 102, 0.4);
+    --glow-rare: rgba(30, 144, 255, 0.4);
+    --glow-ultrarare: rgba(142, 45, 226, 0.4);
+    --glow-legendary: rgba(255, 159, 28, 0.5);
+    --glow-mythic: rgba(255, 222, 89, 0.6);
   }
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial; background:linear-gradient(135deg,var(--bg1),var(--bg2)); color:#fff;}
   .app {
@@ -26,7 +34,7 @@
     color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
     box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 -6px 18px rgba(255,255,255,0.02);
   }
-  .btn.primary { background: linear-gradient(180deg,#00d27a,#00783f); color:#001; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+  .btn.primary { background: linear-gradient(180deg,#00d27a,#00783f); color:#001; box-shadow:0 10px 30px rgba(0,0,0,0.5); border:none; }
   .btn:active{transform:translateY(1px)}
 
   /* main panel */
@@ -67,16 +75,29 @@
   .inv { background:var(--glass); border-radius:10px; padding:10px; height:420px; overflow:auto; }
   .inv h3{margin:0 0 8px 0;font-size:14px}
   .inv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-  .card-mini { background:rgba(0,0,0,0.45); padding:6px; border-radius:8px; display:flex; gap:8px; align-items:center }
+  .card-mini { background:rgba(0,0,0,0.45); padding:6px; border-radius:8px; display:flex; gap:8px; align-items:center; transition: border .3s, box-shadow .3s; }
   .card-mini img{width:44px;height:44px;border-radius:6px;object-fit:cover}
   .card-mini .meta { font-size:12px }
-  /* Rarity color classes for inventory items */
+  
+  /* Rarity Glows for Inventory & Preview Items (Updated to use defined colors) */
   .rarity-common{border:1px solid #666}
-  .rarity-uncommon{border:1px solid #00cc66}
-  .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px rgba(30, 144, 255,0.2)}
-  .rarity-ultrarare{border:1px solid #8e2de2; box-shadow:0 0 8px rgba(142, 45, 226,0.2)}
-  .rarity-legendary{border:1px solid #ff9f1c; box-shadow:0 0 12px rgba(255,159,28,0.3)}
-  .rarity-mythic{border:1px solid #ffde59; box-shadow:0 0 16px rgba(255,222,89,0.4)}
+  .rarity-uncommon{border:1px solid #00cc66; box-shadow:0 0 6px var(--glow-uncommon)}
+  .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px var(--glow-rare)}
+  .rarity-ultrarare{border:1px solid #8e2de2; box-shadow:0 0 10px var(--glow-ultrarare)}
+  .rarity-legendary{border:1px solid #ff9f1c; box-shadow:0 0 12px var(--glow-legendary)}
+  .rarity-mythic{border:1px solid #ffde59; box-shadow:0 0 16px var(--glow-mythic)}
+  
+  /* Last Result Glow */
+  #lastResult {
+    transition: box-shadow .5s ease-out, border-color .5s ease-out;
+  }
+  .rarity-common-bg{ border:1px solid #666; box-shadow:0 0 8px var(--glow-common); }
+  .rarity-uncommon-bg{ border:1px solid #00cc66; box-shadow:0 0 12px var(--glow-uncommon); }
+  .rarity-rare-bg{ border:1px solid #1e90ff; box-shadow:0 0 16px var(--glow-rare); }
+  .rarity-ultrarare-bg{ border:1px solid #8e2de2; box-shadow:0 0 20px var(--glow-ultrarare); }
+  .rarity-legendary-bg{ border:1px solid #ff9f1c; box-shadow:0 0 24px var(--glow-legendary); }
+  .rarity-mythic-bg{ border:1px solid #ffde59; box-shadow:0 0 28px var(--glow-mythic); }
+
 
   /* overlay spinner UI */
   .overlay {
@@ -137,7 +158,17 @@
   .reveal-card {
     width: min(92%,520px); background:linear-gradient(180deg,#111,#000); padding:18px; border-radius:14px; text-align:center;
     border:1px solid rgba(255,255,255,0.06);
+    transition: border .5s, box-shadow .5s; /* Added transition for smooth glow change */
   }
+  /* Rarity Glows for the Modal Card */
+  .reveal-card.rarity-common-modal{ border:1px solid #666; box-shadow:0 0 16px var(--glow-common); }
+  .reveal-card.rarity-uncommon-modal{ border:1px solid #00cc66; box-shadow:0 0 20px var(--glow-uncommon); }
+  .reveal-card.rarity-rare-modal{ border:1px solid #1e90ff; box-shadow:0 0 24px var(--glow-rare); }
+  .reveal-card.rarity-ultrarare-modal{ border:1px solid #8e2de2; box-shadow:0 0 28px var(--glow-ultrarare); }
+  .reveal-card.rarity-legendary-modal{ border:1px solid #ff9f1c; box-shadow:0 0 32px var(--glow-legendary); }
+  .reveal-card.rarity-mythic-modal{ border:1px solid #ffde59; box-shadow:0 0 36px var(--glow-mythic); }
+
+
   .reveal-card img { width:220px; height:220px; object-fit:cover; border-radius:10px; display:block; margin:0 auto; }
   .reveal-card .name { margin-top:12px; font-weight:800; font-size:20px; color:var(--accent); }
   .small { font-size:13px; color:#bbb }
@@ -227,8 +258,7 @@
 
 <script>
 /*
-  Updated Jairo Spin demo with 24 Jairos, stacking inventory, and removed debug/reset features.
-  *** FIX: Added sound effects and increased spinner track length to prevent blank spaces. ***
+  Updated Jairo Spin demo with Rarity Glows
 */
 
 // ----------------------------
@@ -241,6 +271,7 @@ let spinStats = { spins:0, spinsSinceLastOverload:0 };
 // ----------------------------
 // 24 JAIROS DATA POOL
 // The image paths are set to '/jairos/' + filename
+// NOTE: Name changes from user incorporated here
 // ----------------------------
 const JAIROS = [
     // COMMON (60%)
@@ -363,6 +394,7 @@ const spinBtn = document.getElementById('spinBtn');
 const overlay = document.getElementById('overlay');
 const spinnerInner = document.getElementById('spinnerInner');
 const revealModal = document.getElementById('revealModal');
+const revealCard = document.getElementById('revealCard'); // NEW
 const revealImg = document.getElementById('revealImg');
 const revealName = document.getElementById('revealName');
 const revealRarity = document.getElementById('revealRarity');
@@ -371,6 +403,7 @@ const invPreview = document.getElementById('invPreview');
 const inventoryList = document.getElementById('inventoryList');
 const spinCountEl = document.getElementById('spinCount');
 const overloadMeterEl = document.getElementById('overloadMeter');
+const lastResultEl = document.getElementById('lastResult'); // NEW
 const lastImg = document.getElementById('lastImg');
 const lastName = document.getElementById('lastName');
 
@@ -380,7 +413,11 @@ const revealAudio = document.getElementById('revealAudio');
 
 
 spinBtn.addEventListener('click', startSpin);
-claimBtn.addEventListener('click', ()=> { revealModal.style.display='none'; });
+claimBtn.addEventListener('click', ()=> { 
+    revealModal.style.display='none'; 
+    // Reset glow classes on the modal card for the next reveal
+    revealCard.className = 'reveal-card'; 
+});
 
 // render inventory previews (tiny)
 function renderInvPreview(){
@@ -399,6 +436,8 @@ function renderInvPreview(){
   ownedIds.slice(0, 8).forEach(id=>{
     const j = inventory[id];
     const el = document.createElement('div');
+    // ADDED RARITY CLASS TO PREVIEW ITEMS
+    el.className = `rarity-${j.rarity}`; 
     el.style.width='72px'; el.style.height='72px'; el.style.borderRadius='8px'; el.style.overflow='hidden';
     el.style.background='rgba(255,255,255,0.03)'; el.style.display='grid'; el.style.placeItems='center';
     const img = document.createElement('img'); img.src=j.image; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
@@ -421,6 +460,8 @@ function renderInventory(){
   if(ids.length===0){
     inventoryList.innerHTML = '<div style="color:#aaa">No jairos yet. Spin to get some!</div>';
     lastImg.style.display='none'; lastName.textContent='—';
+    // Clear last result glow
+    lastResultEl.className = '';
     return;
   }
 
@@ -439,10 +480,16 @@ function renderInventory(){
     inventoryList.appendChild(node);
   });
 
-  // update last result preview
+  // update last result preview (using the highest rarity item in inventory as proxy for "last")
   const lastId = ids[ids.length-1];
   const lj = inventory[lastId];
-  if(lj){ lastImg.src = lj.image; lastImg.style.display='block'; lastName.textContent = `${lj.name} (x${lj.count})`; }
+  if(lj){ 
+      lastImg.src = lj.image; 
+      lastImg.style.display='block'; 
+      lastName.textContent = `${lj.name} (x${lj.count})`; 
+      // ADDED LAST RESULT GLOW
+      lastResultEl.className = `rarity-${lj.rarity}-bg`;
+  }
 }
 
 // nice ordering
@@ -595,17 +642,25 @@ function revealFinal(final){
   revealAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
 
+  // 1. Set text and image
   revealImg.src = final.image;
   revealName.textContent = final.name;
   revealRarity.textContent = final.rarity.toUpperCase() + (isNew ? " (NEW!)" : "");
+  
+  // 2. Clear old glow and apply new glow to the modal card
+  revealCard.className = `reveal-card rarity-${final.rarity}-modal`;
+
   revealModal.style.display = 'flex';
 
+  // 3. Image entrance animation
   const img = revealImg;
   img.style.transform = 'scale(.6)';
   img.style.opacity = '0';
   setTimeout(()=>{ img.style.transition='transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s'; img.style.transform='scale(1)'; img.style.opacity='1'; }, 40);
 
-  renderInventory(); renderInvPreview();
+  // 4. Update side panels
+  renderInventory(); 
+  renderInvPreview();
 }
 
 // ----------------------------
