@@ -221,9 +221,14 @@
   </div>
 </div>
 
+<audio id="spinAudio" src="spin_start.mp3" preload="auto"></audio>
+<audio id="revealAudio" src="jairo_reveal.mp3" preload="auto"></audio>
+
+
 <script>
 /*
   Updated Jairo Spin demo with 24 Jairos, stacking inventory, and removed debug/reset features.
+  *** FIX: Added sound effects and increased spinner track length to prevent blank spaces. ***
 */
 
 // ----------------------------
@@ -369,6 +374,11 @@ const overloadMeterEl = document.getElementById('overloadMeter');
 const lastImg = document.getElementById('lastImg');
 const lastName = document.getElementById('lastName');
 
+// Audio elements
+const spinAudio = document.getElementById('spinAudio');
+const revealAudio = document.getElementById('revealAudio');
+
+
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { revealModal.style.display='none'; });
 
@@ -377,14 +387,14 @@ function renderInvPreview(){
   invPreview.innerHTML='';
   const ownedIds = Object.keys(inventory);
   if(ownedIds.length===0){ invPreview.textContent = 'You have none yet.'; return; }
-  
+
   // Sort by rarity rank for a cleaner preview
   ownedIds.sort((a,b)=>{
     const ra = rarityRank(inventory[a].rarity);
     const rb = rarityRank(inventory[b].rarity);
     return ra - rb;
   });
-  
+
   // Only show the first few in the preview
   ownedIds.slice(0, 8).forEach(id=>{
     const j = inventory[id];
@@ -416,15 +426,15 @@ function renderInventory(){
 
   ids.forEach(id=>{
     const j = inventory[id];
-    const node = document.createElement('div'); 
+    const node = document.createElement('div');
     // Use the stored rarity for the CSS class
-    node.className=`card-mini rarity-${j.rarity}`; 
+    node.className=`card-mini rarity-${j.rarity}`;
     const img = document.createElement('img'); img.src=j.image;
     const meta = document.createElement('div'); meta.className='meta';
-    
+
     // Display the count next to the name
     meta.innerHTML = `<div style="font-weight:700">${j.name}</div><div style="color:#ccc">${j.rarity.toUpperCase()} • **x${j.count}**</div>`;
-    
+
     node.appendChild(img); node.appendChild(meta);
     inventoryList.appendChild(node);
   });
@@ -447,6 +457,12 @@ function startSpin(){
   if(spinning) return;
   if(JAIROS.length === 0){ alert('Error: Jairo list is empty.'); return; }
   spinning = true;
+  spinBtn.disabled = true; // Disable button while spinning
+
+  // --- AUDIO START ---
+  spinAudio.currentTime = 0;
+  spinAudio.play().catch(e => console.log("Audio playback failed:", e));
+  // --- AUDIO END ---
 
   // overload logic: when >=50 spins since last, 25% chance to trigger overload
   let overload = false;
@@ -466,10 +482,10 @@ function startSpin(){
 
   // pick final result (apply overload boost if true)
   const final = overload ? pickWithBoost() : pickJairo();
-  
+
   // Prepare items for the carousel
   const pool = buildSpinnerPool(final);
-  populateSpinner(pool);
+  populateSpinner(pool); // Re-populating with a long track
 
   // show overlay & animate scroll
   overlay.style.display = 'flex';
@@ -477,16 +493,19 @@ function startSpin(){
   const items = Array.from(spinnerInner.children);
   // Find the index of one of the chosen items near the middle repeats
   let chosenIndex = -1;
-  for(let i=Math.floor(items.length/2); i<items.length; i++){
+  // Start search near the center of the pool
+  const startIndex = Math.floor(items.length * 0.4); 
+  for(let i=startIndex; i<items.length; i++){
     if(items[i].dataset.jairoId === final.id){
       chosenIndex = i; break;
     }
   }
-  if(chosenIndex === -1) chosenIndex = Math.floor(items.length/2); // Fallback
+  if(chosenIndex === -1) chosenIndex = startIndex; // Fallback
 
   const track = spinnerInner;
+  // Get item width dynamically (we assume all are the same size)
   const item = track.querySelector('.spin-item');
-  const itemW = item.offsetWidth + 12; // 12 is the gap
+  const itemW = item ? (item.offsetWidth + 12) : 152; // 12 is the gap, 152 is fallback
 
   const container = document.querySelector('.spinner-window');
   const centerX = container.offsetWidth/2;
@@ -496,7 +515,7 @@ function startSpin(){
   let animStart = performance.now();
   const totalDuration = 2800 + Math.random()*900;
   const startTranslate = 0;
-  const extraCycles = 2 + Math.floor(Math.random()*3);
+  const extraCycles = 4 + Math.floor(Math.random()*4); // Increased cycles for safer animation
   const totalDistance = -(items.length * itemW * extraCycles) + targetTranslate;
 
   function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
@@ -510,10 +529,15 @@ function startSpin(){
       requestAnimationFrame(frame);
     } else {
       // stop - show reveal
+      // Ensure audio stops if it hasn't already
+      spinAudio.pause(); 
+      spinAudio.currentTime = 0;
+
       setTimeout(()=> {
         revealFinal(final);
         overlay.style.display = 'none';
         spinning = false;
+        spinBtn.disabled = false; // Re-enable button
       }, 400);
     }
   }
@@ -525,13 +549,14 @@ function buildSpinnerPool(final){
   // Strategy: take all JAIROS list
   const base = JAIROS.slice();
   shuffleArray(base);
-  
+
   const pool = [];
-  const repeats = 6;
+  // Significantly increase repeats for visual fix (e.g., 20 repeats)
+  const repeats = 20; 
   for(let r=0;r<repeats;r++){
     base.forEach(j=> pool.push(j));
   }
-  
+
   // Insert final a few extra times at random spots near middle
   const mid = Math.floor(pool.length/2);
   pool.splice(mid,0, final);
@@ -565,16 +590,21 @@ function populateSpinner(pool){
 function revealFinal(final){
   const isNew = giveJairo(final); // this updates inventory and saves it
 
+  // --- AUDIO START ---
+  revealAudio.currentTime = 0;
+  revealAudio.play().catch(e => console.log("Audio playback failed:", e));
+  // --- AUDIO END ---
+
   revealImg.src = final.image;
   revealName.textContent = final.name;
   revealRarity.textContent = final.rarity.toUpperCase() + (isNew ? " (NEW!)" : "");
   revealModal.style.display = 'flex';
-  
+
   const img = revealImg;
   img.style.transform = 'scale(.6)';
   img.style.opacity = '0';
   setTimeout(()=>{ img.style.transition='transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s'; img.style.transform='scale(1)'; img.style.opacity='1'; }, 40);
-  
+
   renderInventory(); renderInvPreview();
 }
 
@@ -583,12 +613,12 @@ function revealFinal(final){
 // ----------------------------
 function pickWithBoost(){
   const BOOSTED_CHANCES = {};
-  
+
   // Clone current total chances to start
   for(const rarity in N_WEIGHTS) {
       BOOSTED_CHANCES[rarity] = N_WEIGHTS[rarity] * CHANCE_SUM;
   }
-  
+
   // Apply raw chance increases
   BOOSTED_CHANCES.rare = (BOOSTED_CHANCES.rare || 0) + 8; // was 0.08 of sum=1
   BOOSTED_CHANCES.ultrarare = (BOOSTED_CHANCES.ultrarare || 0) + 3; // was 0.03
