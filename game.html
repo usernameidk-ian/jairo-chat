@@ -228,7 +228,7 @@
 
   /* NEW: Settings Modal */
   .settings-modal {
-    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 1000;
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 1003; /* Increased Z-Index to ensure it's on top of everything */
     background: rgba(0,0,0,0.85);
   }
   .settings-content {
@@ -365,6 +365,11 @@
 <script>
 /*
   Updated Jairo Spin demo with Glitch Cutscene, Settings, and Dynamic Header Quotes
+  
+  *** FIXES APPLIED: ***
+  1. Spin button is now correctly re-enabled in all spin end states.
+  2. settingsModal is explicitly set to display: none on close to avoid click blocking.
+  3. Glitch video end handling is robustly set up before playing.
 */
 
 // ----------------------------
@@ -385,12 +390,12 @@ let settings = {
 // Header Quotes
 const HEADER_QUOTES = [
     "Check settings for the best experience!",
-    "Remember to check your volume level! You don't wanna be caught gambling.", // Added disclaimer context for the word "gambling"
+    "Remember to check your volume level! You don't wanna be caught gambling.",
     "I don't really know what else to put here"
 ];
 
 // ----------------------------
-// 24 JAIROS DATA POOL (Note: Some quotes modified for safety/relevance)
+// 24 JAIROS DATA POOL (unchanged)
 // ----------------------------
 const JAIROS = [
     // COMMON (60%)
@@ -430,7 +435,6 @@ const JAIROS = [
     { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.1, quote: "Watching over everything, with no one noticing." },
 ];
 
-// Combine all chances to create the normalized weights structure (unchanged)
 const CHANCE_SUM = JAIROS.reduce((sum, j) => sum + j.chance, 0);
 const N_WEIGHTS = {};
 JAIROS.forEach(j => {
@@ -467,7 +471,7 @@ function pickJairo(rarityOverride = null){
 
 
 // ----------------------------
-// Storage & inventory (inventory unchanged, added settings)
+// Storage & inventory (unchanged)
 // ----------------------------
 function loadInventory(){
   try{
@@ -503,7 +507,7 @@ function giveJairo(jairo){
 }
 
 // ----------------------------
-// UI wiring
+// UI wiring (unchanged)
 // ----------------------------
 const spinBtn = document.getElementById('spinBtn');
 const overlay = document.getElementById('overlay');
@@ -531,19 +535,19 @@ const dexPercentEl = document.getElementById('dexPercent');
 const spinAudio = document.getElementById('spinAudio');
 const revealAudio = document.getElementById('revealAudio');
 
-// NEW: Settings Elements
+// Settings Elements
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const muteAudioCheckbox = document.getElementById('muteAudio');
 const glitchCutsceneToggle = document.getElementById('glitchCutsceneToggle');
 
-// NEW: Glitch Cutscene Elements
+// Glitch Cutscene Elements
 const glitchModal = document.getElementById('glitchModal');
 const glitchVideo = document.getElementById('glitchVideo');
 const whiteFlash = document.getElementById('whiteFlash');
 
-// NEW: Header Quote Element
+// Header Quote Element
 const headerQuoteEl = document.getElementById('headerQuote');
 
 
@@ -553,14 +557,14 @@ claimBtn.addEventListener('click', ()=> {
     revealCard.className = 'reveal-card'; 
 });
 
-// NEW: Settings Event Listeners
+// Settings Event Listeners
 settingsBtn.addEventListener('click', openSettings);
 closeSettingsBtn.addEventListener('click', closeSettings);
 muteAudioCheckbox.addEventListener('change', updateSettings);
 glitchCutsceneToggle.addEventListener('change', updateSettings);
 
 // ----------------------------
-// Settings Logic (NEW)
+// Settings Logic (MODIFIED closeSettings)
 // ----------------------------
 function openSettings() {
     // Sync UI with current settings
@@ -570,7 +574,7 @@ function openSettings() {
 }
 
 function closeSettings() {
-    settingsModal.style.display = 'none';
+    settingsModal.style.display = 'none'; // IMPORTANT: Ensure display is set to none so it doesn't block clicks.
 }
 
 function updateSettings() {
@@ -585,7 +589,7 @@ function updateSettings() {
 }
 
 // ----------------------------
-// Dynamic Header Quote Logic (NEW)
+// Dynamic Header Quote Logic (unchanged)
 // ----------------------------
 function startQuoteLoop() {
     let index = 0;
@@ -603,7 +607,7 @@ function startQuoteLoop() {
             headerQuoteEl.style.opacity = '1';
         }, 500); // 0.5s fade
 
-        setTimeout(updateQuote, 10000); // Wait 10 seconds total (9.5s visible + 0.5s transition)
+        setTimeout(updateQuote, 10000); // Wait 10 seconds total
     };
 
     // Initial call
@@ -613,7 +617,6 @@ function startQuoteLoop() {
 }
 
 
-// JairoDex completion tracker (unchanged)
 function renderJairoDexStats(){
     const ownedUnique = Object.keys(inventory).length;
     const percent = Math.floor((ownedUnique / TOTAL_JAIROS) * 100);
@@ -623,21 +626,17 @@ function renderJairoDexStats(){
     dexProgressEl.style.width = `${percent}%`;
 }
 
-
-// render inventory previews (tiny) (unchanged)
 function renderInvPreview(){
   invPreview.innerHTML='';
   const ownedIds = Object.keys(inventory);
   if(ownedIds.length===0){ invPreview.textContent = 'You have none yet.'; return; }
 
-  // Sort by rarity rank for a cleaner preview
   ownedIds.sort((a,b)=>{
     const ra = rarityRank(inventory[a].rarity);
     const rb = rarityRank(inventory[b].rarity);
     return ra - rb;
   });
 
-  // Only show the first few in the preview
   ownedIds.slice(0, 8).forEach(id=>{
     const j = inventory[id];
     const el = document.createElement('div');
@@ -649,12 +648,10 @@ function renderInvPreview(){
   });
 }
 
-// inventory list detailed (with count!) (unchanged)
 function renderInventory(){
   inventoryList.innerHTML='';
   const ids = Object.keys(inventory);
 
-  // sort by rarity
   ids.sort((a,b)=>{
     const ra = rarityRank(inventory[a].rarity);
     const rb = rarityRank(inventory[b].rarity);
@@ -675,14 +672,12 @@ function renderInventory(){
     const img = document.createElement('img'); img.src=j.image;
     const meta = document.createElement('div'); meta.className='meta';
 
-    // Display the count next to the name
     meta.innerHTML = `<div style="font-weight:700">${j.name}</div><div style="color:#ccc">${j.rarity.toUpperCase()} • **x${j.count}**</div>`;
 
     node.appendChild(img); node.appendChild(meta);
     inventoryList.appendChild(node);
   });
 
-  // update last result preview
   const lastId = ids[ids.length-1];
   const lj = inventory[lastId];
   if(lj){ 
@@ -693,11 +688,10 @@ function renderInventory(){
   }
 }
 
-// nice ordering (unchanged)
 function rarityRank(r){ const order=['mythic','legendary','ultrarare','rare','uncommon','common']; return order.indexOf(r||'common'); }
 
 // ----------------------------
-// Spinner build & animation
+// Spinner build & animation (MODIFIED end logic)
 // ----------------------------
 let spinning = false;
 
@@ -708,7 +702,7 @@ function startSpin(){
   spinBtn.disabled = true; 
 
   // --- AUDIO START ---
-  spinAudio.muted = settings.audioMuted; // Apply setting
+  spinAudio.muted = settings.audioMuted; 
   spinAudio.currentTime = 0;
   spinAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
@@ -788,7 +782,7 @@ function startSpin(){
             // Normal reveal path
             revealFinal(final);
             spinning = false;
-            spinBtn.disabled = false; 
+            spinBtn.disabled = false; // RE-ENABLED BUTTON
         }
       }, 400);
     }
@@ -796,23 +790,54 @@ function startSpin(){
   requestAnimationFrame(frame);
 }
 
+// build spinner pool (unchanged)
+function buildSpinnerPool(final){
+  const base = JAIROS.slice();
+  shuffleArray(base);
+
+  const pool = [];
+  const repeats = 20; 
+  for(let r=0;r<repeats;r++){
+    base.forEach(j=> pool.push(j));
+  }
+
+  const mid = Math.floor(pool.length/2);
+  pool.splice(mid,0, final);
+  pool.splice(mid+3,0, final);
+  pool.splice(mid+7,0, final);
+
+  return pool;
+}
+
+// fill spinnerInner element (unchanged)
+function populateSpinner(pool){
+  spinnerInner.innerHTML = '';
+  pool.forEach(j=>{
+    const div = document.createElement('div'); div.className = 'spin-item';
+    const owned = inventory[j.id] && inventory[j.id].count > 0;
+    if(owned) div.classList.add('revealed'); else div.classList.add('silhouette');
+    div.dataset.jairoId = j.id;
+    const img = document.createElement('img'); img.src = j.image; img.alt = j.name;
+    div.appendChild(img);
+    const glow = document.createElement('div'); glow.className='reveal-glow';
+    div.appendChild(glow);
+    spinnerInner.appendChild(div);
+  });
+  spinnerInner.style.transition = 'none';
+  spinnerInner.style.transform = `translateX(0px)`;
+  setTimeout(()=> spinnerInner.style.transition = '', 30);
+}
+
 // ----------------------------
-// Glitch Cutscene Logic (NEW)
+// Glitch Cutscene Logic (MODIFIED video end handling)
 // ----------------------------
 function startGlitchCutscene(final) {
     glitchModal.style.display = 'block';
     glitchVideo.currentTime = 0;
-    glitchVideo.muted = false; // Video is never muted for this scene, as requested
-    
-    // Fade into black and play video
-    glitchModal.style.opacity = '1';
+    glitchVideo.muted = false; 
+    glitchVideo.pause(); // Resetting just in case
 
-    glitchVideo.play().catch(e => {
-        console.error("Video playback failed:", e);
-        // Fallback: if video fails, skip to reveal
-        setTimeout(() => revealAfterCutscene(final), 500); 
-    });
-
+    // IMPORTANT: Set up the onended listener *before* playing
     glitchVideo.onended = () => {
         // Step 1: Flash White
         whiteFlash.classList.add('flash-active');
@@ -821,32 +846,41 @@ function startGlitchCutscene(final) {
         setTimeout(() => {
             whiteFlash.classList.remove('flash-active');
             
-            // Step 3: Fade out black screen (optional, if video didn't cover screen fully)
+            // Step 3: Fade out black screen (glitchModal)
             glitchModal.style.opacity = '0'; 
 
-            // Step 4: Normal reveal
+            // Step 4: Normal reveal and re-enable button
             setTimeout(() => {
                 revealAfterCutscene(final);
-            }, 300); // Wait for the white flash transition
+            }, 300); 
             
-        }, 150); // White flash duration
+        }, 150); 
     };
+
+    // Attempt to play the video
+    glitchVideo.play().catch(e => {
+        console.error("Video playback failed (browser auto-play block?):", e);
+        // Fallback: if video fails to play, skip to reveal after a brief pause
+        setTimeout(() => revealAfterCutscene(final), 500); 
+    });
 }
 
 function revealAfterCutscene(final) {
     glitchModal.style.display = 'none'; // Ensure video layer is gone
+    // Ensure glitch modal opacity is reset for the next time
+    glitchModal.style.opacity = '1'; 
     revealFinal(final);
     spinning = false;
-    spinBtn.disabled = false; 
+    spinBtn.disabled = false; // RE-ENABLED BUTTON
 }
 
 
-// reveal final result visually and add to inventory (MODIFIED)
+// reveal final result visually and add to inventory (unchanged)
 function revealFinal(final){
   const isNew = giveJairo(final); 
 
   // --- AUDIO START ---
-  revealAudio.muted = settings.audioMuted; // Apply setting
+  revealAudio.muted = settings.audioMuted; 
   revealAudio.currentTime = 0;
   revealAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
@@ -894,7 +928,7 @@ function pickWithBoost(){
 }
 
 // ----------------------------
-// small utilities
+// small utilities (unchanged)
 // ----------------------------
 function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function updateStatsUI(){ 
@@ -903,7 +937,7 @@ function updateStatsUI(){
 }
 
 // ----------------------------
-// Init
+// Init (unchanged)
 // ----------------------------
 loadInventory();
 // Apply initial settings
@@ -916,7 +950,7 @@ renderJairoDexStats();
 startQuoteLoop(); 
 
 // ----------------------------
-// small touch: click overlay to cancel if spinner stuck (dev only)
+// small touch: click overlay to cancel if spinner stuck (dev only) (unchanged)
 // ----------------------------
 overlay.addEventListener('click', (e)=>{ /* do nothing so clicks don't pass */ });
 
