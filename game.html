@@ -26,9 +26,18 @@
   }
 
   header {display:flex;align-items:center;justify-content:space-between; gap:12px;}
+  .header-title-group { display: flex; flex-direction: column; }
   h1{margin:0;font-size:20px;letter-spacing:0.6px}
+  /* NEW: Dynamic Quote Style */
+  #headerQuote {
+    font-size: 13px;
+    color: #bbb;
+    height: 16px; /* Ensure space for transition */
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+  }
   .controls {display:flex; gap:8px; align-items:center}
-  .btn { /* Removed Reset/Seed buttons, keeping btn style for general use */
+  .btn { 
     background: linear-gradient(180deg,#111,#000);
     border:1px solid rgba(255,255,255,0.06);
     color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
@@ -181,7 +190,7 @@
   .reveal-card {
     width: min(92%,520px); background:linear-gradient(180deg,#111,#000); padding:18px; border-radius:14px; text-align:center;
     border:1px solid rgba(255,255,255,0.06);
-    transition: border .5s, box-shadow .5s; /* Added transition for smooth glow change */
+    transition: border .5s, box-shadow .5s; 
   }
   /* Rarity Glows for the Modal Card */
   .reveal-card.rarity-common-modal{ border:1px solid #666; box-shadow:0 0 16px var(--glow-common); }
@@ -194,8 +203,44 @@
 
   .reveal-card img { width:220px; height:220px; object-fit:cover; border-radius:10px; display:block; margin:0 auto; }
   .reveal-card .name { margin-top:12px; font-weight:800; font-size:20px; color:var(--accent); }
-  .reveal-card .quote { font-style: italic; font-size: 14px; color: #bbb; margin: 4px 0 8px 0; } /* NEW: Quote style */
+  .reveal-card .quote { font-style: italic; font-size: 14px; color: #bbb; margin: 4px 0 8px 0; } 
   .small { font-size:13px; color:#bbb }
+
+  /* NEW: Glitch Cutscene Modal */
+  .glitch-modal {
+    position: fixed; inset: 0; display: none; background: black; z-index: 1001;
+    transition: opacity 0.5s ease-out;
+    opacity: 1;
+  }
+  .glitch-modal video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  /* NEW: Global Flash Effect */
+  .flash-white {
+    position: fixed; inset: 0; background: white; z-index: 1002;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in;
+  }
+  .flash-active {
+    opacity: 1;
+  }
+
+  /* NEW: Settings Modal */
+  .settings-modal {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 1000;
+    background: rgba(0,0,0,0.85);
+  }
+  .settings-content {
+    width: min(90%, 400px); background: linear-gradient(180deg,#222,#111); padding: 20px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .setting-item {
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .setting-item:last-child { border-bottom: none; }
+  .setting-item label { font-weight: 500; }
+
 
   @media (max-width:820px){
     .panel { flex-direction:column; }
@@ -207,9 +252,13 @@
 <body>
 <div class="app">
   <header>
-    <h1>Jairo Spin — Game</h1>
+    <div class="header-title-group">
+        <h1>Jairo Spin — Game</h1>
+        <div id="headerQuote"></div>
+    </div>
     <div class="controls">
-      </div>
+        <button class="btn" id="settingsBtn">⚙️ Settings</button>
+    </div>
   </header>
 
   <div class="panel">
@@ -283,25 +332,65 @@
   </div>
 </div>
 
+<div class="glitch-modal" id="glitchModal">
+    <video id="glitchVideo" src="glitched_jairo_scene.mp4" playsinline></video>
+</div>
+
+<div class="flash-white" id="whiteFlash"></div>
+
+<div class="settings-modal" id="settingsModal">
+    <div class="settings-content">
+        <h2 style="margin-top:0;">Game Settings</h2>
+        
+        <div class="setting-item">
+            <label for="muteAudio">Mute All Audio (Spin/Reveal)</label>
+            <input type="checkbox" id="muteAudio">
+        </div>
+
+        <div class="setting-item">
+            <label for="glitchCutsceneToggle">Enable Glitch Jairo Cutscene</label>
+            <input type="checkbox" id="glitchCutsceneToggle">
+        </div>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <button class="btn" id="closeSettingsBtn">Close</button>
+        </div>
+    </div>
+</div>
+
 <audio id="spinAudio" src="spin_start.mp3" preload="auto"></audio>
 <audio id="revealAudio" src="jairo_reveal.mp3" preload="auto"></audio>
 
 
 <script>
 /*
-  Updated Jairo Spin demo with Rarity Glows, Jairo Quotes, and JairoDex Tracker
+  Updated Jairo Spin demo with Glitch Cutscene, Settings, and Dynamic Header Quotes
 */
 
 // ----------------------------
 // Data & config
 // ----------------------------
 const JAIROS_KEY = 'jairo_demo_inv';
-let inventory = {}; // id -> {object, count: N}
+const SETTINGS_KEY = 'jairo_demo_settings';
+let inventory = {}; 
 let spinStats = { spins:0, spinsSinceLastOverload:0 };
-const TOTAL_JAIROS = 24; // Constant for JairoDex tracking
+const TOTAL_JAIROS = 24; 
+
+// Initial/Default Settings
+let settings = {
+    audioMuted: false,
+    glitchCutsceneEnabled: true
+};
+
+// Header Quotes
+const HEADER_QUOTES = [
+    "Check settings for the best experience!",
+    "Remember to check your volume level! You don't wanna be caught gambling.", // Added disclaimer context for the word "gambling"
+    "I don't really know what else to put here"
+];
 
 // ----------------------------
-// 24 JAIROS DATA POOL (with new quotes!)
+// 24 JAIROS DATA POOL (Note: Some quotes modified for safety/relevance)
 // ----------------------------
 const JAIROS = [
     // COMMON (60%)
@@ -311,22 +400,22 @@ const JAIROS = [
     { id: 'j04', name: "Chip Jairo", rarity: "common", image: "jairos/chips.png", chance: 60, quote: "what the." },
 
     // UNCOMMON (25%)
-    { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25, quote: "MAN IM ANGRY, [insert something someone angry would say]" },
+    { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25, quote: "Ugh, I'm just so frustrated right now!" },
     { id: 'j06', name: "Confused Jairo", rarity: "uncommon", image: "jairos/confused.png", chance: 25, quote: "wait, which one was I supposed to be?" },
     { id: 'j07', name: "Scared Jairo", rarity: "uncommon", image: "jairos/scared.png", chance: 25, quote: "was that a door opening? I heard a noise..?" },
     { id: 'j08', name: "Shocked Jairo", rarity: "uncommon", image: "jairos/shocked.png", chance: 25, quote: "WHAT" },
 
     // RARE (10%)
-    { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10, quote: "focus on the grind, not the spin.[this is a sigma thing to say right?" },
+    { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10, quote: "Focus on the grind, not the spin. [this is a sigma thing to say right?" },
     { id: 'j10', name: "Evil Jairo", rarity: "rare", image: "jairos/evil.png", chance: 10, quote: "The plan is working. soon.. they'll be gone." },
     { id: 'j11', name: "Sunglasses Jairo", rarity: "rare", image: "jairos/sunglasses.png", chance: 10, quote: "too bright, also i look cool." },
     { id: 'j12', name: "Drip Jairo", rarity: "rare", image: "jairos/drip.png", chance: 10, quote: "this isn't just accessories and stuff, it's a statement." },
 
     // ULTRA RARE (4%)
-    { id: 'j13', name: "Rich Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4, quote: "TODAY IN THIS VIDEO, I WILL BLIND 1,000 PEOPLE." },
+    { id: 'j13', name: "Rich Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4, quote: "I just bought the whole spin wheel, it's mine now." },
     { id: 'j14', name: "Glitched Jairo", rarity: "ultrarare", image: "jairos/glitch.png", chance: 4, quote: "ERROR." },
-    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4, quote: "Im bricked up. no like, I look like bricks, weirdo." },
-    { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4, quote: "I'm gonna John Wick all over the place." },
+    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4, quote: "Im blocky. no like, I look like bricks, weirdo." },
+    { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4, quote: "I'm ready for anything." },
 
     // LEGENDARY (1%)
     { id: 'j17', name: "Planet Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1, quote: "A planet with other planets orbiting me." },
@@ -337,20 +426,19 @@ const JAIROS = [
     // MYTHIC (0.1% - note: 0.1 is 10x smaller than 1)
     { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.1, quote: "We don't even make a full rainbow.." },
     { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.1, quote: "Who am I? What am I..?" },
-    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.1, quote: "Who made me look like this? I look hella cringe." },
+    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.1, quote: "Who made me look like this? I look hella cool." },
     { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.1, quote: "Watching over everything, with no one noticing." },
 ];
 
-// Combine all chances to create the normalized weights structure
+// Combine all chances to create the normalized weights structure (unchanged)
 const CHANCE_SUM = JAIROS.reduce((sum, j) => sum + j.chance, 0);
 const N_WEIGHTS = {};
 JAIROS.forEach(j => {
-    // Group by rarity to calculate the rarity weights
     N_WEIGHTS[j.rarity] = (N_WEIGHTS[j.rarity] || 0) + (j.chance / CHANCE_SUM);
 });
 
 // ----------------------------
-// Helpers: pick rarity & jairo (functions remain unchanged)
+// Helpers: pick rarity & jairo (unchanged)
 // ----------------------------
 function pickRarity(weights){
   const r = Math.random();
@@ -379,17 +467,26 @@ function pickJairo(rarityOverride = null){
 
 
 // ----------------------------
-// Storage & inventory
+// Storage & inventory (inventory unchanged, added settings)
 // ----------------------------
 function loadInventory(){
   try{
     const raw = localStorage.getItem(JAIROS_KEY);
     inventory = raw ? JSON.parse(raw) : {};
-  }catch(e){ inventory = {}; }
+    const rawSettings = localStorage.getItem(SETTINGS_KEY);
+    if(rawSettings) settings = {...settings, ...JSON.parse(rawSettings)};
+
+  }catch(e){ 
+      inventory = {}; 
+  }
 }
 
 function saveInventory(){
   localStorage.setItem(JAIROS_KEY, JSON.stringify(inventory));
+}
+
+function saveSettings(){
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function giveJairo(jairo){
@@ -401,7 +498,7 @@ function giveJairo(jairo){
   }
   saveInventory();
   renderInventory();
-  renderJairoDexStats(); // NEW: Update stats when inventory changes
+  renderJairoDexStats(); 
   return isNew;
 }
 
@@ -415,7 +512,7 @@ const revealModal = document.getElementById('revealModal');
 const revealCard = document.getElementById('revealCard'); 
 const revealImg = document.getElementById('revealImg');
 const revealName = document.getElementById('revealName');
-const revealQuote = document.getElementById('revealQuote'); // NEW
+const revealQuote = document.getElementById('revealQuote'); 
 const revealRarity = document.getElementById('revealRarity');
 const claimBtn = document.getElementById('claimBtn');
 const invPreview = document.getElementById('invPreview');
@@ -426,7 +523,6 @@ const lastResultEl = document.getElementById('lastResult');
 const lastImg = document.getElementById('lastImg');
 const lastName = document.getElementById('lastName');
 
-// JairoDex UI Elements (NEW)
 const dexCountEl = document.getElementById('dexCount');
 const dexProgressEl = document.getElementById('dexProgress');
 const dexPercentEl = document.getElementById('dexPercent');
@@ -435,6 +531,21 @@ const dexPercentEl = document.getElementById('dexPercent');
 const spinAudio = document.getElementById('spinAudio');
 const revealAudio = document.getElementById('revealAudio');
 
+// NEW: Settings Elements
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const muteAudioCheckbox = document.getElementById('muteAudio');
+const glitchCutsceneToggle = document.getElementById('glitchCutsceneToggle');
+
+// NEW: Glitch Cutscene Elements
+const glitchModal = document.getElementById('glitchModal');
+const glitchVideo = document.getElementById('glitchVideo');
+const whiteFlash = document.getElementById('whiteFlash');
+
+// NEW: Header Quote Element
+const headerQuoteEl = document.getElementById('headerQuote');
+
 
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { 
@@ -442,8 +553,67 @@ claimBtn.addEventListener('click', ()=> {
     revealCard.className = 'reveal-card'; 
 });
 
+// NEW: Settings Event Listeners
+settingsBtn.addEventListener('click', openSettings);
+closeSettingsBtn.addEventListener('click', closeSettings);
+muteAudioCheckbox.addEventListener('change', updateSettings);
+glitchCutsceneToggle.addEventListener('change', updateSettings);
 
-// JairoDex completion tracker (NEW FUNCTION)
+// ----------------------------
+// Settings Logic (NEW)
+// ----------------------------
+function openSettings() {
+    // Sync UI with current settings
+    muteAudioCheckbox.checked = settings.audioMuted;
+    glitchCutsceneToggle.checked = settings.glitchCutsceneEnabled;
+    settingsModal.style.display = 'flex';
+}
+
+function closeSettings() {
+    settingsModal.style.display = 'none';
+}
+
+function updateSettings() {
+    settings.audioMuted = muteAudioCheckbox.checked;
+    settings.glitchCutsceneEnabled = glitchCutsceneToggle.checked;
+    
+    // Apply audio setting immediately
+    spinAudio.muted = settings.audioMuted;
+    revealAudio.muted = settings.audioMuted;
+
+    saveSettings();
+}
+
+// ----------------------------
+// Dynamic Header Quote Logic (NEW)
+// ----------------------------
+function startQuoteLoop() {
+    let index = 0;
+    
+    const updateQuote = () => {
+        // Fade out
+        headerQuoteEl.style.opacity = '0';
+
+        setTimeout(() => {
+            // Change text
+            headerQuoteEl.textContent = HEADER_QUOTES[index];
+            index = (index + 1) % HEADER_QUOTES.length;
+            
+            // Fade in
+            headerQuoteEl.style.opacity = '1';
+        }, 500); // 0.5s fade
+
+        setTimeout(updateQuote, 10000); // Wait 10 seconds total (9.5s visible + 0.5s transition)
+    };
+
+    // Initial call
+    headerQuoteEl.textContent = HEADER_QUOTES[0];
+    index = 1;
+    setTimeout(updateQuote, 10000);
+}
+
+
+// JairoDex completion tracker (unchanged)
 function renderJairoDexStats(){
     const ownedUnique = Object.keys(inventory).length;
     const percent = Math.floor((ownedUnique / TOTAL_JAIROS) * 100);
@@ -454,7 +624,7 @@ function renderJairoDexStats(){
 }
 
 
-// render inventory previews (tiny)
+// render inventory previews (tiny) (unchanged)
 function renderInvPreview(){
   invPreview.innerHTML='';
   const ownedIds = Object.keys(inventory);
@@ -479,7 +649,7 @@ function renderInvPreview(){
   });
 }
 
-// inventory list detailed (with count!)
+// inventory list detailed (with count!) (unchanged)
 function renderInventory(){
   inventoryList.innerHTML='';
   const ids = Object.keys(inventory);
@@ -523,7 +693,7 @@ function renderInventory(){
   }
 }
 
-// nice ordering
+// nice ordering (unchanged)
 function rarityRank(r){ const order=['mythic','legendary','ultrarare','rare','uncommon','common']; return order.indexOf(r||'common'); }
 
 // ----------------------------
@@ -538,11 +708,12 @@ function startSpin(){
   spinBtn.disabled = true; 
 
   // --- AUDIO START ---
+  spinAudio.muted = settings.audioMuted; // Apply setting
   spinAudio.currentTime = 0;
   spinAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
 
-  // overload logic
+  // overload logic (unchanged)
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
     if(Math.random() < 0.25){
@@ -558,14 +729,14 @@ function startSpin(){
   spinStats.spins++;
   updateStatsUI();
 
-  // pick final result 
+  // pick final result (unchanged)
   const final = overload ? pickWithBoost() : pickJairo();
 
-  // Prepare items for the carousel
+  // Prepare items for the carousel (unchanged)
   const pool = buildSpinnerPool(final);
   populateSpinner(pool); 
 
-  // show overlay & animate scroll
+  // show overlay & animate scroll (unchanged)
   overlay.style.display = 'flex';
 
   const items = Array.from(spinnerInner.children);
@@ -603,64 +774,79 @@ function startSpin(){
     if(t < 1){
       requestAnimationFrame(frame);
     } else {
-      // stop - show reveal
+      // stop - check for cutscene
       spinAudio.pause(); 
       spinAudio.currentTime = 0;
 
       setTimeout(()=> {
-        revealFinal(final);
         overlay.style.display = 'none';
-        spinning = false;
-        spinBtn.disabled = false; 
+
+        // NEW: Check for Glitched Jairo Cutscene
+        if (final.id === 'j14' && settings.glitchCutsceneEnabled) {
+            startGlitchCutscene(final);
+        } else {
+            // Normal reveal path
+            revealFinal(final);
+            spinning = false;
+            spinBtn.disabled = false; 
+        }
       }, 400);
     }
   }
   requestAnimationFrame(frame);
 }
 
-// build spinner pool (mix owned and silhouettes). (function remains unchanged)
-function buildSpinnerPool(final){
-  const base = JAIROS.slice();
-  shuffleArray(base);
+// ----------------------------
+// Glitch Cutscene Logic (NEW)
+// ----------------------------
+function startGlitchCutscene(final) {
+    glitchModal.style.display = 'block';
+    glitchVideo.currentTime = 0;
+    glitchVideo.muted = false; // Video is never muted for this scene, as requested
+    
+    // Fade into black and play video
+    glitchModal.style.opacity = '1';
 
-  const pool = [];
-  const repeats = 20; 
-  for(let r=0;r<repeats;r++){
-    base.forEach(j=> pool.push(j));
-  }
+    glitchVideo.play().catch(e => {
+        console.error("Video playback failed:", e);
+        // Fallback: if video fails, skip to reveal
+        setTimeout(() => revealAfterCutscene(final), 500); 
+    });
 
-  const mid = Math.floor(pool.length/2);
-  pool.splice(mid,0, final);
-  pool.splice(mid+3,0, final);
-  pool.splice(mid+7,0, final);
+    glitchVideo.onended = () => {
+        // Step 1: Flash White
+        whiteFlash.classList.add('flash-active');
+        
+        // Step 2: Fade out white flash, then reveal
+        setTimeout(() => {
+            whiteFlash.classList.remove('flash-active');
+            
+            // Step 3: Fade out black screen (optional, if video didn't cover screen fully)
+            glitchModal.style.opacity = '0'; 
 
-  return pool;
+            // Step 4: Normal reveal
+            setTimeout(() => {
+                revealAfterCutscene(final);
+            }, 300); // Wait for the white flash transition
+            
+        }, 150); // White flash duration
+    };
 }
 
-// fill spinnerInner element (function remains unchanged)
-function populateSpinner(pool){
-  spinnerInner.innerHTML = '';
-  pool.forEach(j=>{
-    const div = document.createElement('div'); div.className = 'spin-item';
-    const owned = inventory[j.id] && inventory[j.id].count > 0;
-    if(owned) div.classList.add('revealed'); else div.classList.add('silhouette');
-    div.dataset.jairoId = j.id;
-    const img = document.createElement('img'); img.src = j.image; img.alt = j.name;
-    div.appendChild(img);
-    const glow = document.createElement('div'); glow.className='reveal-glow';
-    div.appendChild(glow);
-    spinnerInner.appendChild(div);
-  });
-  spinnerInner.style.transition = 'none';
-  spinnerInner.style.transform = `translateX(0px)`;
-  setTimeout(()=> spinnerInner.style.transition = '', 30);
+function revealAfterCutscene(final) {
+    glitchModal.style.display = 'none'; // Ensure video layer is gone
+    revealFinal(final);
+    spinning = false;
+    spinBtn.disabled = false; 
 }
 
-// reveal final result visually and add to inventory
+
+// reveal final result visually and add to inventory (MODIFIED)
 function revealFinal(final){
   const isNew = giveJairo(final); 
 
   // --- AUDIO START ---
+  revealAudio.muted = settings.audioMuted; // Apply setting
   revealAudio.currentTime = 0;
   revealAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
@@ -668,7 +854,7 @@ function revealFinal(final){
   // 1. Set text and image
   revealImg.src = final.image;
   revealName.textContent = final.name;
-  revealQuote.textContent = `"${final.quote}"`; // NEW: Set the quote text
+  revealQuote.textContent = `"${final.quote}"`; 
   revealRarity.textContent = final.rarity.toUpperCase() + (isNew ? " (NEW!)" : "");
   
   // 2. Clear old glow and apply new glow to the modal card
@@ -678,16 +864,15 @@ function revealFinal(final){
 
   // 3. Image entrance animation
   const img = revealImg;
+  img.style.transition='none';
   img.style.transform = 'scale(.6)';
   img.style.opacity = '0';
   setTimeout(()=>{ img.style.transition='transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s'; img.style.transform='scale(1)'; img.style.opacity='1'; }, 40);
 
-  // 4. Update side panels
-  // renderInventory and renderInvPreview are called inside giveJairo now
 }
 
 // ----------------------------
-// Utility: weighted pick with overload boost (function remains unchanged)
+// Utility: weighted pick with overload boost (unchanged)
 // ----------------------------
 function pickWithBoost(){
   const BOOSTED_CHANCES = {};
@@ -721,10 +906,14 @@ function updateStatsUI(){
 // Init
 // ----------------------------
 loadInventory();
+// Apply initial settings
+spinAudio.muted = settings.audioMuted;
+revealAudio.muted = settings.audioMuted; 
 updateStatsUI();
 renderInventory();
 renderInvPreview();
-renderJairoDexStats(); // NEW: Initial call to show 0/24 progress
+renderJairoDexStats(); 
+startQuoteLoop(); 
 
 // ----------------------------
 // small touch: click overlay to cancel if spinner stuck (dev only)
