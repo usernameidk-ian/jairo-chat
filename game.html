@@ -19,6 +19,8 @@
     --glow-ultrarare: rgba(142, 45, 226, 0.4);
     --glow-legendary: rgba(255, 159, 28, 0.5);
     --glow-mythic: rgba(255, 222, 89, 0.6);
+    /* NEW: Trash Rarity Styles */
+    --glow-trash: rgba(100, 70, 0, 0.4); /* Muted brown/gray */
   }
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial; background:linear-gradient(135deg,var(--bg1),var(--bg2)); color:#fff;}
   .app {
@@ -112,6 +114,7 @@
   .card-mini .meta { font-size:12px }
   
   /* Rarity Glows for Inventory & Preview Items */
+  .rarity-trash{border:1px solid #774f00;} /* NEW */
   .rarity-common{border:1px solid #666}
   .rarity-uncommon{border:1px solid #00cc66; box-shadow:0 0 6px var(--glow-uncommon)}
   .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px var(--glow-rare)}
@@ -123,6 +126,7 @@
   #lastResult {
     transition: box-shadow .5s ease-out, border-color .5s ease-out;
   }
+  .rarity-trash-bg { border:1px solid #774f00; box-shadow:0 0 8px var(--glow-trash); } /* NEW */
   .rarity-common-bg{ border:1px solid #666; box-shadow:0 0 8px var(--glow-common); }
   .rarity-uncommon-bg{ border:1px solid #00cc66; box-shadow:0 0 12px var(--glow-uncommon); }
   .rarity-rare-bg{ border:1px solid #1e90ff; box-shadow:0 0 16px var(--glow-rare); }
@@ -193,6 +197,7 @@
     transition: border .5s, box-shadow .5s; 
   }
   /* Rarity Glows for the Modal Card */
+  .reveal-card.rarity-trash-modal{ border:1px solid #774f00; box-shadow:0 0 16px var(--glow-trash); } /* NEW */
   .reveal-card.rarity-common-modal{ border:1px solid #666; box-shadow:0 0 16px var(--glow-common); }
   .reveal-card.rarity-uncommon-modal{ border:1px solid #00cc66; box-shadow:0 0 20px var(--glow-uncommon); }
   .reveal-card.rarity-rare-modal{ border:1px solid #1e90ff; box-shadow:0 0 24px var(--glow-rare); }
@@ -282,7 +287,7 @@
       </div>
       
       <div class="dex-tracker">
-          JairoDex Completion: <strong id="dexCount">0/24</strong>
+          JairoDex Completion: <strong id="dexCount">0/52</strong>
           <div class="dex-bar"><div id="dexProgress" class="dex-progress" style="width:0%"></div></div>
           <div class="small" id="dexPercent">0% Complete</div>
       </div>
@@ -370,6 +375,12 @@
   1. Spin button is now correctly re-enabled in all spin end states.
   2. settingsModal is explicitly set to display: none on close to avoid click blocking.
   3. Glitch video end handling is robustly set up before playing.
+
+  *** CONTENT UPDATES: ***
+  1. TOTAL_JAIROS set to 52.
+  2. New 'trash' rarity added (4 items).
+  3. Mythic tier updated with 'God of Time Jairo' and other assignments.
+  4. Rarity assignments updated per user request (24 new items added).
 */
 
 // ----------------------------
@@ -379,7 +390,9 @@ const JAIROS_KEY = 'jairo_demo_inv';
 const SETTINGS_KEY = 'jairo_demo_settings';
 let inventory = {}; 
 let spinStats = { spins:0, spinsSinceLastOverload:0 };
-const TOTAL_JAIROS = 24; 
+
+// UPDATED: Total number of Jairos is now 52 (6 tiers * 8 + 1 new tier * 4)
+const TOTAL_JAIROS = 52; 
 
 // Initial/Default Settings
 let settings = {
@@ -395,44 +408,94 @@ const HEADER_QUOTES = [
 ];
 
 // ----------------------------
-// 24 JAIROS DATA POOL (unchanged)
+// 52 JAIROS DATA POOL - FINALIZED
 // ----------------------------
 const JAIROS = [
-    // COMMON (60%)
+    // ----------------------------------------------------
+    // TRASH (NEW Rarity - 4 items - Chance: 70)
+    // ----------------------------------------------------
+    { id: 'j49', name: "Toy Jairo", rarity: "trash", image: "jairos/toy.png", chance: 70, quote: "I was supposed to be a Mythic, but they threw me out." },
+    { id: 'j50', name: "Trash Jairo 1", rarity: "trash", image: "jairos/trash1.png", chance: 70, quote: "I'm just waiting for the garbage truck." },
+    { id: 'j51', name: "Trash Jairo 2", rarity: "trash", image: "jairos/trash2.png", chance: 70, quote: "Don't touch me. I'm dirty." },
+    { id: 'j52', name: "Trash Jairo 3", rarity: "trash", image: "jairos/trash3.png", chance: 70, quote: "Error: File too large to delete." },
+
+    // ----------------------------------------------------
+    // COMMON (8 items - Chance: 60)
+    // ----------------------------------------------------
     { id: 'j01', name: "Sleepy Jairo", rarity: "common", image: "jairos/sleepy.png", chance: 60, quote: "Five more minutes." },
     { id: 'j02', name: "Side-eye Jairo", rarity: "common", image: "jairos/sideeye.png", chance: 60, quote: "What're you lookin at?" },
     { id: 'j03', name: "Tired Jairo", rarity: "common", image: "jairos/tired.png", chance: 60, quote: "The ONE day I don't have my coffee.." },
     { id: 'j04', name: "Chip Jairo", rarity: "common", image: "jairos/chips.png", chance: 60, quote: "what the." },
+    // NEW ASSIGNMENTS (Common)
+    { id: 'j25', name: "Anime Jairo", rarity: "common", image: "jairos/anime.png", chance: 60, quote: "My power level is only 3... a very common 3." },
+    { id: 'j26', name: "Bird Jairo", rarity: "common", image: "jairos/bird.png", chance: 60, quote: "Tweet! Wait, I'm a Jairo, not a bird." },
+    { id: 'j27', name: "Emo Jairo", rarity: "common", image: "jairos/emo.png", chance: 60, quote: "This rarity perfectly expresses my pain." },
+    { id: 'j28', name: "Surfing Jairo", rarity: "common", image: "jairos/surfing.png", chance: 60, quote: "Gotta catch the spin wave!" },
 
-    // UNCOMMON (25%)
+    // ----------------------------------------------------
+    // UNCOMMON (8 items - Chance: 25)
+    // ----------------------------------------------------
     { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25, quote: "Ugh, I'm just so frustrated right now!" },
     { id: 'j06', name: "Confused Jairo", rarity: "uncommon", image: "jairos/confused.png", chance: 25, quote: "wait, which one was I supposed to be?" },
     { id: 'j07', name: "Scared Jairo", rarity: "uncommon", image: "jairos/scared.png", chance: 25, quote: "was that a door opening? I heard a noise..?" },
     { id: 'j08', name: "Shocked Jairo", rarity: "uncommon", image: "jairos/shocked.png", chance: 25, quote: "WHAT" },
+    // NEW ASSIGNMENTS (Uncommon)
+    { id: 'j29', name: "Jairo Kick Buddy", rarity: "uncommon", image: "jairos/kick_buddy.png", chance: 25, quote: "Just try to tap me. I can take it." },
+    { id: 'j30', name: "Baby Jairo", rarity: "uncommon", image: "jairos/baby.png", chance: 25, quote: "Waaaah! I want a Legendary!" },
+    { id: 'j31', name: "Robot Jairo", rarity: "uncommon", image: "jairos/robot.png", chance: 25, quote: "Affirmative. Engaging spin protocol 2.5." },
+    { id: 'j32', name: "Pokémon Jairo", rarity: "uncommon", image: "jairos/pokemon.png", chance: 25, quote: "Jairo, Jairo! (I choose you!)" },
 
-    // RARE (10%)
+    // ----------------------------------------------------
+    // RARE (8 items - Chance: 10)
+    // ----------------------------------------------------
     { id: 'j09', name: "Sigma Jairo", rarity: "rare", image: "jairos/sigma.png", chance: 10, quote: "Focus on the grind, not the spin. [this is a sigma thing to say right?]" },
     { id: 'j10', name: "Evil Jairo", rarity: "rare", image: "jairos/evil.png", chance: 10, quote: "The plan is working. soon.. they'll be gone." },
     { id: 'j11', name: "Sunglasses Jairo", rarity: "rare", image: "jairos/sunglasses.png", chance: 10, quote: "too bright, also i look cool." },
     { id: 'j12', name: "Drip Jairo", rarity: "rare", image: "jairos/drip.png", chance: 10, quote: "this isn't just accessories and stuff, it's a statement." },
+    // NEW ASSIGNMENTS (Rare)
+    { id: 'j33', name: "Dealer Jairo", rarity: "rare", image: "jairos/dealer.png", chance: 10, quote: "I can give you a better drop rate... for a fee." },
+    { id: 'j34', name: "Smurf Jairo", rarity: "rare", image: "jairos/smurf.png", chance: 10, quote: "I'm feeling very smurfy today." },
+    { id: 'j35', name: "Nome Jairo", rarity: "rare", image: "jairos/nome.png", chance: 10, quote: "I'm here. I'm there. I'm everywhere." },
+    { id: 'j36', name: "Jotaro Jairo", rarity: "rare", image: "jairos/jotaro.png", chance: 10, quote: "Yare yare daze... another common pull." },
 
-    // ULTRA RARE (4%)
+    // ----------------------------------------------------
+    // ULTRA RARE (8 items - Chance: 4)
+    // ----------------------------------------------------
     { id: 'j13', name: "Rich Jairo", rarity: "ultrarare", image: "jairos/golden.png", chance: 4, quote: "TODAY IN THIS VIDEO, I WILL BLIND 1,000 PEOPLE." },
     { id: 'j14', name: "Glitched Jairo", rarity: "ultrarare", image: "jairos/glitch.png", chance: 4, quote: "ERROR." },
-    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4, quote: "Im bricked up. no like, I look like bricks, weirdo." },
+    { id: 'j15', name: "8-bit Jairo", rarity: "ultrarare", image: "jairos/8bit.png", chance: 4, quote: "Im blocky. no like, I look like bricks, weirdo." },
     { id: 'j16', name: "Battle Jairo", rarity: "ultrarare", image: "jairos/battle.png", chance: 4, quote: "I'm gonna John Wick all over the place." },
+    // NEW ASSIGNMENTS (Ultra Rare)
+    { id: 'j37', name: "Skibidi Jairo", rarity: "ultrarare", image: "jairos/skibidi.png", chance: 4, quote: "Dop dop dop yes yes." },
+    { id: 'j38', name: "Buff Jairo", rarity: "ultrarare", image: "jairos/buff.png", chance: 4, quote: "I spin weights, not wheels." },
+    { id: 'j39', name: "Chainsaw Jairo", rarity: "ultrarare", image: "jairos/chainsaw.png", chance: 4, quote: "This pull is going to be bloody rare." },
+    { id: 'j40', name: "Cardboard Cutout Jairo", rarity: "ultrarare", image: "jairos/cardboard.png", chance: 4, quote: "I look flat, but my rarity is deep." },
 
-    // LEGENDARY (1%)
-    { id: 'j17', name: "Planet Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1, quote: "Im a planet with other planets orbiting me." },
+    // ----------------------------------------------------
+    // LEGENDARY (8 items - Chance: 1)
+    // ----------------------------------------------------
+    { id: 'j17', name: "Planet Jairo", rarity: "legendary", image: "jairos/galaxy.png", chance: 1, quote: "A planet with other planets orbiting me." },
     { id: 'j18', name: "Universe Jairo", rarity: "legendary", image: "jairos/god.png", chance: 1, quote: "I have galaxies inside me, cuz im a universe, duh." },
     { id: 'j19', name: "Santa Jairo", rarity: "legendary", image: "jairos/santa.png", chance: 1, quote: "Ho ho ho! Did you wish for a Legendary? Well here you go!" },
     { id: 'j20', name: "Shadow the Hedgehog Jairo", rarity: "legendary", image: "jairos/shadow.png", chance: 1, quote: "I'm the ultimate life form, I go wherever I want." },
+    // NEW ASSIGNMENTS (Legendary)
+    { id: 'j41', name: "Brainrot Jairo", rarity: "legendary", image: "jairos/brainrot.png", chance: 1, quote: "The internet spins faster than this wheel." },
+    { id: 'j42', name: "Caseoh Jairo", rarity: "legendary", image: "jairos/caseoh.png", chance: 1, quote: "Did you just call me wide? That's a Legendary insult." },
+    { id: 'j43', name: "Radioactive Jairo", rarity: "legendary", image: "jairos/radioactive.png", chance: 1, quote: "Handle with extreme rarity. I glow." },
+    { id: 'j44', name: "Mafia Jairo", rarity: "legendary", image: "jairos/mafia.png", chance: 1, quote: "You spun my collection. Now, you owe me a favor." },
 
-    // MYTHIC (0.1% - note: 0.1 is 10x smaller than 1)
+    // ----------------------------------------------------
+    // MYTHIC (8 items - Chance: 0.1)
+    // ----------------------------------------------------
     { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.8, quote: "We don't even make a full rainbow.." },
     { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.2, quote: "Who am I? What am I..?" },
     { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.6, quote: "Who made me look like this? I look hella cringe." },
     { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.5, quote: "Watching over everything." },
+    // NEW ASSIGNMENTS (Mythic)
+    { id: 'j45', name: "God of Time Jairo", rarity: "mythic", image: "jairos/god_of_time.png", chance: 0.1, quote: "I control the spin, past, present, and future." },
+    { id: 'j46', name: "Possessed Jairo", rarity: "mythic", image: "jairos/possessed.png", chance: 0.1, quote: "Not myself, but much more powerful now." },
+    { id: 'j47', name: "The Second Coming Jairo", rarity: "mythic", image: "jairos/second_coming.png", chance: 0.1, quote: "Wait, you were still spinning?" },
+    { id: 'j48', name: "Roaring Knight Jairo", rarity: "mythic", image: "jairos/roaring_knight.png", chance: 0.1, quote: "The legends spoke of my drop rate." },
 ];
 
 const CHANCE_SUM = JAIROS.reduce((sum, j) => sum + j.chance, 0);
@@ -458,6 +521,7 @@ function pickJairo(rarityOverride = null){
   const rarity = rarityOverride || pickRarity(N_WEIGHTS);
   const pool = JAIROS.filter(j=> j.rarity === rarity);
   if(pool.length === 0) {
+    // If no pool for a rarity (shouldn't happen with 52 items), fall back to random pick
     return JAIROS[Math.floor(Math.random() * JAIROS.length)];
   }
   const poolTotalChance = pool.reduce((sum, j) => sum + j.chance, 0);
@@ -619,6 +683,7 @@ function startQuoteLoop() {
 
 function renderJairoDexStats(){
     const ownedUnique = Object.keys(inventory).length;
+    // UPDATED: Use the new TOTAL_JAIROS constant (52)
     const percent = Math.floor((ownedUnique / TOTAL_JAIROS) * 100);
 
     dexCountEl.textContent = `${ownedUnique}/${TOTAL_JAIROS}`;
@@ -688,7 +753,8 @@ function renderInventory(){
   }
 }
 
-function rarityRank(r){ const order=['mythic','legendary','ultrarare','rare','uncommon','common']; return order.indexOf(r||'common'); }
+// UPDATED: Added 'trash' to the lowest rank.
+function rarityRank(r){ const order=['mythic','legendary','ultrarare','rare','uncommon','common','trash']; return order.indexOf(r||'common'); }
 
 // ----------------------------
 // Spinner build & animation (MODIFIED end logic)
@@ -775,7 +841,7 @@ function startSpin(){
       setTimeout(()=> {
         overlay.style.display = 'none';
 
-        // NEW: Check for Glitched Jairo Cutscene
+        // Check for Glitched Jairo Cutscene (Jairo j14)
         if (final.id === 'j14' && settings.glitchCutsceneEnabled) {
             startGlitchCutscene(final);
         } else {
@@ -829,7 +895,7 @@ function populateSpinner(pool){
 }
 
 // ----------------------------
-// Glitch Cutscene Logic (MODIFIED video end handling)
+// Glitch Cutscene Logic
 // ----------------------------
 function startGlitchCutscene(final) {
     glitchModal.style.display = 'block';
@@ -915,6 +981,7 @@ function pickWithBoost(){
       BOOSTED_CHANCES[rarity] = N_WEIGHTS[rarity] * CHANCE_SUM;
   }
 
+  // Common boost logic (unchanged from original)
   BOOSTED_CHANCES.rare = (BOOSTED_CHANCES.rare || 0) + 8; 
   BOOSTED_CHANCES.ultrarare = (BOOSTED_CHANCES.ultrarare || 0) + 3; 
   BOOSTED_CHANCES.legendary = (BOOSTED_CHANCES.legendary || 0) + 1; 
@@ -937,7 +1004,7 @@ function updateStatsUI(){
 }
 
 // ----------------------------
-// Init (unchanged)
+// Init 
 // ----------------------------
 loadInventory();
 // Apply initial settings
