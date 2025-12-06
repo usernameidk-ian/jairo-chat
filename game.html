@@ -389,7 +389,25 @@
 const JAIROS_KEY = 'jairo_demo_inv';
 const SETTINGS_KEY = 'jairo_demo_settings';
 let inventory = {}; 
-let spinStats = { spins:0, spinsSinceLastOverload:0 };
+// NEW: Correctly initialize spin stats from storage or default
+let spinStats = { spins:0, spinsSinceLastOverload:0 }; 
+
+function loadStats() {
+    try {
+        const raw = localStorage.getItem('jairo_demo_stats');
+        if (raw) {
+            spinStats = JSON.parse(raw);
+        }
+    } catch (e) {
+        // Fallback to default if load fails
+        spinStats = { spins:0, spinsSinceLastOverload:0 };
+    }
+}
+
+function saveStats() {
+    localStorage.setItem('jairo_demo_stats', JSON.stringify(spinStats));
+}
+
 
 // UPDATED: Total number of Jairos is now 52 (6 tiers * 8 + 1 new tier * 4)
 const TOTAL_JAIROS = 52; 
@@ -404,8 +422,8 @@ let settings = {
 const HEADER_QUOTES = [
     "Check settings for the best experience!",
     "Remember to check your volume level! You don't wanna be caught gambling.",
-    "I don't really know what else to put here"
-    "thanks to edison and erick for suggestions."
+    "I don't really know what else to put here", // <-- ADDED COMMA HERE
+    "thanks to edison and erick for suggestions.",
     "there are a total of 52 jairos."
 ];
 
@@ -546,10 +564,14 @@ function loadInventory(){
     const rawSettings = localStorage.getItem(SETTINGS_KEY);
     if(rawSettings) settings = {...settings, ...JSON.parse(rawSettings)};
 
+    // NEW: Load spin stats here as well
+    loadStats(); 
+
   }catch(e){ 
       inventory = {}; 
   }
 }
+
 
 function saveInventory(){
   localStorage.setItem(JAIROS_KEY, JSON.stringify(inventory));
@@ -640,7 +662,8 @@ function openSettings() {
 }
 
 function closeSettings() {
-    settingsModal.style.display = 'none'; // IMPORTANT: Ensure display is set to none so it doesn't block clicks.
+    updateSettings(); // **CRITICAL ADDITION: Update and Save settings on close**
+    settingsModal.style.display = 'none'; 
 }
 
 function updateSettings() {
@@ -788,8 +811,11 @@ function startSpin(){
     spinStats.spinsSinceLastOverload++;
   }
 
-  spinStats.spins++;
+    spinStats.spins++;
+  spinStats.spinsSinceLastOverload++; // <-- THIS WAS MISSING
   updateStatsUI();
+  saveStats(); // **CRITICAL ADDITION: Save spin stats**
+
 
   // pick final result (unchanged)
   const final = overload ? pickWithBoost() : pickJairo();
