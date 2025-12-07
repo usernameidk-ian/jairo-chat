@@ -220,6 +220,17 @@
   .glitch-modal video {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
+  
+  /* INSERT NEW: God of Time Cutscene Modal Styles */
+  .time-modal {
+    position: fixed; inset: 0; display: none; background: black; z-index: 1001;
+    opacity: 1;
+  }
+  .time-modal video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  /* END NEW */
+  
   /* NEW: Global Flash Effect */
   .flash-white {
     position: fixed; inset: 0; background: white; z-index: 1002;
@@ -341,6 +352,10 @@
     <video id="glitchVideo" src="glitched_jairo_scene.mp4" playsinline></video>
 </div>
 
+<div class="time-modal" id="timeModal">
+    <video id="timeVideo" src="time_skip_scene.mp4" playsinline></video>
+</div>
+  
 <div class="flash-white" id="whiteFlash"></div>
 
 <div class="settings-modal" id="settingsModal">
@@ -356,6 +371,12 @@
             <label for="glitchCutsceneToggle">Enable Glitch Jairo Cutscene</label>
             <input type="checkbox" id="glitchCutsceneToggle">
         </div>
+
+        <div class="setting-item">
+            <label for="timeCutsceneToggle">Enable God of Time Jairo Cutscene</label>
+            <input type="checkbox" id="timeCutsceneToggle">
+        </div>
+        <div style="text-align: right; margin-top: 20px;">
         
         <div style="text-align: right; margin-top: 20px;">
             <button class="btn" id="closeSettingsBtn">Close</button>
@@ -415,7 +436,9 @@ const TOTAL_JAIROS = 52;
 // Initial/Default Settings
 let settings = {
     audioMuted: false,
-    glitchCutsceneEnabled: true
+    glitchCutsceneEnabled: true,
+    // INSERT NEW SETTING
+    timeCutsceneEnabled: true 
 };
 
 // Header Quotes
@@ -638,6 +661,12 @@ const whiteFlash = document.getElementById('whiteFlash');
 // Header Quote Element
 const headerQuoteEl = document.getElementById('headerQuote');
 
+// INSERT NEW: God of Time Cutscene Elements
+const timeModal = document.getElementById('timeModal');
+const timeVideo = document.getElementById('timeVideo');
+// INSERT NEW SETTINGS ELEMENT
+const timeCutsceneToggle = document.getElementById('timeCutsceneToggle');
+
 
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { 
@@ -650,6 +679,8 @@ settingsBtn.addEventListener('click', openSettings);
 closeSettingsBtn.addEventListener('click', closeSettings);
 muteAudioCheckbox.addEventListener('change', updateSettings);
 glitchCutsceneToggle.addEventListener('change', updateSettings);
+// INSERT NEW EVENT LISTENER
+timeCutsceneToggle.addEventListener('change', updateSettings);
 
 // ----------------------------
 // Settings Logic (MODIFIED closeSettings)
@@ -658,6 +689,9 @@ function openSettings() {
     // Sync UI with current settings
     muteAudioCheckbox.checked = settings.audioMuted;
     glitchCutsceneToggle.checked = settings.glitchCutsceneEnabled;
+    // INSERT NEW SYNC LINE
+    timeCutsceneToggle.checked = settings.timeCutsceneEnabled;
+    
     settingsModal.style.display = 'flex';
 }
 
@@ -666,16 +700,7 @@ function closeSettings() {
     settingsModal.style.display = 'none'; 
 }
 
-function updateSettings() {
-    settings.audioMuted = muteAudioCheckbox.checked;
-    settings.glitchCutsceneEnabled = glitchCutsceneToggle.checked;
-    
-    // Apply audio setting immediately
-    spinAudio.muted = settings.audioMuted;
-    revealAudio.muted = settings.audioMuted;
 
-    saveSettings();
-}
 
 // ----------------------------
 // Dynamic Header Quote Logic (unchanged)
@@ -719,6 +744,19 @@ function renderJairoDexStats(){
 function renderInvPreview(){
   invPreview.innerHTML='';
   const ownedIds = Object.keys(inventory);
+  function updateSettings() {
+    settings.audioMuted = muteAudioCheckbox.checked;
+    settings.glitchCutsceneEnabled = glitchCutsceneToggle.checked;
+    // INSERT NEW UPDATE LINE
+    settings.timeCutsceneEnabled = timeCutsceneToggle.checked;
+    
+    // Apply audio setting immediately
+    spinAudio.muted = settings.audioMuted;
+    revealAudio.muted = settings.audioMuted;
+
+    saveSettings();
+}
+
   if(ownedIds.length===0){ invPreview.textContent = 'You have none yet.'; return; }
 
   ownedIds.sort((a,b)=>{
@@ -872,7 +910,13 @@ function startSpin(){
         // Check for Glitched Jairo Cutscene (Jairo j14)
         if (final.id === 'j14' && settings.glitchCutsceneEnabled) {
             startGlitchCutscene(final);
-        } else {
+        } 
+        // INSERT NEW CHECK: God of Time Jairo Cutscene (Jairo j45)
+        else if (final.id === 'j45' && settings.timeCutsceneEnabled) {
+            startTimeCutscene(final);
+        }
+        // END NEW CHECK
+        else {
             // Normal reveal path
             revealFinal(final);
             spinning = false;
@@ -968,6 +1012,42 @@ function revealAfterCutscene(final) {
     spinBtn.disabled = false; // RE-ENABLED BUTTON
 }
 
+// ----------------------------
+// INSERT NEW: God of Time Cutscene Logic
+// ----------------------------
+function startTimeCutscene(final) {
+    timeModal.style.display = 'block';
+    timeVideo.currentTime = 0;
+    timeVideo.muted = settings.audioMuted; // Use game mute setting
+    timeVideo.pause(); 
+
+    // IMPORTANT: Set up the onended listener *before* playing
+    timeVideo.onended = () => {
+        // Fade out for transition
+        timeModal.style.opacity = '0'; 
+
+        // Wait for fade to complete, then reveal
+        setTimeout(() => {
+            revealAfterTimeCutscene(final);
+        }, 500); 
+    };
+
+    // Attempt to play the video
+    timeVideo.play().catch(e => {
+        console.error("Time video playback failed:", e);
+        // Fallback
+        setTimeout(() => revealAfterTimeCutscene(final), 500); 
+    });
+}
+
+function revealAfterTimeCutscene(final) {
+    timeModal.style.display = 'none'; 
+    timeModal.style.opacity = '1'; 
+    revealFinal(final);
+    spinning = false;
+    spinBtn.disabled = false;
+}
+// END NEW CUTSCENE LOGIC
 
 // reveal final result visually and add to inventory (unchanged)
 function revealFinal(final){
