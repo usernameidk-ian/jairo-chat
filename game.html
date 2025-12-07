@@ -376,13 +376,13 @@
             <label for="timeCutsceneToggle">Enable God of Time Jairo Cutscene</label>
             <input type="checkbox" id="timeCutsceneToggle">
         </div>
-        <div style="text-align: right; margin-top: 20px;">
         
         <div style="text-align: right; margin-top: 20px;">
             <button class="btn" id="closeSettingsBtn">Close</button>
         </div>
     </div>
 </div>
+
 
 <audio id="spinAudio" src="spin_start.mp3" preload="auto"></audio>
 <audio id="revealAudio" src="jairo_reveal.mp3" preload="auto"></audio>
@@ -836,7 +836,8 @@ function startSpin(){
   spinAudio.play().catch(e => console.log("Audio playback failed:", e));
   // --- AUDIO END ---
 
-  // overload logic (unchanged)
+// NEW CODE STARTING at line 839:
+  // overload logic (UNCHANGED)
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
     if(Math.random() < 0.25){
@@ -846,13 +847,14 @@ function startSpin(){
       spinStats.spinsSinceLastOverload++;
     }
   } else {
+    // If we're under 50, we just increment by 1
     spinStats.spinsSinceLastOverload++;
   }
 
-    spinStats.spins++;
-  spinStats.spinsSinceLastOverload++; // <-- THIS WAS MISSING
+  spinStats.spins++;
+  // REMOVED REDUNDANT/CONFUSING LINE HERE
   updateStatsUI();
-  saveStats(); // **CRITICAL ADDITION: Save spin stats**
+  saveStats(); // CRITICAL: Save new spin count and overload value
 
 
   // pick final result (unchanged)
