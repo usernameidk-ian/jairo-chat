@@ -275,6 +275,7 @@
     </div>
     <div class="controls">
         <button class="btn" id="settingsBtn">⚙️ Settings</button>
+        <a href="chat.html" class="btn" style="text-decoration:none;">💬 Chat</a>
     </div>
   </header>
 
@@ -390,6 +391,32 @@
 
 
 <script>
+// ==========================================================
+// *** SECURITY LOCK ADDED HERE ***
+// This prevents users from accessing the game directly via
+// the /game_content.html URL without the password.
+// ==========================================================
+(function() {
+    const LOCK_KEY = 'jairo_access_granted';
+    const REDIRECT_URL = 'index.html'; // The new password page
+
+    if (localStorage.getItem(LOCK_KEY) !== 'true') {
+        // If the lock is not set, redirect them to the password gate.
+        window.location.replace(REDIRECT_URL);
+        
+        // IMPORTANT: Stop the rest of the script from executing
+        // We throw an error to halt execution without breaking the user experience.
+        throw new Error("Access denied: Redirecting to authentication.");
+    } else {
+        // Access is granted, remove the key so they have to re-auth later
+        // and can't share a direct link after successful login.
+        localStorage.removeItem(LOCK_KEY);
+    }
+})();
+// ==========================================================
+// *** END OF SECURITY LOCK ***
+// ==========================================================
+
 /*
   *** FULLY UPDATED Jairo Spin demo with Glitch Cutscene, Settings, and Dynamic Header Quotes ***
   
