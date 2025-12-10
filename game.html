@@ -232,6 +232,16 @@
   }
   /* END NEW */
   
+  /* NEW: Oppression Cutscene Modal Styles */
+  .oppression-modal {
+    position: fixed; inset: 0; display: none; background: black; z-index: 1001;
+    opacity: 1;
+  }
+  .oppression-modal video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  /* END NEW */
+  
   /* NEW: Global Flash Effect */
   .flash-white {
     position: fixed; inset: 0; background: white; z-index: 1002;
@@ -356,7 +366,10 @@
 <div class="time-modal" id="timeModal">
     <video id="timeVideo" src="time_skip_scene.mp4" playsinline></video>
 </div>
-  
+
+<div class="oppression-modal" id="oppressionModal">
+    <video id="oppressionVideo" src="oppression.mp4" playsinline></video>
+</div>
 <div class="flash-white" id="whiteFlash"></div>
 
 <div class="settings-modal" id="settingsModal">
@@ -378,6 +391,10 @@
             <input type="checkbox" id="timeCutsceneToggle">
         </div>
         
+        <div class="setting-item">
+            <label for="oppressionCutsceneToggle">Enable Oppression Jairo Cutscene</label>
+            <input type="checkbox" id="oppressionCutsceneToggle">
+        </div>
         <div style="text-align: right; margin-top: 20px;">
             <button class="btn" id="closeSettingsBtn">Close</button>
         </div>
@@ -404,6 +421,10 @@
   2. New 'trash' rarity added (4 items).
   3. Mythic tier updated with 'God of Time Jairo' and other assignments.
   4. Rarity assignments updated per user request (24 new items added).
+  
+  *** USER-REQUESTED CHANGES (This Session) ***
+  1. Change 'Angel Jairo' (j23) to 'Oppression Jairo' with quote "but is this truly the end..?".
+  2. Add new cutscene setting 'oppressionCutsceneEnabled' for 'Oppression Jairo' (j23) using 'oppression.mp4'.
 */
 
 // ----------------------------
@@ -439,7 +460,8 @@ const TOTAL_JAIROS = 52;
 let settings = {
     audioMuted: false,
     glitchCutsceneEnabled: true,
-    timeCutsceneEnabled: true 
+    timeCutsceneEnabled: true,
+    oppressionCutsceneEnabled: true // NEW: Default to true
 };
 
 // Header Quotes
@@ -452,7 +474,7 @@ const HEADER_QUOTES = [
 ];
 
 // ----------------------------
-// 52 JAIROS DATA POOL - FINALIZED (unchanged)
+// 52 JAIROS DATA POOL - FINALIZED (with Oppression Jairo change)
 // ----------------------------
 const JAIROS = [
     // ----------------------------------------------------
@@ -476,7 +498,7 @@ const JAIROS = [
     { id: 'j27', name: "Emo Jairo", rarity: "common", image: "jairos/emo.png", chance: 60, quote: "whatever.." },
     { id: 'j28', name: "Surfing Jairo", rarity: "common", image: "jairos/surfing.png", chance: 60, quote: "im on waves, a transverse wave." },
 
-    // ----------------------------------------------------
+    // -----------------------------------------------
     // UNCOMMON (8 items - Chance: 25)
     // ----------------------------------------------------
     { id: 'j05', name: "Angry Jairo", rarity: "uncommon", image: "jairos/angry.png", chance: 25, quote: "THE #### YOU MEAN WE RAN OUT OF DONUTS??" },
@@ -533,7 +555,7 @@ const JAIROS = [
     // ----------------------------------------------------
     { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.8, quote: "We don't even make a full rainbow.." },
     { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.2, quote: "Who am I? What am I..?" },
-    { id: 'j23', name: "Angel Jairo", rarity: "mythic", image: "jairos/angel.png", chance: 0.6, quote: "Who made me look like this? I look hella cringe." },
+    { id: 'j23', name: "Oppression Jairo", rarity: "mythic", image: "jairos/stoodbeforegod.png", chance: 0.6, quote: "but is this truly the end..?" }, // MODIFIED JAIRO (was Angel Jairo)
     { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.5, quote: "Watching over everything." },
     // NEW ASSIGNMENTS (Mythic)
     { id: 'j45', name: "God of Time Jairo", rarity: "mythic", image: "jairos/god_of_time.png", chance: 0.9, quote: "One snap of a finger, and time goes into my full control." },
@@ -621,7 +643,7 @@ function giveJairo(jairo){
 }
 
 // ----------------------------
-// UI wiring (unchanged)
+// UI wiring (Updated to include new cutscene elements)
 // ----------------------------
 const spinBtn = document.getElementById('spinBtn');
 const overlay = document.getElementById('overlay');
@@ -655,7 +677,8 @@ const settingsModal = document.getElementById('settingsModal');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const muteAudioCheckbox = document.getElementById('muteAudio');
 const glitchCutsceneToggle = document.getElementById('glitchCutsceneToggle');
-const timeCutsceneToggle = document.getElementById('timeCutsceneToggle'); // New setting
+const timeCutsceneToggle = document.getElementById('timeCutsceneToggle'); 
+const oppressionCutsceneToggle = document.getElementById('oppressionCutsceneToggle'); // NEW SETTING TOGGLE
 
 // Glitch Cutscene Elements
 const glitchModal = document.getElementById('glitchModal');
@@ -669,6 +692,10 @@ const headerQuoteEl = document.getElementById('headerQuote');
 const timeModal = document.getElementById('timeModal');
 const timeVideo = document.getElementById('timeVideo');
 
+// Oppression Cutscene Elements (NEW)
+const oppressionModal = document.getElementById('oppressionModal');
+const oppressionVideo = document.getElementById('oppressionVideo');
+
 
 spinBtn.addEventListener('click', startSpin);
 claimBtn.addEventListener('click', ()=> { 
@@ -677,7 +704,7 @@ claimBtn.addEventListener('click', ()=> {
 });
 
 // ----------------------------
-// Settings Logic (FIXED event handling and flow)
+// Settings Logic (FIXED event handling and flow - Updated for new setting)
 // ----------------------------
 
 function updateSettings() {
@@ -685,6 +712,7 @@ function updateSettings() {
     settings.audioMuted = muteAudioCheckbox.checked;
     settings.glitchCutsceneEnabled = glitchCutsceneToggle.checked;
     settings.timeCutsceneEnabled = timeCutsceneToggle.checked;
+    settings.oppressionCutsceneEnabled = oppressionCutsceneToggle.checked; // NEW SETTING UPDATE
     
     // 2. Apply audio setting immediately
     spinAudio.muted = settings.audioMuted;
@@ -699,6 +727,7 @@ function syncSettingsUI() {
     muteAudioCheckbox.checked = settings.audioMuted;
     glitchCutsceneToggle.checked = settings.glitchCutsceneEnabled;
     timeCutsceneToggle.checked = settings.timeCutsceneEnabled;
+    oppressionCutsceneToggle.checked = settings.oppressionCutsceneEnabled; // NEW SETTING SYNC
 }
 
 function openSettings() {
@@ -714,12 +743,13 @@ function closeSettings() {
     settingsModal.style.display = 'none'; 
 }
 
-// Settings Event Listeners (Added 'change' listener to checkboxes)
+// Settings Event Listeners (Added 'change' listener to new checkbox)
 settingsBtn.addEventListener('click', openSettings);
 closeSettingsBtn.addEventListener('click', closeSettings);
 muteAudioCheckbox.addEventListener('change', updateSettings);
 glitchCutsceneToggle.addEventListener('change', updateSettings);
 timeCutsceneToggle.addEventListener('change', updateSettings);
+oppressionCutsceneToggle.addEventListener('change', updateSettings); // NEW LISTENER
 
 
 
@@ -829,7 +859,7 @@ function renderInventory(){
 }
 
 // ----------------------------
-// Spinner build & animation (FIXED end logic)
+// Spinner build & animation (FIXED end logic - Updated for new cutscene)
 // ----------------------------
 let spinning = false;
 
@@ -918,8 +948,12 @@ function startSpin(){
       setTimeout(()=> {
         overlay.style.display = 'none';
 
+        // Check for Oppression Jairo Cutscene (Jairo j23) - NEW CHECK
+        if (final.id === 'j23' && settings.oppressionCutsceneEnabled) {
+            startOppressionCutscene(final);
+        }
         // Check for Glitched Jairo Cutscene (Jairo j14)
-        if (final.id === 'j14' && settings.glitchCutsceneEnabled) {
+        else if (final.id === 'j14' && settings.glitchCutsceneEnabled) {
             startGlitchCutscene(final);
         } 
         // Check for God of Time Jairo Cutscene (Jairo j45)
@@ -976,6 +1010,40 @@ function populateSpinner(pool){
   setTimeout(()=> spinnerInner.style.transition = '', 30);
 }
 
+// ----------------------------
+// Oppression Cutscene Logic (NEW)
+// ----------------------------
+function startOppressionCutscene(final) {
+    oppressionModal.style.display = 'block';
+    oppressionVideo.currentTime = 0;
+    oppressionVideo.muted = settings.audioMuted; // Use game mute setting
+    oppressionVideo.pause(); 
+
+    oppressionVideo.onended = () => {
+        // Fade out
+        oppressionModal.style.opacity = '0'; 
+
+        // Wait for fade to complete, then reveal
+        setTimeout(() => {
+            revealAfterOppressionCutscene(final);
+        }, 500); 
+    };
+
+    // Attempt to play the video
+    oppressionVideo.play().catch(e => {
+        console.error("Oppression video playback failed:", e);
+        // Fallback
+        setTimeout(() => revealAfterOppressionCutscene(final), 500); 
+    });
+}
+
+function revealAfterOppressionCutscene(final) {
+    oppressionModal.style.display = 'none'; 
+    oppressionModal.style.opacity = '1'; 
+    revealFinal(final);
+    spinning = false; // CRITICAL FIX: Reset spinning state
+    spinBtn.disabled = false; // CRITICAL FIX: Re-enable button
+}
 // ----------------------------
 // Glitch Cutscene Logic (FIXED: Ensure button re-enable)
 // ----------------------------
@@ -1057,7 +1125,7 @@ function revealAfterTimeCutscene(final) {
     spinning = false; // CRITICAL FIX: Reset spinning state
     spinBtn.disabled = false; // CRITICAL FIX: Re-enable button
 }
-// END NEW CUTSCENE LOGIC
+// END CUTSCENE LOGIC
 
 // reveal final result visually and add to inventory (unchanged)
 function revealFinal(final){
