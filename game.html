@@ -471,6 +471,7 @@ const HEADER_QUOTES = [
     "I don't really know what else to put here", 
     "thanks to edison and erick for suggestions.",
     "there are a total of 52 jairos."
+    "the update that counted the versions wasnt even the first version, makes sense right??"
 ];
 
 // ----------------------------
@@ -880,7 +881,7 @@ function startSpin(){
   // overload logic (UNCHANGED)
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
-    if(Math.random() < 99.25){
+    if(Math.random() < 100){
       overload = true;
       spinStats.spinsSinceLastOverload = 0;
     } else {
