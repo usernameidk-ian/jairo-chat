@@ -554,12 +554,12 @@ const JAIROS = [
     // MYTHIC (8 items - Chance: 0.1)
     // ----------------------------------------------------
     { id: 'j21', name: "Rainbow Jairos", rarity: "mythic", image: "jairos/rainbow.png", chance: 0.8, quote: "We don't even make a full rainbow.." },
-    { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.2, quote: "Who am I? What am I..?" },
+    { id: 'j22', name: "Unknown Jairo", rarity: "mythic", image: "jairos/corrupted.png", chance: 0.2, quote: "❄︎☟︎☜︎✡︎ 🕈︎✋︎☹︎☹︎ ✌︎☹︎☹︎ 😐︎☠︎⚐︎🕈︎ 💧︎⚐︎⚐︎☠︎ ☜︎☠︎⚐︎🕆︎☝︎☟︎" },
     { id: 'j23', name: "Oppression Jairo", rarity: "mythic", image: "jairos/stoodbeforegod.png", chance: 0.6, quote: "but is this truly the end..?" }, // MODIFIED JAIRO (was Angel Jairo)
     { id: 'j24', name: "Titan Jairo", rarity: "mythic", image: "jairos/ascended.png", chance: 0.5, quote: "Watching over everything." },
     // NEW ASSIGNMENTS (Mythic)
-    { id: 'j45', name: "God of Time Jairo", rarity: "mythic", image: "jairos/god_of_time.png", chance: 0.9, quote: "One snap of a finger, and time goes into my full control." },
-    { id: 'j46', name: "Possessed Jairo", rarity: "mythic", image: "jairos/possessed.png", chance: 0.8, quote: "❄︎☟︎☜︎✡︎ 🕈︎✋︎☹︎☹︎ ✌︎☹︎☹︎ 😐︎☠︎⚐︎🕈︎ 💧︎⚐︎⚐︎☠︎ ☜︎☠︎⚐︎🕆︎☝︎☟︎" },
+    { id: 'j45', name: "God of Time Jairo", rarity: "mythic", image: "jairos/god_of_time.png", chance: 0.9, quote: "one snap of a finger, and time goes into my full control." },
+    { id: 'j46', name: "Possessed Jairo", rarity: "mythic", image: "jairos/possessed.png", chance: 0.8, quote: "...?" },
     { id: 'j47', name: "The Second Coming Jairo", rarity: "mythic", image: "jairos/second_coming.png", chance: 0.5, quote: "what? i dont have powers, what're you talking about?" },
     { id: 'j48', name: "Roaring Knight Jairo", rarity: "mythic", image: "jairos/roaring_knight.png", chance: 0.3, quote: "The prophecy, must be followed." },
 ];
@@ -880,7 +880,7 @@ function startSpin(){
   // overload logic (UNCHANGED)
   let overload = false;
   if(spinStats.spinsSinceLastOverload >= 50){
-    if(Math.random() < 0.25){
+    if(Math.random() < 99.25){
       overload = true;
       spinStats.spinsSinceLastOverload = 0;
     } else {
