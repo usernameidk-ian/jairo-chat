@@ -5,24 +5,41 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>JAIROS SPINNING OF JAIROS</title>
 <style>
-/* CSS from the original advanced version is kept here */
+/* *** FESTIVE/SNOWY STYLES - COMPLETE OVERHAUL ***
+  - Background is a gradient AND a custom PNG.
+  - Panels are bright, semi-transparent white.
+  - Text on bright panels is black for readability.
+*/
   :root{
-    --bg1:#062; --bg2:#600;
-    --panel-bg: rgba(0,0,0,.75);
-    --accent: #00ff66;
-    --glass: rgba(255,255,255,0.03);
+    --bg1: #001A33; /* Dark Navy/Pine Blue */
+    --bg2: #003366; /* Medium Blue */
+    --panel-bg: rgba(255,255,255,.9); /* Bright, semi-transparent white (90% opacity) */
+    --accent: #00FFFF; /* Bright Cyan/Snow Blue */
+    --glass: rgba(255,255,255,0.25); /* More transparent white for dark background elements */
     
-    /* Rarity Glow Colors */
-    --glow-common: rgba(102, 102, 102, 0.4);
-    --glow-uncommon: rgba(0, 204, 102, 0.4);
-    --glow-rare: rgba(30, 144, 255, 0.4);
-    --glow-ultrarare: rgba(142, 45, 226, 0.4);
-    --glow-legendary: rgba(255, 159, 28, 0.5);
-    --glow-mythic: rgba(255, 222, 89, 0.6);
-    /* NEW: Trash Rarity Styles */
-    --glow-trash: rgba(100, 70, 0, 0.4); /* Muted brown/gray */
+    /* Rarity Glow Colors (Adjusted for brighter look) */
+    --glow-trash: rgba(100, 70, 0, 0.6); 
+    --glow-common: rgba(102, 102, 102, 0.6);
+    --glow-uncommon: rgba(0, 150, 200, 0.6); /* Icy Blue */
+    --glow-rare: rgba(30, 144, 255, 0.8);
+    --glow-ultrarare: rgba(142, 45, 226, 0.8);
+    --glow-legendary: rgba(255, 159, 28, 0.8);
+    --glow-mythic: rgba(255, 222, 89, 0.9); 
   }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial; background:linear-gradient(135deg,var(--bg1),var(--bg2)); color:#fff;}
+  
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:Inter,system-ui,Arial;
+    /* 1. Base Gradient */
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    /* 2. Custom Festive Background Image (UPDATE THIS PATH!) */
+    background-image: url('snowy_bg_game.png'); /* <<< UPDATE THIS PATH! */
+    background-size: cover;
+    background-attachment: fixed;
+    /* 3. Global text color set to WHITE by default */
+    color:#fff; 
+  }
   .app {
     max-width:960px; margin:28px auto; padding:24px; position:relative;
   }
@@ -30,29 +47,59 @@
   header {display:flex;align-items:center;justify-content:space-between; gap:12px;}
   .header-title-group { display: flex; flex-direction: column; }
   h1{margin:0;font-size:20px;letter-spacing:0.6px}
-  /* NEW: Dynamic Quote Style */
+  /* Dynamic Quote Style */
   #headerQuote {
     font-size: 13px;
     color: #bbb;
-    height: 16px; /* Ensure space for transition */
+    height: 16px; 
     opacity: 1;
     transition: opacity 0.5s ease-in-out;
   }
   .controls {display:flex; gap:8px; align-items:center}
+  
+  /* GENERAL BUTTON STYLES (Dark for contrast on white panel) */
   .btn { 
-    background: linear-gradient(180deg,#111,#000);
+    background: linear-gradient(180deg,#1c1c1c,#000); 
     border:1px solid rgba(255,255,255,0.06);
     color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
     box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 -6px 18px rgba(255,255,255,0.02);
   }
-  .btn.primary { background: linear-gradient(180deg,#00d27a,#00783f); color:#001; box-shadow:0 10px 30px rgba(0,0,0,0.5); border:none; }
+  /* PRIMARY BUTTON (SPIN & CLAIM) */
+  .btn.primary { 
+    background: linear-gradient(180deg,#ffeb5c,#ff9f1c); /* Brighter Gold */
+    color:#000; 
+    box-shadow:0 10px 30px rgba(0,0,0,0.5); border:none; 
+  }
   .btn:active{transform:translateY(1px)}
 
   /* main panel */
   .panel {
-    margin-top:18px; background:var(--panel-bg); border-radius:14px; padding:18px; display:flex; gap:18px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    margin-top:18px; 
+    background:var(--panel-bg); /* New bright background */
+    border-radius:14px; 
+    padding:18px; 
+    display:flex; 
+    gap:18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    color: #000; /* Panel content is BLACK */
   }
+
+  /* Exclusions: Text that sits on dark background (Header, Inventory, Overlays) is kept white/light */
+  header, h1, #headerQuote, .controls .btn, 
+  .inv, .inv h3, .card-mini .meta div, .spin-info, 
+  .small, .center-hint, .reveal-card, .reveal-card .quote {
+      color: #fff;
+  }
+  /* Text inside inventory items needs to be white/light */
+  .card-mini { color: #fff; }
+
+  /* Adjustments for text inside the BRIGHT panel */
+  .panel .left, .panel .center, .panel .right, .dex-tracker, .spin-card {
+      color: #000; 
+  }
+  .panel .left strong { color: var(--bg2); } /* Dark emphasis */
+  .panel .small { color: #555; } /* Small text inside panel should be muted dark */
+
 
   .left {
     flex:1; min-width:360px;
@@ -68,54 +115,74 @@
   .dex-tracker {
     margin-top: 12px;
     padding: 12px;
-    background: var(--glass);
+    background: rgba(255,255,255,0.7); /* Slightly darker white for contrast */
     border-radius: 10px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(0,0,0,0.06);
+    color: #000; /* Black text */
   }
-  .dex-tracker strong { font-size: 16px; color: var(--accent); }
+  .dex-tracker strong { font-size: 16px; color: var(--bg2); } 
   .dex-bar {
     height: 8px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.1);
     border-radius: 4px;
     margin-top: 6px;
     overflow: hidden;
   }
   .dex-progress {
     height: 100%;
-    background: linear-gradient(90deg, #00783f, var(--accent));
+    background: linear-gradient(90deg, #005080, var(--accent)); /* Blue gradient */
     transition: width 0.5s ease-out;
   }
 
   /* Spin button / card */
   .spin-card {
-    width:100%; background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    width:100%; 
+    background:rgba(255,255,255,0.7); /* Slightly brighter card */
     border-radius:12px; padding:14px; display:flex; flex-direction:column; align-items:center; gap:12px;
+    color: #000;
   }
   .big-spin {
     width:200px; height:200px; border-radius:14px; display:grid; place-items:center;
-    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid rgba(255,255,255,0.06);
+    background:rgba(255,255,255,0.5); /* Semi-transparent white */
+    border:1px solid rgba(0,0,0,0.1);
     position:relative; overflow:hidden;
   }
   .spin-button {
     position:absolute; z-index:3; bottom:16px; left:50%; transform:translateX(-50%);
     width:120px; text-align:center; border-radius:999px; padding:12px 18px; font-weight:900; letter-spacing:1px; cursor:pointer;
   }
-  .spin-button.primary { background:linear-gradient(180deg,#ffd85c,#ff9f1c); color:#000; box-shadow: 0 8px 24px rgba(255,160,0,0.28); border:none; }
-  .spin-button:disabled { opacity: 0.6; cursor: not-allowed; } /* Added disabled style */
-  .spin-info { font-size:13px; color: #bfbfbf; text-align:center; max-width:320px }
+  .spin-button.primary { 
+    background:linear-gradient(180deg,#ffeb5c,#ff9f1c); color:#000; box-shadow: 0 8px 24px rgba(255,160,0,0.28); border:none; 
+  }
+  .spin-button:disabled { opacity: 0.6; cursor: not-allowed; } 
+  .spin-info { font-size:13px; color: #555; text-align:center; max-width:320px } /* Dark color for info on light background */
 
   /* inventory right */
-  .inv { background:var(--glass); border-radius:10px; padding:10px; height:420px; overflow:auto; }
+  .inv { 
+    background:var(--glass); 
+    border-radius:10px; 
+    padding:10px; 
+    height:420px; 
+    overflow:auto;
+  }
   .inv h3{margin:0 0 8px 0;font-size:14px}
   .inv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-  .card-mini { background:rgba(0,0,0,0.45); padding:6px; border-radius:8px; display:flex; gap:8px; align-items:center; transition: border .3s, box-shadow .3s; }
+  .card-mini { 
+    background:rgba(0,0,0,0.55); 
+    padding:6px; border-radius:8px; 
+    display:flex; gap:8px; 
+    align-items:center; 
+    transition: border .3s, box-shadow .3s; 
+    color: #fff; /* Ensure card text is white */
+  }
   .card-mini img{width:44px;height:44px;border-radius:6px;object-fit:cover}
   .card-mini .meta { font-size:12px }
+  .card-mini .meta div { color: #eee; }
+  .card-mini .meta div:first-child { color: var(--accent); }
   
-  /* Rarity Glows for Inventory & Preview Items */
-  .rarity-trash{border:1px solid #774f00;} /* NEW */
+  /* Rarity Glows for Inventory & Preview Items (colors updated in root) */
+  .rarity-trash{border:1px solid #774f00;} 
   .rarity-common{border:1px solid #666}
   .rarity-uncommon{border:1px solid #00cc66; box-shadow:0 0 6px var(--glow-uncommon)}
   .rarity-rare{border:1px solid #1e90ff; box-shadow:0 0 8px var(--glow-rare)}
@@ -123,11 +190,11 @@
   .rarity-legendary{border:1px solid #ff9f1c; box-shadow:0 0 12px var(--glow-legendary)}
   .rarity-mythic{border:1px solid #ffde59; box-shadow:0 0 16px var(--glow-mythic)}
   
-  /* Last Result Glow */
+  /* Last Result Glow (colors updated in root) */
   #lastResult {
     transition: box-shadow .5s ease-out, border-color .5s ease-out;
   }
-  .rarity-trash-bg { border:1px solid #774f00; box-shadow:0 0 8px var(--glow-trash); } /* NEW */
+  .rarity-trash-bg { border:1px solid #774f00; box-shadow:0 0 8px var(--glow-trash); } 
   .rarity-common-bg{ border:1px solid #666; box-shadow:0 0 8px var(--glow-common); }
   .rarity-uncommon-bg{ border:1px solid #00cc66; box-shadow:0 0 12px var(--glow-uncommon); }
   .rarity-rare-bg{ border:1px solid #1e90ff; box-shadow:0 0 16px var(--glow-rare); }
@@ -136,7 +203,7 @@
   .rarity-mythic-bg{ border:1px solid #ffde59; box-shadow:0 0 28px var(--glow-mythic); }
 
 
-  /* overlay spinner UI */
+  /* overlay spinner UI (unchanged) */
   .overlay {
     position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:999;
     background: rgba(0,0,0,0.65);
@@ -198,7 +265,7 @@
     transition: border .5s, box-shadow .5s; 
   }
   /* Rarity Glows for the Modal Card */
-  .reveal-card.rarity-trash-modal{ border:1px solid #774f00; box-shadow:0 0 16px var(--glow-trash); } /* NEW */
+  .reveal-card.rarity-trash-modal{ border:1px solid #774f00; box-shadow:0 0 16px var(--glow-trash); } 
   .reveal-card.rarity-common-modal{ border:1px solid #666; box-shadow:0 0 16px var(--glow-common); }
   .reveal-card.rarity-uncommon-modal{ border:1px solid #00cc66; box-shadow:0 0 20px var(--glow-uncommon); }
   .reveal-card.rarity-rare-modal{ border:1px solid #1e90ff; box-shadow:0 0 24px var(--glow-rare); }
@@ -321,12 +388,12 @@
     </div>
 
     <div class="center">
-      <div style="opacity:0.85; color:#ddd; font-size:13px; text-align:center;">Press spin to start the reveal sequence</div>
+      <div style="opacity:0.85; color:#000; font-size:13px; text-align:center;">Press spin to start the reveal sequence</div>
       <div style="height:12px"></div>
-      <div style="color:#aaa; font-size:13px">Last Result</div>
+      <div style="color:#000; font-size:13px">Last Result</div>
       <div id="lastResult" style="width:240px;height:240px;border-radius:12px;background:rgba(255,255,255,0.02);display:grid;place-items:center">
         <img id="lastImg" src="" alt="" style="width:180px;height:180px;border-radius:10px;object-fit:cover;display:none" />
-        <div id="lastName" style="display:block;color:#ddd">—</div>
+        <div id="lastName" style="display:block;color:#000">—</div>
       </div>
     </div>
 
@@ -423,8 +490,10 @@
   4. Rarity assignments updated per user request (24 new items added).
   
   *** USER-REQUESTED CHANGES (This Session) ***
-  1. Change 'Angel Jairo' (j23) to 'Oppression Jairo' with quote "but is this truly the end..?".
-  2. Add new cutscene setting 'oppressionCutsceneEnabled' for 'Oppression Jairo' (j23) using 'oppression.mp4'.
+  1. Festive/Icy Blue/White UI applied.
+  2. Custom background PNG path added to CSS.
+  3. Text color on bright panels set to black for readability.
+  4. Oppression Jairo cutscene logic confirmed.
 */
 
 // ----------------------------
