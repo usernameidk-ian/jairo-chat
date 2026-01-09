@@ -3,6 +3,7 @@
 <head>
     <title>JAIRORUNE</title>
     <style>
+        /* Loading a pixel font similar to the one in your screenshot */
         @font-face {
             font-family: 'Fixedsys';
             src: url('https://db.onlinewebfonts.com/t/c9aa129e79471168f237f37435f29910.woff2') format('woff2');
@@ -11,7 +12,7 @@
         body, html {
             margin: 0; padding: 0;
             background-color: black;
-            color: #00FF00; /* Neon Green from your screenshot */
+            color: #00FF00; /* Neon Green */
             font-family: 'Fixedsys', 'Courier New', monospace;
             height: 100%;
             display: flex;
@@ -23,21 +24,23 @@
         }
 
         /* --- SAVE MENU LAYOUT --- */
+        #menu-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 1s;
+        }
+
         #chapter-header {
             width: 600px;
             text-align: left;
             font-size: 24px;
-            margin-bottom: 40px;
-        }
-
-        #save-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            margin-bottom: 30px;
+            color: #00FF00;
         }
 
         .save-slot {
-            border: 2px solid #005500; /* Darker green border */
+            border: 2px solid #004400; /* Dark green border */
             width: 600px;
             height: 100px;
             display: flex;
@@ -45,20 +48,23 @@
             padding: 0 20px;
             position: relative;
             cursor: pointer;
+            margin-bottom: 10px;
+            box-sizing: border-box;
         }
 
         .save-slot.active {
-            border-color: #00FF00;
+            border: 2px solid #00FF00; /* Bright green when selected */
         }
 
-        /* The little red soul cursor */
+        /* The Soul Cursor */
         .soul-cursor {
-            width: 15px;
-            height: 15px;
+            width: 16px;
+            height: 16px;
             background: red;
             position: absolute;
-            left: -30px;
+            left: -35px;
             display: none;
+            /* Simple heart shape using clip-path */
             clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0);
         }
 
@@ -71,150 +77,220 @@
             justify-content: space-between;
             width: 100%;
             font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        .slot-line {
+            border-bottom: 2px solid #004400;
+            width: 150px;
+            display: block;
+            margin-top: 5px;
         }
 
         /* Bottom Options */
         #menu-footer {
             margin-top: 30px;
-            width: 620px;
+            width: 600px;
             display: flex;
             justify-content: space-between;
-            font-size: 20px;
+            font-size: 22px;
+            color: #00FF00;
         }
 
-        /* --- THE STORY OVERLAY --- */
-        #story-overlay {
+        /* --- THE INTRO OVERLAY --- */
+        #intro-overlay {
             position: fixed;
             inset: 0;
             background: black;
             display: none;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 10;
+            z-index: 100;
         }
 
         #text-box {
-            font-size: 30px;
+            font-size: 32px;
             color: white;
             text-align: center;
-            letter-spacing: 5px;
+            letter-spacing: 6px;
             opacity: 0;
-            transition: opacity 1s;
+            transition: opacity 2s ease-in-out; /* Ghostly fade */
+            
+            /* The Glow effect from your screenshot */
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 
+                         0 0 15px rgba(255, 255, 255, 0.4);
         }
 
-        /* Red Beam for the Soul Reveal */
         #red-beam {
             position: absolute;
-            width: 80px;
+            width: 70px;
             height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,0,0,0.4), transparent);
+            background: linear-gradient(to right, transparent, rgba(255,0,0,0.3), transparent);
             display: none;
+            z-index: 1;
         }
 
         #center-soul {
-            width: 30px;
-            height: 30px;
+            width: 25px;
+            height: 25px;
             background: red;
             display: none;
             clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0);
-            z-index: 11;
+            z-index: 2;
+            animation: pulse 0.8s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
         }
     </style>
 </head>
 <body>
 
-    <div id="chapter-header">CHAPTER 1</div>
+    <div id="menu-container">
+        <div id="chapter-header">CHAPTER 1</div>
 
-    <div id="save-container">
-        <div class="save-slot active" onclick="selectSlot(this)">
+        <div class="save-slot active" onclick="handleSlotClick(this)">
             <div class="soul-cursor"></div>
             <div class="slot-info">
-                <span>[EMPTY]</span>
-                <span>--:--</span>
+                <div>
+                    [EMPTY]<br>
+                    <span class="slot-line"></span>
+                </div>
+                <div>--:--</div>
             </div>
         </div>
-        <div class="save-slot" onclick="selectSlot(this)">
+
+        <div class="save-slot" onclick="handleSlotClick(this)">
             <div class="soul-cursor"></div>
             <div class="slot-info">
-                <span>[EMPTY]</span>
-                <span>--:--</span>
+                <div>
+                    [EMPTY]<br>
+                    <span class="slot-line"></span>
+                </div>
+                <div>--:--</div>
             </div>
         </div>
-        <div class="save-slot" onclick="selectSlot(this)">
+
+        <div class="save-slot" onclick="handleSlotClick(this)">
             <div class="soul-cursor"></div>
             <div class="slot-info">
-                <span>[EMPTY]</span>
-                <span>--:--</span>
+                <div>
+                    [EMPTY]<br>
+                    <span class="slot-line"></span>
+                </div>
+                <div>--:--</div>
             </div>
+        </div>
+
+        <div id="menu-footer">
+            <div>COPY</div>
+            <div>ERASE</div>
+            <div>END PROGRAM</div>
         </div>
     </div>
 
-    <div id="menu-footer">
-        <div>COPY</div>
-        <div>ERASE</div>
-        <div>END PROGRAM</div>
-    </div>
-
-    <div id="story-overlay">
+    <div id="intro-overlay">
         <div id="red-beam"></div>
         <div id="center-soul"></div>
         <div id="text-box"></div>
     </div>
 
     <script>
-        let step = 0;
-        const overlay = document.getElementById('story-overlay');
+        const menu = document.getElementById('menu-container');
+        const overlay = document.getElementById('intro-overlay');
         const textBox = document.getElementById('text-box');
         const beam = document.getElementById('red-beam');
-        const centerSoul = document.getElementById('center-soul');
+        const soul = document.getElementById('center-soul');
 
-        function selectSlot(el) {
-            // Remove active from others
-            document.querySelectorAll('.save-slot').forEach(s => s.classList.remove('active'));
-            el.classList.add('active');
-            
-            // In the real game, clicking twice or pressing Enter starts it
-            // For this version, let's start the intro on click
-            startSequence();
+        let step = 0;
+        let isWaiting = false;
+
+        function handleSlotClick(el) {
+            // First click selects the slot (moves the heart)
+            if (!el.classList.contains('active')) {
+                document.querySelectorAll('.save-slot').forEach(s => s.classList.remove('active'));
+                el.classList.add('active');
+                return;
+            }
+
+            // Second click (on an already active slot) starts the program
+            startIntro();
         }
 
-        function startSequence() {
-            overlay.style.display = 'flex';
-            progress();
+        function startIntro() {
+            // Fade out the menu
+            menu.style.opacity = '0';
+
+            setTimeout(() => {
+                menu.style.display = 'none';
+                overlay.style.display = 'flex';
+                
+                // WAIT 3 SECONDS on black screen as requested
+                setTimeout(() => {
+                    progress();
+                }, 3000);
+            }, 1000);
         }
 
         function progress() {
+            if (isWaiting) return;
+
             if (step === 0) fadeText("ARE YOU THERE?");
             if (step === 1) fadeText("ARE WE CONNECTED?");
+            
             if (step === 2) {
-                textBox.style.opacity = 0;
+                // Hide text, show soul/beam, then show next text
+                textBox.style.opacity = '0';
                 setTimeout(() => {
                     beam.style.display = 'block';
-                    centerSoul.style.display = 'block';
-                    fadeText("EXCELLENT.");
+                    soul.style.display = 'block';
+                    setTimeout(() => {
+                        fadeText("EXCELLENT.");
+                    }, 1000);
                 }, 1000);
             }
+
             if (step === 3) fadeText("TRULY EXCELLENT.");
             if (step === 4) fadeText("NOW.");
-            if (step === 5) {
-                fadeText("WE MAY BEGIN.");
-                // We would hide the beam here and move to Vessel Creation
-            }
+            if (step === 5) fadeText("WE MAY BEGIN.");
+
             step++;
         }
 
         function fadeText(txt) {
-            textBox.style.opacity = 0;
+            isWaiting = true;
+            // Step 1: Fade out old text
+            textBox.style.opacity = '0';
+
             setTimeout(() => {
+                // Step 2: Change text while invisible
                 textBox.innerText = txt;
-                textBox.style.opacity = 1;
-            }, 1000);
+                // Step 3: Fade in new text
+                textBox.style.opacity = '1';
+                
+                // Allow the next step only after the fade-in is mostly done
+                setTimeout(() => {
+                    isWaiting = false;
+                }, 2000);
+            }, 1500);
         }
 
+        // Keyboard controls
         window.addEventListener('keydown', (e) => {
-            if (e.key === "Enter" && overlay.style.display === 'flex') progress();
+            if (e.key === "Enter") {
+                if (overlay.style.display === 'flex') {
+                    progress();
+                } else {
+                    const activeSlot = document.querySelector('.save-slot.active');
+                    if (activeSlot) startIntro();
+                }
+            }
         });
+
+        // Click to progress the text
+        overlay.addEventListener('click', progress);
     </script>
 </body>
 </html>
