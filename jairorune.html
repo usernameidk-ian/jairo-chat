@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JAIRORUNE</title>
+    <title>CONTACT</title>
     <style>
         @font-face {
             font-family: 'Fixedsys';
@@ -10,184 +10,176 @@
 
         body, html {
             margin: 0; padding: 0;
-            background-color: black;
-            color: #00FF00;
-            font-family: 'Fixedsys', 'Courier New', monospace;
-            height: 100%;
+            background: black;
+            color: white;
+            font-family: 'Fixedsys', monospace;
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            text-transform: uppercase;
         }
 
-        /* --- BACKGROUND --- */
-        #abyss {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle, #222 0%, #000 70%);
+        /* The Goner Abyss Background Logic */
+        #abyss-layer {
+            position: fixed; inset: 0;
+            background-image: url('bg_abyss.png'); /* Add your sprite here later */
+            background-color: #1a1a1a; /* Backup color from source */
             opacity: 0;
-            z-index: -1;
-            transition: opacity 3s;
+            z-index: 1;
+            transition: opacity 4s;
+            /* The source code scrolls the background at a 45-degree angle */
+            animation: abyssScroll 30s linear infinite;
         }
 
-        /* --- STORY OVERLAY --- */
-        #intro-overlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
+        @keyframes abyssScroll {
+            from { background-position: 0 0; }
+            to { background-position: 500px 500px; }
         }
 
+        /* The Red Beam */
         #red-beam {
             position: absolute;
-            width: 4px;
-            height: 100%;
-            background: rgba(255, 0, 0, 0.6);
-            box-shadow: 0 0 20px 5px rgba(255, 0, 0, 0.4);
-            display: none;
+            width: 2px; height: 100%;
+            background: #FF0000;
+            box-shadow: 0 0 12px #FF0000;
+            opacity: 0;
+            z-index: 2;
+            left: 50%; transform: translateX(-50%);
+            transition: opacity 2s;
         }
 
-        #story-content {
-            display: flex;
+        #story-ui {
+            position: relative;
+            display: none;
             align-items: center;
-            gap: 20px;
+            justify-content: center;
+            gap: 25px;
             z-index: 10;
         }
 
-        #center-soul {
-            width: 20px; height: 20px;
+        #soul {
+            width: 18px; height: 18px;
             background: red;
-            display: none;
             clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0);
-            animation: pulse 0.8s infinite alternate;
+            display: none;
+            animation: soulPulse 0.8s infinite alternate;
         }
 
-        #text-box {
-            font-size: 28px;
-            color: white;
+        #text-typer {
+            font-size: 32px;
             letter-spacing: 5px;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 1.2s ease-in-out;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            max-width: 80%;
+            line-height: 1.6;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
         }
 
-        @keyframes pulse {
+        @keyframes soulPulse {
             from { transform: scale(1); }
-            to { transform: scale(1.15); }
+            to { transform: scale(1.1); }
         }
 
-        /* --- MENU --- */
-        #menu-container { transition: opacity 1s; }
-        .save-slot { border: 2px solid #004400; width: 600px; height: 100px; display: flex; align-items: center; padding: 0 20px; cursor: pointer; margin-bottom: 10px; position: relative; }
-        .save-slot.active { border: 2px solid #00FF00; }
-        .soul-cursor { width: 16px; height: 16px; background: red; position: absolute; left: -35px; display: none; clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0); }
-        .save-slot.active .soul-cursor { display: block; }
+        /* Menu Styling */
+        #menu { width: 600px; color: #00FF00; z-index: 20; }
+        .save-slot { border: 2px solid #004400; padding: 30px; margin-bottom: 10px; cursor: pointer; }
+        .save-slot.active { border-color: #00FF00; }
     </style>
 </head>
-<body>
+<body onclick="handleInput()" onkeydown="if(event.key==='Enter') handleInput()">
 
-    <div id="abyss"></div>
+    <div id="abyss-layer"></div>
+    <div id="red-beam"></div>
 
-    <div id="menu-container">
-        <div style="width: 600px; margin-bottom: 20px;">CHAPTER 1</div>
-        <div class="save-slot active" onclick="startIntro()">
-            <div class="soul-cursor"></div>
-            <div style="display: flex; justify-content: space-between; width: 100%; font-size: 28px;">
-                <div>[EMPTY]</div><div>--:--</div>
-            </div>
-        </div>
+    <div id="menu">
+        <div style="margin-bottom: 20px;">CHAPTER 1</div>
+        <div class="save-slot active" id="slot1">[EMPTY]</div>
+        <div class="save-slot">[EMPTY]</div>
     </div>
 
-    <div id="intro-overlay">
-        <div id="red-beam"></div>
-        <div id="story-content">
-            <div id="center-soul"></div>
-            <div id="text-box"></div>
-        </div>
+    <div id="story-ui">
+        <div id="soul"></div>
+        <div id="text-typer"></div>
     </div>
 
     <script>
-        const menu = document.getElementById('menu-container');
-        const overlay = document.getElementById('intro-overlay');
-        const textBox = document.getElementById('text-box');
+        const textElement = document.getElementById('text-typer');
+        const soul = document.getElementById('soul');
         const beam = document.getElementById('red-beam');
-        const soul = document.getElementById('center-soul');
-        const abyss = document.getElementById('abyss');
+        const abyss = document.getElementById('abyss-layer');
+        const menu = document.getElementById('menu');
+        const storyUI = document.getElementById('story-ui');
 
-        let step = 0;
-        let isWaiting = false;
+        // This matches the "con" (controller) states in the decompiled code
+        let con = 0; 
+        let isTyping = false;
 
-        // The Full Script including your found dialogue
-        const script = [
-            { text: "ARE YOU THERE?", mode: "dark" },
-            { text: "ARE WE CONNECTED?", mode: "dark" },
-            { text: "EXCELLENT.", mode: "soul" },
-            { text: "TRULY EXCELLENT.", mode: "soul" },
-            { text: "NOW.", mode: "soul" },
-            { text: "WE MAY BEGIN.", mode: "soul" },
-            { text: "FIRST.", mode: "abyss" },
-            { text: "YOU MUST CREATE A VESSEL.", mode: "abyss" },
-            { text: "SELECT THE HEAD YOU PREFER.", mode: "creator" },
-            // ... After selection (We'll skip selection for now for the demo)
-            { text: "EXCELLENT.", mode: "abyss" },
-            { text: "HOW INTERESTING.", mode: "abyss" },
-            { text: "YOU ARE ABOUT TO MEET SOMEONE VERY, VERY WONDERFUL.", mode: "abyss" },
-            { text: "OF COURSE. OF COURSE THEY ARE THE SAME.", mode: "abyss" },
-            { text: "THANK YOU FOR YOUR TIME.", mode: "abyss" },
-            { text: "YOUR ANSWERS.", mode: "abyss" },
-            { text: "YOUR WONDERFUL CREATION...", mode: "abyss" },
-            { text: "WILL NOW BE DISCARDED.", mode: "discard" },
-            { text: "NO ONE CAN CHOOSE WHO THEY ARE IN THIS WORLD.", mode: "discard" }
+        const scriptData = [
+            { text: "ARE YOU THERE?", type: "dark" },
+            { text: "ARE WE CONNECTED?", type: "dark" },
+            { text: "EXCELLENT.", type: "soul" },
+            { text: "TRULY EXCELLENT.", type: "soul" },
+            { text: "HOW INTERESTING.", type: "soul" },
+            { text: "YOU ARE ABOUT TO\nMEET SOMEONE\nVERY, VERY\nWONDERFUL.", type: "soul" },
+            { text: "NOW.", type: "soul" },
+            { text: "WE MAY BEGIN.", type: "soul" },
+            { text: "FIRST.", type: "abyss" },
+            { text: "YOU MUST CREATE A VESSEL.", type: "abyss" }
         ];
 
-        function startIntro() {
-            menu.style.opacity = '0';
-            setTimeout(() => {
+        function handleInput() {
+            if (isTyping) return;
+            
+            if (con === 0) {
+                // Start sequence: Fade out menu
                 menu.style.display = 'none';
-                overlay.style.display = 'flex';
-                setTimeout(() => { progress(); }, 3000);
-            }, 1000);
+                storyUI.style.display = 'flex';
+                document.title = "CONTACT"; // Matches source code behavior
+                setTimeout(nextStep, 2000);
+                con = 1;
+                return;
+            }
+            nextStep();
         }
 
-        function progress() {
-            if (isWaiting || step >= script.length) return;
+        function nextStep() {
+            const index = con - 1;
+            if (index >= scriptData.length) return;
 
-            const current = script[step];
-            
-            // Handle visual changes based on "mode"
-            if (current.mode === "soul") {
-                beam.style.display = 'block';
-                soul.style.display = 'block';
-            } else if (current.mode === "abyss") {
-                beam.style.display = 'none';
-                soul.style.display = 'none';
-                abyss.style.opacity = '1';
-            } else if (current.mode === "discard") {
-                abyss.style.opacity = '0'; // Everything fades to black
+            const current = scriptData[index];
+
+            // Visual Logic based on decompiled "States"
+            if (current.type === "soul") {
+                beam.style.opacity = "1";
+                soul.style.display = "block";
+            } else if (current.type === "abyss") {
+                beam.style.opacity = "0";
+                soul.style.display = "none";
+                abyss.style.opacity = "1";
             }
 
-            fadeText(current.text);
-            step++;
+            typeWriter(current.text);
+            con++;
         }
 
-        function fadeText(txt) {
-            isWaiting = true;
-            textBox.style.opacity = '0';
-            setTimeout(() => {
-                textBox.innerText = txt;
-                textBox.style.opacity = '1';
-                setTimeout(() => { isWaiting = false; }, 1500);
-            }, 1000);
+        function typeWriter(txt) {
+            isTyping = true;
+            textElement.innerHTML = "";
+            let i = 0;
+            
+            // 70ms is the 'snd_txtgas' delay found in the data files
+            const timer = setInterval(() => {
+                if (txt[i] === "\n") {
+                    textElement.innerHTML += "<br>";
+                } else {
+                    textElement.innerHTML += txt[i];
+                }
+                
+                i++;
+                if (i >= txt.length) {
+                    clearInterval(timer);
+                    isTyping = false;
+                }
+            }, 70);
         }
-
-        window.addEventListener('keydown', (e) => { if (e.key === "Enter") progress(); });
-        overlay.addEventListener('click', progress);
     </script>
 </body>
 </html>
