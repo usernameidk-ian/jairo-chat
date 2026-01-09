@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JAIRORUNE</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            background-color: black;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- BACKGROUNDS --- */
+        #abyss {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, #000 0%, #333 50%, #000 100%);
+            opacity: 0; /* Starts hidden */
+            z-index: -2;
+            transition: opacity 2s;
+        }
+
+        /* --- THE RED BEAM --- */
+        #red-beam {
+            position: fixed;
+            width: 60px;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.3);
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
+            display: none;
+            z-index: -1;
+        }
+
+        /* --- THE SOUL (Heart) --- */
+        #soul {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            position: relative;
+            transform: rotate(-45deg);
+            display: none;
+            animation: pulse 0.8s infinite alternate;
+        }
+        #soul:before, #soul:after {
+            content: "";
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+        }
+        #soul:before { top: -10px; left: 0; }
+        #soul:after { left: 10px; top: 0; }
+
+        @keyframes pulse {
+            from { transform: rotate(-45deg) scale(1); }
+            to { transform: rotate(-45deg) scale(1.1); }
+        }
+
+        /* --- SAVE SLOTS --- */
+        #save-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .save-slot {
+            border: 2px solid white;
+            padding: 20px;
+            width: 300px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .save-slot:hover { background: rgba(255,255,255,0.1); }
+
+        /* --- TEXT STYLING --- */
+        #text-box {
+            font-size: 24px;
+            text-align: center;
+            max-width: 800px;
+            opacity: 0;
+            transition: opacity 1s;
+            letter-spacing: 4px;
+        }
+
+        /* --- VESSEL CREATOR --- */
+        #vessel-ui {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sprite-display {
+            width: 200px;
+            height: 300px;
+            border: 1px dashed #444;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="abyss"></div>
+    <div id="red-beam"></div>
+    <div id="soul"></div>
+
+    <div id="save-menu">
+        <div class="save-slot" onclick="startIntro(1)">[ EMPTY ]</div>
+        <div class="save-slot" onclick="startIntro(2)">[ EMPTY ]</div>
+        <div class="save-slot" onclick="startIntro(3)">[ EMPTY ]</div>
+    </div>
+
+    <div id="text-box"></div>
+
+    <div id="vessel-ui">
+        <div class="sprite-display" id="vessel-preview">
+            </div>
+        <div id="selection-text">SELECT THE HEAD YOU PREFER.</div>
+    </div>
+
+    <script>
+        const textBox = document.getElementById('text-box');
+        const saveMenu = document.getElementById('save-menu');
+        const beam = document.getElementById('red-beam');
+        const soul = document.getElementById('soul');
+        const abyss = document.getElementById('abyss');
+        const vesselUI = document.getElementById('vessel-ui');
+
+        let step = 0;
+        let isWaiting = false;
+
+        const dialogue = [
+            "ARE YOU THERE?",
+            "ARE WE CONNECTED?",
+            "EXCELLENT.",
+            "TRULY EXCELLENT.",
+            "NOW.",
+            "WE MAY BEGIN.",
+            "FIRST.",
+            "YOU MUST CREATE A VESSEL.",
+            "SELECT THE HEAD YOU PREFER."
+        ];
+
+        function startIntro(slot) {
+            saveMenu.style.display = 'none';
+            progressStory();
+        }
+
+        function showText(txt) {
+            isWaiting = true;
+            textBox.style.opacity = 0;
+            
+            setTimeout(() => {
+                textBox.innerHTML = txt;
+                textBox.style.opacity = 1;
+                isWaiting = false;
+            }, 1000);
+        }
+
+        function progressStory() {
+            if (isWaiting) return;
+
+            if (step === 0) showText(dialogue[0]);
+            if (step === 1) showText(dialogue[1]);
+            
+            if (step === 2) {
+                textBox.style.opacity = 0;
+                setTimeout(() => {
+                    beam.style.display = 'block';
+                    soul.style.display = 'block';
+                    setTimeout(() => showText(dialogue[2]), 1000);
+                }, 1000);
+            }
+
+            if (step === 3) showText(dialogue[dialogue.indexOf("TRULY EXCELLENT.")]);
+            if (step === 4) showText("NOW.");
+            if (step === 5) showText("WE MAY BEGIN.");
+
+            if (step === 6) {
+                textBox.style.opacity = 0;
+                beam.style.display = 'none';
+                soul.style.display = 'none';
+                setTimeout(() => {
+                    abyss.style.opacity = 0.6; // Show moving background
+                    showText("FIRST.");
+                }, 1000);
+            }
+
+            if (step === 7) showText("YOU MUST CREATE A VESSEL.");
+            
+            if (step === 8) {
+                textBox.style.opacity = 0;
+                setTimeout(() => {
+                    vesselUI.style.display = 'flex';
+                }, 1000);
+            }
+
+            step++;
+        }
+
+        window.addEventListener('click', progressStory);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") progressStory();
+        });
+    </script>
+</body>
+</html>
