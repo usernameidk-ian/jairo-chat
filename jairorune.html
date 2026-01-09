@@ -3,208 +3,217 @@
 <head>
     <title>JAIRORUNE</title>
     <style>
+        @font-face {
+            font-family: 'Fixedsys';
+            src: url('https://db.onlinewebfonts.com/t/c9aa129e79471168f237f37435f29910.woff2') format('woff2');
+        }
+
         body, html {
             margin: 0; padding: 0;
             background-color: black;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
+            color: #00FF00; /* Neon Green from your screenshot */
+            font-family: 'Fixedsys', 'Courier New', monospace;
             height: 100%;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            text-transform: uppercase;
         }
 
-        /* --- BACKGROUNDS --- */
-        #abyss {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: linear-gradient(to bottom, #000 0%, #333 50%, #000 100%);
-            opacity: 0; /* Starts hidden */
-            z-index: -2;
-            transition: opacity 2s;
+        /* --- SAVE MENU LAYOUT --- */
+        #chapter-header {
+            width: 600px;
+            text-align: left;
+            font-size: 24px;
+            margin-bottom: 40px;
         }
 
-        /* --- THE RED BEAM --- */
-        #red-beam {
-            position: fixed;
-            width: 60px;
-            height: 100%;
-            background: rgba(255, 0, 0, 0.3);
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
-            display: none;
-            z-index: -1;
-        }
-
-        /* --- THE SOUL (Heart) --- */
-        #soul {
-            width: 20px;
-            height: 20px;
-            background-color: red;
-            position: relative;
-            transform: rotate(-45deg);
-            display: none;
-            animation: pulse 0.8s infinite alternate;
-        }
-        #soul:before, #soul:after {
-            content: "";
-            width: 20px;
-            height: 20px;
-            background-color: red;
-            border-radius: 50%;
-            position: absolute;
-        }
-        #soul:before { top: -10px; left: 0; }
-        #soul:after { left: 10px; top: 0; }
-
-        @keyframes pulse {
-            from { transform: rotate(-45deg) scale(1); }
-            to { transform: rotate(-45deg) scale(1.1); }
-        }
-
-        /* --- SAVE SLOTS --- */
-        #save-menu {
+        #save-container {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 10px;
         }
+
         .save-slot {
-            border: 2px solid white;
-            padding: 20px;
-            width: 300px;
+            border: 2px solid #005500; /* Darker green border */
+            width: 600px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
             cursor: pointer;
-            text-align: left;
-        }
-        .save-slot:hover { background: rgba(255,255,255,0.1); }
-
-        /* --- TEXT STYLING --- */
-        #text-box {
-            font-size: 24px;
-            text-align: center;
-            max-width: 800px;
-            opacity: 0;
-            transition: opacity 1s;
-            letter-spacing: 4px;
         }
 
-        /* --- VESSEL CREATOR --- */
-        #vessel-ui {
+        .save-slot.active {
+            border-color: #00FF00;
+        }
+
+        /* The little red soul cursor */
+        .soul-cursor {
+            width: 15px;
+            height: 15px;
+            background: red;
+            position: absolute;
+            left: -30px;
+            display: none;
+            clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0);
+        }
+
+        .save-slot.active .soul-cursor {
+            display: block;
+        }
+
+        .slot-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 28px;
+        }
+
+        /* Bottom Options */
+        #menu-footer {
+            margin-top: 30px;
+            width: 620px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+        }
+
+        /* --- THE STORY OVERLAY --- */
+        #story-overlay {
+            position: fixed;
+            inset: 0;
+            background: black;
             display: none;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            z-index: 10;
         }
-        .sprite-display {
-            width: 200px;
-            height: 300px;
-            border: 1px dashed #444;
-            margin-bottom: 20px;
+
+        #text-box {
+            font-size: 30px;
+            color: white;
+            text-align: center;
+            letter-spacing: 5px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        /* Red Beam for the Soul Reveal */
+        #red-beam {
+            position: absolute;
+            width: 80px;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,0,0,0.4), transparent);
+            display: none;
+        }
+
+        #center-soul {
+            width: 30px;
+            height: 30px;
+            background: red;
+            display: none;
+            clip-path: polygon(50% 15%, 80% 0, 100% 30%, 50% 100%, 0 30%, 20% 0);
+            z-index: 11;
         }
     </style>
 </head>
 <body>
 
-    <div id="abyss"></div>
-    <div id="red-beam"></div>
-    <div id="soul"></div>
+    <div id="chapter-header">CHAPTER 1</div>
 
-    <div id="save-menu">
-        <div class="save-slot" onclick="startIntro(1)">[ EMPTY ]</div>
-        <div class="save-slot" onclick="startIntro(2)">[ EMPTY ]</div>
-        <div class="save-slot" onclick="startIntro(3)">[ EMPTY ]</div>
+    <div id="save-container">
+        <div class="save-slot active" onclick="selectSlot(this)">
+            <div class="soul-cursor"></div>
+            <div class="slot-info">
+                <span>[EMPTY]</span>
+                <span>--:--</span>
+            </div>
+        </div>
+        <div class="save-slot" onclick="selectSlot(this)">
+            <div class="soul-cursor"></div>
+            <div class="slot-info">
+                <span>[EMPTY]</span>
+                <span>--:--</span>
+            </div>
+        </div>
+        <div class="save-slot" onclick="selectSlot(this)">
+            <div class="soul-cursor"></div>
+            <div class="slot-info">
+                <span>[EMPTY]</span>
+                <span>--:--</span>
+            </div>
+        </div>
     </div>
 
-    <div id="text-box"></div>
+    <div id="menu-footer">
+        <div>COPY</div>
+        <div>ERASE</div>
+        <div>END PROGRAM</div>
+    </div>
 
-    <div id="vessel-ui">
-        <div class="sprite-display" id="vessel-preview">
-            </div>
-        <div id="selection-text">SELECT THE HEAD YOU PREFER.</div>
+    <div id="story-overlay">
+        <div id="red-beam"></div>
+        <div id="center-soul"></div>
+        <div id="text-box"></div>
     </div>
 
     <script>
-        const textBox = document.getElementById('text-box');
-        const saveMenu = document.getElementById('save-menu');
-        const beam = document.getElementById('red-beam');
-        const soul = document.getElementById('soul');
-        const abyss = document.getElementById('abyss');
-        const vesselUI = document.getElementById('vessel-ui');
-
         let step = 0;
-        let isWaiting = false;
+        const overlay = document.getElementById('story-overlay');
+        const textBox = document.getElementById('text-box');
+        const beam = document.getElementById('red-beam');
+        const centerSoul = document.getElementById('center-soul');
 
-        const dialogue = [
-            "ARE YOU THERE?",
-            "ARE WE CONNECTED?",
-            "EXCELLENT.",
-            "TRULY EXCELLENT.",
-            "NOW.",
-            "WE MAY BEGIN.",
-            "FIRST.",
-            "YOU MUST CREATE A VESSEL.",
-            "SELECT THE HEAD YOU PREFER."
-        ];
-
-        function startIntro(slot) {
-            saveMenu.style.display = 'none';
-            progressStory();
+        function selectSlot(el) {
+            // Remove active from others
+            document.querySelectorAll('.save-slot').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+            
+            // In the real game, clicking twice or pressing Enter starts it
+            // For this version, let's start the intro on click
+            startSequence();
         }
 
-        function showText(txt) {
-            isWaiting = true;
-            textBox.style.opacity = 0;
-            
-            setTimeout(() => {
-                textBox.innerHTML = txt;
-                textBox.style.opacity = 1;
-                isWaiting = false;
-            }, 1000);
+        function startSequence() {
+            overlay.style.display = 'flex';
+            progress();
         }
 
-        function progressStory() {
-            if (isWaiting) return;
-
-            if (step === 0) showText(dialogue[0]);
-            if (step === 1) showText(dialogue[1]);
-            
+        function progress() {
+            if (step === 0) fadeText("ARE YOU THERE?");
+            if (step === 1) fadeText("ARE WE CONNECTED?");
             if (step === 2) {
                 textBox.style.opacity = 0;
                 setTimeout(() => {
                     beam.style.display = 'block';
-                    soul.style.display = 'block';
-                    setTimeout(() => showText(dialogue[2]), 1000);
+                    centerSoul.style.display = 'block';
+                    fadeText("EXCELLENT.");
                 }, 1000);
             }
-
-            if (step === 3) showText(dialogue[dialogue.indexOf("TRULY EXCELLENT.")]);
-            if (step === 4) showText("NOW.");
-            if (step === 5) showText("WE MAY BEGIN.");
-
-            if (step === 6) {
-                textBox.style.opacity = 0;
-                beam.style.display = 'none';
-                soul.style.display = 'none';
-                setTimeout(() => {
-                    abyss.style.opacity = 0.6; // Show moving background
-                    showText("FIRST.");
-                }, 1000);
+            if (step === 3) fadeText("TRULY EXCELLENT.");
+            if (step === 4) fadeText("NOW.");
+            if (step === 5) {
+                fadeText("WE MAY BEGIN.");
+                // We would hide the beam here and move to Vessel Creation
             }
-
-            if (step === 7) showText("YOU MUST CREATE A VESSEL.");
-            
-            if (step === 8) {
-                textBox.style.opacity = 0;
-                setTimeout(() => {
-                    vesselUI.style.display = 'flex';
-                }, 1000);
-            }
-
             step++;
         }
 
-        window.addEventListener('click', progressStory);
+        function fadeText(txt) {
+            textBox.style.opacity = 0;
+            setTimeout(() => {
+                textBox.innerText = txt;
+                textBox.style.opacity = 1;
+            }, 1000);
+        }
+
         window.addEventListener('keydown', (e) => {
-            if (e.key === "Enter") progressStory();
+            if (e.key === "Enter" && overlay.style.display === 'flex') progress();
         });
     </script>
 </body>
