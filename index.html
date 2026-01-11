@@ -14,8 +14,6 @@
   </header>
 
   <div class="container">
-
-    <!-- Right: Chat -->
     <main class="chat-box">
       <div class="chat-header">
         <h2>Chat</h2>
@@ -25,13 +23,15 @@
       <div id="chat-messages" class="chat-messages"></div>
 
       <div class="chat-input-row">
-        <div id="media-menu" class="media-popup">
-          <p>Paste image/video link:</p>
-          <input type="text" id="media-link-input" placeholder="https://example.com/image.png" />
-          <div id="media-preview"></div>
+        <div id="gif-menu" class="gif-popup">
+          <p style="margin: 0 0 8px 0; color: #00ff00; font-size: 14px; font-weight: bold;">Search GIFs</p>
+          <input type="text" id="gif-search-input" placeholder="Search Tenor..." autocomplete="off"/>
+          <div id="gif-results"></div>
         </div>
 
-        <button id="media-toggle" title="Attach Media">📎</button>
+        <button id="gif-toggle" title="Search GIFs">
+          <img src="gificon.png" alt="GIF" style="width:20px; height:20px; display:block;">
+        </button>
         <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"/>
         <button id="send-chat">Send</button>
       </div>
@@ -40,13 +40,11 @@
     </main>
   </div>
 
-  <!-- Background Music -->
   <audio id="bgm" loop>
     <source src="nothingyet.mp3" type="audio/mpeg" />
     Your browser does not support audio.
   </audio>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
