@@ -4,11 +4,14 @@ body {
   margin: 0;
   color: #fff;
   -webkit-font-smoothing: antialiased;
+
+  /* Custom wallpaper background */
   background: url('snowmaninsnow.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
 }
 
+/* Overlay gradient for green-to-red Christmas vibe */
 body::before {
   content: "";
   position: fixed;
@@ -28,7 +31,11 @@ body::before {
   z-index: 1;
   position: relative;
 }
-.topbar h1 { margin: 0; font-size: 18px; color: #fff; }
+.topbar h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
 .topbar .controls button {
   padding: 8px 12px;
   border-radius: 8px;
@@ -49,10 +56,16 @@ body::before {
   z-index: 1;
 }
 
+/* ---------------------- LEFT PANEL (hidden) ---------------------- */
+.left-panel {
+  display: none; /* removed the game preview */
+}
+
+/* ---------------------- CHAT BOX ---------------------- */
 .chat-box {
   flex: 1 1 720px;
   max-width: 720px;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.85); /* semi-transparent */
   border-radius: 12px;
   padding: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
@@ -60,80 +73,94 @@ body::before {
   display: flex;
   flex-direction: column;
   z-index: 1;
-  position: relative;
 }
 
-/* ---------------------- GIF POPUP ---------------------- */
-.gif-popup {
-  display: none;
-  position: absolute;
-  bottom: 70px;
-  left: 12px;
-  background: #18191c;
-  border: 1px solid #00ff00;
-  padding: 12px;
-  border-radius: 8px;
-  width: 280px;
-  z-index: 100;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.7);
-}
-#gif-search-input {
-  width: 90%;
-  padding: 10px;
-  background: #202225;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-#gif-results {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* ---------------------- CHAT HEADER ---------------------- */
+.chat-header {
+  display: flex;
   gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
-#gif-results img {
-  width: 100%;
-  border-radius: 4px;
+.chat-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+#clear-chat {
+  background: #4f545c;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 8px;
+  border: none;
   cursor: pointer;
 }
 
 /* ---------------------- CHAT MESSAGES ---------------------- */
 .chat-messages {
-  background: rgba(50,50,50,0.5);
+  background: rgba(50,50,50,0.5); /* semi-transparent to show wallpaper */
   border-radius: 8px;
   padding: 12px;
   height: 420px;
   overflow-y: auto;
   border: 1px solid rgba(255,255,255,0.1);
 }
-.chat-messages::-webkit-scrollbar { width: 8px; }
-.chat-messages::-webkit-scrollbar-thumb { background: #00ff00; border-radius: 4px; }
 
+/* Scrollbar styling */
+.chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #00ff00;
+  border-radius: 4px;
+}
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+/* Individual message */
 .chat-messages p {
   margin: 6px 0;
+  line-height: 1.25;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   font-size: 14px;
   background: rgba(255,255,255,0.05);
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: 6px;
   animation: fadeIn 0.25s ease-in-out;
 }
 
-.chat-media {
-  max-width: 100%;
-  max-height: 250px;
-  border-radius: 8px;
-  margin-top: 5px;
-  display: block;
+/* Admin icon */
+.chat-messages img.admin-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  margin-right: 6px;
+  border-radius: 3px;
 }
 
-.username { font-weight: 700; margin-right: 4px; }
-.msgtext { word-wrap: break-word; white-space: pre-wrap; flex: 1; }
-.admin-icon { width: 16px; height: 16px; margin-right: 4px; }
+/* Username */
+.chat-messages .username {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* Message text */
+.chat-messages .msgtext {
+  word-wrap: break-word;     /* wrap long words */
+  overflow-wrap: anywhere;   /* wrap anywhere if needed */
+  white-space: pre-wrap;     /* preserve line breaks and wrap text */
+  flex: 1;
+  color: #fff;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px);}
+  to { opacity: 1; transform: translateY(0);}
+}
 
 /* ---------------------- INPUT ROW ---------------------- */
 .chat-input-row {
@@ -141,20 +168,18 @@ body::before {
   display: flex;
   gap: 8px;
 }
-#gif-toggle {
-  background: #2f3136;
-  border: 1px solid #4f545c;
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
-}
 #chat-input {
   flex: 1;
   padding: 10px;
   border-radius: 8px;
   border: none;
+  outline: none;
+  font-size: 14px;
   background: #1e1e1e;
   color: #fff;
+}
+#chat-input:focus {
+  box-shadow: 0 0 6px #00ff00;
 }
 #send-chat {
   padding: 10px 14px;
@@ -164,11 +189,15 @@ body::before {
   color: #000;
   font-weight: bold;
   cursor: pointer;
+  transition: all 0.2s;
+}
+#send-chat:hover {
+  background: #33ff33;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px);}
-  to { opacity: 1; transform: translateY(0);}
+/* ---------------------- TIMEOUT ---------------------- */
+.timeout-timer {
+  margin-top: 8px;
+  color: #ffb4b4;
+  font-size: 13px;
 }
-
-.timeout-timer { margin-top: 8px; color: #ffb4b4; font-size: 13px; }
