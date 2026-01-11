@@ -69,6 +69,12 @@ const clearChatBtn = document.getElementById("clear-chat");
 const openGameBtn = document.getElementById("open-game");
 const timerEl = document.getElementById("timeout-timer");
 
+// Media UI Elements
+const mediaToggle = document.getElementById('media-toggle');
+const mediaMenu = document.getElementById('media-menu');
+const mediaLinkInput = document.getElementById('media-link-input');
+const mediaPreview = document.getElementById('media-preview');
+
 chatInput.focus();
 
 // open game in new tab
@@ -88,8 +94,6 @@ const messagesRef = db.ref("messages");
 let timeouts = {};
 let timeoutInterval = null;
 
-// insert timer text beneath chat input (already exists in HTML as #timeout-timer)
-
 // Admin clear chat
 if (isAdmin && clearChatBtn) {
   clearChatBtn.addEventListener("click", () => {
@@ -100,10 +104,39 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
+// ---------------------- MEDIA POPUP LOGIC ----------------------
+
+// Open/Close the black box
+mediaToggle.addEventListener('click', () => {
+  mediaMenu.style.display = (mediaMenu.style.display === 'block') ? 'none' : 'block';
+});
+
+// Show preview in the box
+mediaLinkInput.addEventListener('input', () => {
+  const url = mediaLinkInput.value.trim();
+  // Image check
+  if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+    mediaPreview.innerHTML = `<img src="${url}" style="max-width:100%; border-radius:4px; margin-top:5px;"/>`;
+  } 
+  // Video check
+  else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+    mediaPreview.innerHTML = `<video src="${url}" autoplay muted loop style="width:100%; border-radius:4px; margin-top:5px;"></video>`;
+  } 
+  else {
+    mediaPreview.innerHTML = '';
+  }
+});
+
 // ---------------------- SEND MESSAGE ----------------------
-// When sending, check timeout using identityKey (normalized)
 sendChat.addEventListener("click", () => {
-  const text = chatInput.value.trim();
+  let text = chatInput.value.trim();
+  const mediaLink = mediaLinkInput.value.trim();
+
+  // If there is a media link, we prioritize that or combine them
+  if (mediaLink) {
+    text = mediaLink + (text ? " " + text : "");
+  }
+
   if (!text) return;
 
   const myTimeout = timeouts[identityKey];
@@ -112,41 +145,80 @@ sendChat.addEventListener("click", () => {
     return;
   }
 
-  // push original display name for readability, but timeouts/presence use normalized keys
   messagesRef.push({ text, username: username, timestamp: Date.now() });
+  
+  // Clear everything
   chatInput.value = "";
+  mediaLinkInput.value = "";
+  mediaPreview.innerHTML = "";
+  mediaMenu.style.display = "none";
 });
+
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendChat.click();
 });
 
 // ---------------------- MESSAGE RECEIVING & RENDERING ----------------------
-// Render messages nicely. Add admin icon only when displayed username === "bian" (exact).
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
   const p = document.createElement("p");
 
-  // message content
   if (msg && msg.text) {
-    // create username span for better styling control
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
 
-    const textSpan = document.createElement("span");
-    textSpan.className = "msgtext";
-    textSpan.textContent = " " + msg.text;
+    // Container for text or media
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "msg-content";
 
-    // add admin icon if applicable (only exact displayed name 'bian')
+    // Split text to check for links
+    const parts = msg.text.split(" ");
+    const mediaUrl = parts[0]; // Check first word for a link
+
+    if (mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+        const img = document.createElement("img");
+        img.src = mediaUrl;
+        img.className = "chat-media";
+        contentDiv.appendChild(img);
+        
+        // Add remaining text if there is any
+        const remainingText = parts.slice(1).join(" ");
+        if (remainingText) {
+            const textSpan = document.createElement("span");
+            textSpan.className = "msgtext";
+            textSpan.textContent = " " + remainingText;
+            contentDiv.appendChild(textSpan);
+        }
+    } else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
+        const vid = document.createElement("video");
+        vid.src = mediaUrl;
+        vid.className = "chat-media";
+        vid.controls = true;
+        contentDiv.appendChild(vid);
+
+        const remainingText = parts.slice(1).join(" ");
+        if (remainingText) {
+            const textSpan = document.createElement("span");
+            textSpan.className = "msgtext";
+            textSpan.textContent = " " + remainingText;
+            contentDiv.appendChild(textSpan);
+        }
+    } else {
+        const textSpan = document.createElement("span");
+        textSpan.className = "msgtext";
+        textSpan.textContent = " " + msg.text;
+        contentDiv.appendChild(textSpan);
+    }
+
     addAdminIcon(p, msg.username);
-
     p.appendChild(userSpan);
-    p.appendChild(textSpan);
+    p.appendChild(contentDiv);
   }
 
-  // admin controls (delete/timeout) appended to message node (available only to admin users)
+  // admin controls (delete/timeout)
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
@@ -165,7 +237,6 @@ messagesRef.on("child_added", (snapshot) => {
       const choice = prompt("Timeout duration (in seconds):", "30");
       const duration = parseInt(choice, 10) * 1000;
       if (!isNaN(duration) && duration > 0) {
-        // normalize the target user's name for timeout key
         const targetClean = (msg.username || "").toString().trim().replace(/\s+/g, "").toLowerCase();
         const until = Date.now() + duration;
         db.ref("timeouts").child(targetClean).set({ until, by: username });
@@ -174,7 +245,6 @@ messagesRef.on("child_added", (snapshot) => {
     p.appendChild(timeoutBtn);
   }
 
-  // attach key and append
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
