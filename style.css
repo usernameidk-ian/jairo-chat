@@ -176,6 +176,60 @@ body::before {
   outline: none;
   font-size: 14px;
   background: #1e1e1e;
+
+  /* Media Popup Box */
+.media-popup {
+  display: none; /* Hidden until clip is clicked */
+  position: absolute;
+  bottom: 60px;
+  left: 20px;
+  background: #000;
+  border: 2px solid #00ff00;
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 10;
+  width: 250px;
+  box-shadow: 0 0 15px rgba(0,255,0,0.3);
+}
+
+.media-popup p { font-size: 12px; margin: 0 0 5px 0; color: #00ff00; }
+
+#media-link-input {
+  width: 90%;
+  background: #111;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 5px;
+  font-size: 12px;
+}
+
+#media-preview img, #media-preview video {
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: 4px;
+}
+
+/* The Clip Button */
+#media-toggle {
+  background: #2f3136;
+  border: 1px solid #4f545c;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+/* Media in the actual Chat */
+.chat-media {
+  max-width: 250px;
+  max-height: 250px;
+  display: block;
+  border-radius: 8px;
+  margin-top: 5px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+  
   color: #fff;
 }
 #chat-input:focus {
