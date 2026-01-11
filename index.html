@@ -25,6 +25,13 @@
       <div id="chat-messages" class="chat-messages"></div>
 
       <div class="chat-input-row">
+        <div id="media-menu" class="media-popup">
+          <p>Paste image/video link:</p>
+          <input type="text" id="media-link-input" placeholder="https://example.com/image.png" />
+          <div id="media-preview"></div>
+        </div>
+
+        <button id="media-toggle" title="Attach Media">📎</button>
         <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"/>
         <button id="send-chat">Send</button>
       </div>
