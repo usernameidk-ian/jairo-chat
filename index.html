@@ -14,8 +14,15 @@
   </header>
 
   <div class="container">
+    <div id="admin-soundboard" class="soundboard" style="display:none;">
+      <h3>Admin SFX</h3>
+      <button onclick="triggerSound('s1')">Sound 1</button>
+      <button onclick="triggerSound('s2')">Sound 2</button>
+      <button onclick="triggerSound('s3')">Sound 3</button>
+      <button onclick="triggerSound('s4')">Sound 4</button>
+      <button onclick="triggerSound('s5')">Sound 5</button>
+    </div>
 
-    <!-- Right: Chat -->
     <main class="chat-box">
       <div class="chat-header">
         <h2>Chat</h2>
@@ -24,7 +31,16 @@
 
       <div id="chat-messages" class="chat-messages"></div>
 
+      <div id="gif-vault" class="media-popup">
+        <div class="media-grid" id="gif-list"></div>
+      </div>
+      <div id="emoji-vault" class="media-popup">
+        <div class="media-grid" id="emoji-list"></div>
+      </div>
+
       <div class="chat-input-row">
+        <button id="gif-btn" class="icon-btn"><img src="gificon.png" alt="GIF"></button>
+        <button id="emoji-btn" class="icon-btn">😊</button>
         <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"/>
         <button id="send-chat">Send</button>
       </div>
@@ -33,13 +49,13 @@
     </main>
   </div>
 
-  <!-- Background Music -->
   <audio id="bgm" loop>
     <source src="nothingyet.mp3" type="audio/mpeg" />
     Your browser does not support audio.
   </audio>
 
-  <!-- Firebase -->
+  <audio id="sfx-player"></audio>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
