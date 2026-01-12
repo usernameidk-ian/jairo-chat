@@ -1,56 +1,26 @@
-eriod - School's almost out!";
-        }
-    }
-}
-
-function parseTime(t) {
-    const [h, m] = t.split(':').map(Number);
-    return h * 3600 + m * 60;
-}
-
-function formatCountdown(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-}
-
-function convertTo12Hour(timeStr) {
-    let [h, m] = timeStr.split(':').map(Number);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
-}
-
-setInterval(updateSchoolClock, 1000);
-updateSchoolClock();
-// ---------------------- USER & ADMIN SETUP ----------------------
+/* ---------------------- USER & ADMIN SETUP ---------------------- */
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
-// keep raw and trimmed variations
 username = username.toString();
 const trimmed = username.trim();            
 const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); 
 
-// admin credentials
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
 let password = "";
 let isAdmin = false;
 
-// impersonation / admin logic:
 if (cleanName === adminUsername && trimmed !== adminUsername) {
   alert("this username is RESERVED. go choose another name.");
   location.reload();
 }
 
-// prompt for admin password only if they entered exactly "bian"
 if (trimmed === adminUsername) {
   password = prompt("Enter admin password:");
   if (password === adminPassword) {
     isAdmin = true;
     username = adminUsername;
-    // SHOW THE APPLE BUTTON IF ADMIN
     const toggleBtn = document.getElementById('admin-toggle');
     if(toggleBtn) toggleBtn.style.display = 'flex'; 
   } else {
@@ -61,7 +31,6 @@ if (trimmed === adminUsername) {
 
 const identityKey = cleanName || username.replace(/\s+/g, "").toLowerCase();
 
-// --- ADMIN ICON FOR CHAT MESSAGES ---
 const adminIconSrc = "purplestar.png"; 
 
 function addAdminIcon(p, messageUsername) {
@@ -82,9 +51,7 @@ function stringToColor(str) {
   return color;
 }
 
-const userColor = stringToColor(username);
-
-// ---------------------- UI ELEMENTS & FIREBASE SETUP ----------------------
+/* ---------------------- FIREBASE & UI SETUP ---------------------- */
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
@@ -97,7 +64,6 @@ const emojiBtn = document.getElementById('emoji-btn');
 const gifVault = document.getElementById('gif-vault');
 const emojiVault = document.getElementById('emoji-vault');
 
-// ADMIN TOGGLE ELEMENTS
 const adminToggle = document.getElementById('admin-toggle');
 const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
@@ -110,21 +76,14 @@ if (openGameBtn) {
   });
 }
 
-// Logic for the Apple Button
 if (adminToggle) {
   adminToggle.onclick = () => {
-    if (soundBoard.style.display === 'none' || soundBoard.style.display === '') {
-      soundBoard.style.display = 'flex';
-    } else {
-      soundBoard.style.display = 'none';
-    }
+    soundBoard.style.display = (soundBoard.style.display === 'none') ? 'flex' : 'none';
   };
 }
 
 if (closeSfx) {
-  closeSfx.onclick = () => {
-    soundBoard.style.display = 'none';
-  };
+  closeSfx.onclick = () => { soundBoard.style.display = 'none'; };
 }
 
 if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
@@ -144,20 +103,15 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
-// ---------------------- SOUNDBOARD LOGIC (FIXED) ----------------------
-
-// Capture the exact time the user opened the page
 const loadTime = Date.now();
 
 window.triggerSound = function(soundName) {
   if (!isAdmin) return;
-  // Send the sound AND the current time to Firebase
   soundRef.set({ name: soundName, time: Date.now() });
 };
 
 soundRef.on("value", (snapshot) => {
   const data = snapshot.val();
-  // ONLY play if the sound timestamp is NEWER than when we loaded the page
   if (data && data.time > loadTime) {
     const sfx = document.getElementById('sfx-player');
     sfx.src = data.name + ".mp3";
@@ -165,7 +119,7 @@ soundRef.on("value", (snapshot) => {
   }
 });
 
-// ---------------------- GIF & EMOJI LISTS ----------------------
+/* ---------------------- MESSAGING ---------------------- */
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
@@ -173,10 +127,9 @@ const myGifs = [
   "https://tenor.com/view/speed-shock-scared-scary-speed-covering-mouth-ishowspeed-gif-9313694227637759402.gif",
   "https://tenor.com/view/ishowspeed-speed-clueless-acting-as-if-he-understands-speed-clueless-gif-9460732332464534725.gif"
 ];
-
 const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
 
-function populateVault(container, items, isImage) {
+function populateVault(container, items) {
   items.forEach(url => {
     const img = document.createElement('img');
     img.src = url;
@@ -188,45 +141,36 @@ function populateVault(container, items, isImage) {
     container.appendChild(img);
   });
 }
-populateVault(document.getElementById('gif-list'), myGifs, true);
-populateVault(document.getElementById('emoji-list'), myEmojis, true);
+populateVault(document.getElementById('gif-list'), myGifs);
+populateVault(document.getElementById('emoji-list'), myEmojis);
 
-gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
-emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
+gifBtn.onclick = () => { gifVault.style.display = (gifVault.style.display === 'block') ? 'none' : 'block'; emojiVault.style.display = 'none'; };
+emojiBtn.onclick = () => { emojiVault.style.display = (emojiVault.style.display === 'block') ? 'none' : 'block'; gifVault.style.display = 'none'; };
 
-// ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
-
   const myTimeout = timeouts[identityKey];
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("you are timed out, refrain from chatting till ur timeout is done.");
+    alert("you are timed out.");
     return;
   }
-
   messagesRef.push({ text, username: username, timestamp: Date.now() });
   chatInput.value = "";
 });
-chatInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendChat.click();
-});
+chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
-// ---------------------- MESSAGE RECEIVING ----------------------
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
   const p = document.createElement("p");
-
   if (msg && msg.text) {
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
-
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
-
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
@@ -238,77 +182,29 @@ messagesRef.on("child_added", (snapshot) => {
       textSpan.textContent = " " + msg.text;
       contentDiv.appendChild(textSpan);
     }
-
     addAdminIcon(p, msg.username);
     p.appendChild(userSpan);
     p.appendChild(contentDiv);
   }
-
   if (isAdmin) {
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "❌";
-    deleteBtn.style.marginLeft = "8px";
-    deleteBtn.onclick = () => { db.ref("messages").child(msgKey).remove(); };
-    p.appendChild(deleteBtn);
-
-    const timeoutBtn = document.createElement("button");
-    timeoutBtn.textContent = "⏰";
-    timeoutBtn.style.marginLeft = "6px";
-    timeoutBtn.onclick = () => {
-      const choice = prompt("Timeout duration (in seconds):", "30");
-      const duration = parseInt(choice, 10) * 1000;
-      if (!isNaN(duration) && duration > 0) {
-        const targetClean = (msg.username || "").toString().trim().replace(/\s+/g, "").toLowerCase();
-        db.ref("timeouts").child(targetClean).set({ until: Date.now() + duration, by: username });
-      }
-    };
-    p.appendChild(timeoutBtn);
+    const del = document.createElement("button");
+    del.textContent = "❌";
+    del.onclick = () => { db.ref("messages").child(msgKey).remove(); };
+    p.appendChild(del);
   }
-
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
 messagesRef.on("child_removed", (snapshot) => {
-  const key = snapshot.key;
-  const msgEl = [...chatMessages.children].find(el => el.dataset.key === key);
-  if (msgEl) msgEl.remove();
+  const el = [...chatMessages.children].find(e => e.dataset.key === snapshot.key);
+  if (el) el.remove();
 });
 
-// ---------------------- TIMEOUTS & MUSIC ----------------------
-db.ref("timeouts").on("value", (snapshot) => {
-  timeouts = snapshot.val() || {};
-  updateTimeoutDisplay();
-});
-
-function updateTimeoutDisplay() {
-  clearInterval(timeoutInterval);
-  const my = timeouts[identityKey];
-  if (!my || my.until <= Date.now()) {
-    timerEl.textContent = "";
-    return;
-  }
-  function tick() {
-    const remaining = Math.max(0, my.until - Date.now());
-    const seconds = Math.ceil(remaining / 1000);
-    timerEl.textContent = seconds > 0 ? `You are timed out for ${seconds}s more.` : "";
-    if (seconds <= 0) clearInterval(timeoutInterval);
-  }
-  tick();
-  timeoutInterval = setInterval(tick, 500);
-}
-
-// Play BGM on first interaction
-document.addEventListener('click', () => {
-  const bgm = document.getElementById('bgm');
-  if (bgm && bgm.paused) bgm.play().catch(()=>{});
-}, { once: true });
-
-// ---------------------- SCHOOL SCHEDULE LOGIC ----------------------
-
+/* ---------------------- SCHOOL SCHEDULE ---------------------- */
 const schoolSchedule = {
-    regular: [ // Mon, Wed, Thu, Fri
+    regular: [ 
         { name: "Advisory", start: "08:00", end: "08:29" },
         { name: "Period 1", start: "08:33", end: "09:28" },
         { name: "Period 2", start: "09:32", end: "10:27" },
@@ -340,7 +236,6 @@ const schoolSchedule = {
     ]
 };
 
-// List of Minimum Day dates based on your schedule image
 const minDayDates = ["2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
 
 function updateSchoolClock() {
@@ -349,10 +244,13 @@ function updateSchoolClock() {
     const dateStr = now.toISOString().split('T')[0];
     const currentTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
     
+    // Update real-time clock text
+    document.getElementById('clock-real-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
     let schedule = schoolSchedule.regular;
     if (minDayDates.includes(dateStr)) schedule = schoolSchedule.minimum;
     else if (day === 2) schedule = schoolSchedule.tuesday;
-    else if (day === 0 || day === 6) { // Weekend
+    else if (day === 0 || day === 6) { 
         document.getElementById('school-clock').style.display = 'none';
         return; 
     }
@@ -383,17 +281,18 @@ function updateSchoolClock() {
         clockEl.style.display = 'none';
     } else {
         clockEl.style.display = 'block';
-        document.getElementById('current-period').textContent = currentEvent.name;
+        document.getElementById('current-period').textContent = `IT IS CURRENTLY ${currentEvent.name.toUpperCase()}`;
         
         const targetTimeSec = parseTime(currentEvent.end);
         const diff = targetTimeSec - currentTimeSec;
-        
         document.getElementById('time-remaining').textContent = formatCountdown(diff);
         
         if (nextEvent) {
-            document.getElementById('next-up').textContent = `Time before ${nextEvent.name}: (${convertTo12Hour(nextEvent.start)})`;
+            document.getElementById('next-up-label').style.display = 'block';
+            document.getElementById('next-up-label').textContent = `TIME BEFORE ${nextEvent.name.toUpperCase()}:`;
         } else {
-            document.getElementById('next-up').textContent = "Last period - School's almost out!";
+            // No next event (Last Period) - hide the middle label
+            document.getElementById('next-up-label').style.display = 'none';
         }
     }
 }
@@ -409,14 +308,11 @@ function formatCountdown(s) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-function convertTo12Hour(timeStr) {
-    let [h, m] = timeStr.split(':').map(Number);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
-}
-
-// Update the clock every second
 setInterval(updateSchoolClock, 1000);
-// Run once immediately so it doesn't wait a second to appear
 updateSchoolClock();
+
+// BGM
+document.addEventListener('click', () => {
+  const bgm = document.getElementById('bgm');
+  if (bgm && bgm.paused) bgm.play().catch(()=>{});
+}, { once: true });
