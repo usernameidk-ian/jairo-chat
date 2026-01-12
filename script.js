@@ -3,8 +3,8 @@ let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
 // keep raw and trimmed variations
 username = username.toString();
-const trimmed = username.trim();            // trimmed (keeps case)
-const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); // normalized for checks
+const trimmed = username.trim();            
+const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); 
 
 // admin credentials
 const adminUsername = "bian";
@@ -25,8 +25,9 @@ if (trimmed === adminUsername) {
   if (password === adminPassword) {
     isAdmin = true;
     username = adminUsername;
-    // Show soundboard if admin
-    document.getElementById('admin-soundboard').style.display = 'flex';
+    // SHOW THE APPLE BUTTON IF ADMIN
+    const toggleBtn = document.getElementById('admin-toggle');
+    if(toggleBtn) toggleBtn.style.display = 'flex'; 
   } else {
     alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
@@ -71,6 +72,11 @@ const emojiBtn = document.getElementById('emoji-btn');
 const gifVault = document.getElementById('gif-vault');
 const emojiVault = document.getElementById('emoji-vault');
 
+// NEW ADMIN TOGGLE ELEMENTS
+const adminToggle = document.getElementById('admin-toggle');
+const soundBoard = document.getElementById('admin-soundboard');
+const closeSfx = document.getElementById('close-sfx');
+
 chatInput.focus();
 
 if (openGameBtn) {
@@ -79,10 +85,28 @@ if (openGameBtn) {
   });
 }
 
+// Logic for the Apple Button
+if (adminToggle) {
+  adminToggle.onclick = () => {
+    // Toggle between none and flex
+    if (soundBoard.style.display === 'none' || soundBoard.style.display === '') {
+      soundBoard.style.display = 'flex';
+    } else {
+      soundBoard.style.display = 'none';
+    }
+  };
+}
+
+if (closeSfx) {
+  closeSfx.onclick = () => {
+    soundBoard.style.display = 'none';
+  };
+}
+
 if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
 
 const messagesRef = db.ref("messages");
-const soundRef = db.ref("global_sfx"); // New ref for soundboard
+const soundRef = db.ref("global_sfx"); 
 
 let timeouts = {};
 let timeoutInterval = null;
@@ -98,13 +122,11 @@ if (isAdmin && clearChatBtn) {
 
 // ---------------------- SOUNDBOARD & GIF/EMOJI LOGIC ----------------------
 
-// Only bian can trigger
 window.triggerSound = function(soundName) {
   if (!isAdmin) return;
   soundRef.set({ name: soundName, time: Date.now() });
 };
 
-// Everyone listens for sounds
 soundRef.on("value", (snapshot) => {
   const data = snapshot.val();
   if (data) {
@@ -114,7 +136,7 @@ soundRef.on("value", (snapshot) => {
   }
 });
 
-// Hard-coded GIFs
+// YOUR GIF LIST (I kept these exact links as you requested)
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
@@ -123,10 +145,8 @@ const myGifs = [
   "https://tenor.com/view/ishowspeed-speed-clueless-acting-as-if-he-understands-speed-clueless-gif-9460732332464534725.gif"
 ];
 
-// Hard-coded Emojis
 const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
 
-// Populate Vaults
 function populateVault(container, items, isImage) {
   items.forEach(url => {
     const img = document.createElement('img');
@@ -178,7 +198,6 @@ messagesRef.on("child_added", (snapshot) => {
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
 
-    // Media Detect
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
