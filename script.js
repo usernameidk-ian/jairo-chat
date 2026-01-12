@@ -134,8 +134,8 @@ function populateVault(container, items) {
     container.appendChild(img);
   });
 }
-populateVault(document.getElementById('gif-list'), myGifs);
-populateVault(document.getElementById('emoji-list'), myEmojis);
+populateVault(document.getElementById('gif-list'), myGifs, true);
+populateVault(document.getElementById('emoji-list'), myEmojis, true);
 
 gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
 emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
