@@ -279,3 +279,119 @@ document.addEventListener('click', () => {
   const bgm = document.getElementById('bgm');
   if (bgm && bgm.paused) bgm.play().catch(()=>{});
 }, { once: true });
+
+// ---------------------- SCHOOL SCHEDULE LOGIC ----------------------
+
+const schoolSchedule = {
+    regular: [ // Mon, Wed, Thu, Fri
+        { name: "Advisory", start: "08:00", end: "08:29" },
+        { name: "Period 1", start: "08:33", end: "09:28" },
+        { name: "Period 2", start: "09:32", end: "10:27" },
+        { name: "Break", start: "10:27", end: "10:37" },
+        { name: "Period 3", start: "10:41", end: "11:36" },
+        { name: "Period 4", start: "11:40", end: "12:35" },
+        { name: "Lunch", start: "12:35", end: "13:05" },
+        { name: "Period 5", start: "13:09", end: "14:04" },
+        { name: "Period 6", start: "14:08", end: "15:03" }
+    ],
+    tuesday: [
+        { name: "Period 1", start: "08:00", end: "09:03" },
+        { name: "Period 2", start: "09:07", end: "09:55" },
+        { name: "Break", start: "09:55", end: "10:05" },
+        { name: "Period 3", start: "10:09", end: "10:57" },
+        { name: "Period 4", start: "11:01", end: "11:49" },
+        { name: "Lunch", start: "11:49", end: "12:19" },
+        { name: "Period 5", start: "12:23", end: "13:11" },
+        { name: "Period 6", start: "13:15", end: "14:03" }
+    ],
+    minimum: [
+        { name: "Period 1", start: "08:00", end: "08:52" },
+        { name: "Period 2", start: "08:56", end: "09:33" },
+        { name: "Period 3", start: "09:37", end: "10:14" },
+        { name: "Brunch", start: "10:14", end: "10:44" },
+        { name: "Period 4", start: "10:48", end: "11:25" },
+        { name: "Period 5", start: "11:29", end: "12:06" },
+        { name: "Period 6", start: "12:10", end: "12:47" }
+    ]
+};
+
+// List of Minimum Day dates based on your schedule image
+const minDayDates = ["2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
+
+function updateSchoolClock() {
+    const now = new Date();
+    const day = now.getDay(); 
+    const dateStr = now.toISOString().split('T')[0];
+    const currentTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    
+    let schedule = schoolSchedule.regular;
+    if (minDayDates.includes(dateStr)) schedule = schoolSchedule.minimum;
+    else if (day === 2) schedule = schoolSchedule.tuesday;
+    else if (day === 0 || day === 6) { // Weekend
+        document.getElementById('school-clock').style.display = 'none';
+        return; 
+    }
+
+    let currentEvent = null;
+    let nextEvent = null;
+
+    for (let i = 0; i < schedule.length; i++) {
+        const startSecs = parseTime(schedule[i].start);
+        const endSecs = parseTime(schedule[i].end);
+
+        if (currentTimeSec >= startSecs && currentTimeSec <= endSecs) {
+            currentEvent = schedule[i];
+            nextEvent = schedule[i + 1] || null;
+            break;
+        } else if (i < schedule.length - 1) {
+            const nextStart = parseTime(schedule[i+1].start);
+            if (currentTimeSec > endSecs && currentTimeSec < nextStart) {
+                currentEvent = { name: "Passing Period", end: schedule[i+1].start };
+                nextEvent = schedule[i+1];
+                break;
+            }
+        }
+    }
+
+    const clockEl = document.getElementById('school-clock');
+    if (!currentEvent) {
+        clockEl.style.display = 'none';
+    } else {
+        clockEl.style.display = 'block';
+        document.getElementById('current-period').textContent = currentEvent.name;
+        
+        const targetTimeSec = parseTime(currentEvent.end);
+        const diff = targetTimeSec - currentTimeSec;
+        
+        document.getElementById('time-remaining').textContent = formatCountdown(diff);
+        
+        if (nextEvent) {
+            document.getElementById('next-up').textContent = `Time before ${nextEvent.name}: (${convertTo12Hour(nextEvent.start)})`;
+        } else {
+            document.getElementById('next-up').textContent = "Last period - School's almost out!";
+        }
+    }
+}
+
+function parseTime(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 3600 + m * 60;
+}
+
+function formatCountdown(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function convertTo12Hour(timeStr) {
+    let [h, m] = timeStr.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+// Update the clock every second
+setInterval(updateSchoolClock, 1000);
+// Run once immediately so it doesn't wait a second to appear
+updateSchoolClock();
