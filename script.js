@@ -320,9 +320,9 @@ const minDayDates = ["2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "20
 
 function updateSchoolClock() {
     const now = new Date();
-    const day = now.getDay(); 
-    const dateStr = now.toISOString().split('T')[0];
-    const currentTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+const day = 1; // <--- This forces the code to think it's MONDAY
+const currentTimeSec = (8 * 3600) + (45 * 60); // <--- This forces the code to think it's 8:45 AM (Period 1)
+
     
     let schedule = schoolSchedule.regular;
     if (minDayDates.includes(dateStr)) schedule = schoolSchedule.minimum;
