@@ -118,9 +118,9 @@ soundRef.on("value", (snapshot) => {
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
-  "https://media.tenor.com/7vS78u3h97AAAAAM/ishowspeed-speed.gif",
-  "https://media.tenor.com/XU6O0X_S0X0AAAAM/ishowspeed-speed.gif",
-  "https://media.tenor.com/L63R-T0e9EwAAAAM/ishowspeed.gif"
+  "https://tenor.com/view/ishowspeed-hey-calming-down-funny-fortnite-gif-14401934564791130107",
+  "https://tenor.com/view/speed-shock-scared-scary-speed-covering-mouth-ishowspeed-gif-9313694227637759402",
+  "https://tenor.com/view/ishowspeed-speed-clueless-acting-as-if-he-understands-speed-clueless-gif-9460732332464534725"
 ];
 
 // Hard-coded Emojis
