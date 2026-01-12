@@ -72,7 +72,7 @@ const emojiBtn = document.getElementById('emoji-btn');
 const gifVault = document.getElementById('gif-vault');
 const emojiVault = document.getElementById('emoji-vault');
 
-// NEW ADMIN TOGGLE ELEMENTS
+// ADMIN TOGGLE ELEMENTS
 const adminToggle = document.getElementById('admin-toggle');
 const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
@@ -88,7 +88,6 @@ if (openGameBtn) {
 // Logic for the Apple Button
 if (adminToggle) {
   adminToggle.onclick = () => {
-    // Toggle between none and flex
     if (soundBoard.style.display === 'none' || soundBoard.style.display === '') {
       soundBoard.style.display = 'flex';
     } else {
@@ -120,23 +119,28 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
-// ---------------------- SOUNDBOARD & GIF/EMOJI LOGIC ----------------------
+// ---------------------- SOUNDBOARD LOGIC (FIXED) ----------------------
+
+// Capture the exact time the user opened the page
+const loadTime = Date.now();
 
 window.triggerSound = function(soundName) {
   if (!isAdmin) return;
+  // Send the sound AND the current time to Firebase
   soundRef.set({ name: soundName, time: Date.now() });
 };
 
 soundRef.on("value", (snapshot) => {
   const data = snapshot.val();
-  if (data) {
+  // ONLY play if the sound timestamp is NEWER than when we loaded the page
+  if (data && data.time > loadTime) {
     const sfx = document.getElementById('sfx-player');
     sfx.src = data.name + ".mp3";
     sfx.play().catch(() => {});
   }
 });
 
-// YOUR GIF LIST (I kept these exact links as you requested)
+// ---------------------- GIF & EMOJI LISTS ----------------------
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
@@ -183,7 +187,7 @@ chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendChat.click();
 });
 
-// ---------------------- MESSAGE RECEIVING & RENDERING ----------------------
+// ---------------------- MESSAGE RECEIVING ----------------------
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
@@ -247,7 +251,7 @@ messagesRef.on("child_removed", (snapshot) => {
   if (msgEl) msgEl.remove();
 });
 
-// ---------------------- TIMEOUTS (live) ----------------------
+// ---------------------- TIMEOUTS & MUSIC ----------------------
 db.ref("timeouts").on("value", (snapshot) => {
   timeouts = snapshot.val() || {};
   updateTimeoutDisplay();
@@ -270,7 +274,7 @@ function updateTimeoutDisplay() {
   timeoutInterval = setInterval(tick, 500);
 }
 
-// ---------------------- MUSIC (resume on first click) ----------------------
+// Play BGM on first interaction
 document.addEventListener('click', () => {
   const bgm = document.getElementById('bgm');
   if (bgm && bgm.paused) bgm.play().catch(()=>{});
