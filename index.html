@@ -15,13 +15,18 @@
 
   <div class="container">
     <div id="admin-soundboard" class="soundboard" style="display:none;">
-      <h3>Admin SFX</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 14px; color: #00ff00;">Admin SFX</h3>
+        <button id="close-sfx" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:16px;">✕</button>
+      </div>
       <button onclick="triggerSound('s1')">huh?</button>
       <button onclick="triggerSound('s2')">ayogama hahaha(laughing)</button>
       <button onclick="triggerSound('s3')">metal bar drop</button>
       <button onclick="triggerSound('s4')">helo hru im under the water</button>
       <button onclick="triggerSound('s5')">ishowspeed bark</button>
     </div>
+
+    <button id="admin-toggle" style="display:none;">🍏</button>
 
     <main class="chat-box">
       <div class="chat-header">
@@ -71,7 +76,6 @@
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
   </script>
-
   <script src="script.js"></script>
 </body>
 </html>
