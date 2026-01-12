@@ -271,7 +271,7 @@ body::before {
 
 /* Sizes for items inside the chat */
 .chat-media {
-  max-width: 550px; /* Smaller GIF in chat */
+  max-width: 800px; /* Smaller GIF in chat */
   border-radius: 8px;
   margin-top: 4px;
 }
