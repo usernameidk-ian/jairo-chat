@@ -120,6 +120,7 @@ const myGifs = [
   "https://tenor.com/view/speed-shock-scared-scary-speed-covering-mouth-ishowspeed-gif-9313694227637759402.gif",
   "https://tenor.com/view/ishowspeed-speed-clueless-acting-as-if-he-understands-speed-clueless-gif-9460732332464534725.gif"
 ];
+
 const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
 
 function populateVault(container, items) {
