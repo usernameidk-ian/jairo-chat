@@ -1,10 +1,11 @@
-/* ---------------------- USER & ADMIN SETUP ---------------------- */
+// ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
 username = username.toString();
 const trimmed = username.trim();            
 const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); 
 
+// admin credentials
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
@@ -51,12 +52,11 @@ function stringToColor(str) {
   return color;
 }
 
-/* ---------------------- FIREBASE & UI SETUP ---------------------- */
+// ---------------------- UI ELEMENTS & FIREBASE SETUP ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
 const clearChatBtn = document.getElementById("clear-chat");
-const openGameBtn = document.getElementById("open-game");
 const timerEl = document.getElementById("timeout-timer");
 
 const gifBtn = document.getElementById('gif-btn');
@@ -70,21 +70,13 @@ const closeSfx = document.getElementById('close-sfx');
 
 chatInput.focus();
 
-if (openGameBtn) {
-  openGameBtn.addEventListener("click", () => {
-    window.open("game.html", "_blank");
-  });
-}
-
 if (adminToggle) {
   adminToggle.onclick = () => {
-    soundBoard.style.display = (soundBoard.style.display === 'none') ? 'flex' : 'none';
+    soundBoard.style.display = (soundBoard.style.display === 'none' || soundBoard.style.display === '') ? 'flex' : 'none';
   };
 }
 
-if (closeSfx) {
-  closeSfx.onclick = () => { soundBoard.style.display = 'none'; };
-}
+if (closeSfx) closeSfx.onclick = () => soundBoard.style.display = 'none';
 
 if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
 
@@ -103,6 +95,7 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
+// ---------------------- SOUNDBOARD LOGIC ----------------------
 const loadTime = Date.now();
 
 window.triggerSound = function(soundName) {
@@ -119,7 +112,7 @@ soundRef.on("value", (snapshot) => {
   }
 });
 
-/* ---------------------- MESSAGING ---------------------- */
+// ---------------------- GIF & EMOJI LISTS ----------------------
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
@@ -144,15 +137,16 @@ function populateVault(container, items) {
 populateVault(document.getElementById('gif-list'), myGifs);
 populateVault(document.getElementById('emoji-list'), myEmojis);
 
-gifBtn.onclick = () => { gifVault.style.display = (gifVault.style.display === 'block') ? 'none' : 'block'; emojiVault.style.display = 'none'; };
-emojiBtn.onclick = () => { emojiVault.style.display = (emojiVault.style.display === 'block') ? 'none' : 'block'; gifVault.style.display = 'none'; };
+gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
+emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
 
+// ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   const myTimeout = timeouts[identityKey];
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("you are timed out.");
+    alert("you are timed out, refrain from chatting till ur timeout is done.");
     return;
   }
   messagesRef.push({ text, username: username, timestamp: Date.now() });
@@ -187,10 +181,10 @@ messagesRef.on("child_added", (snapshot) => {
     p.appendChild(contentDiv);
   }
   if (isAdmin) {
-    const del = document.createElement("button");
-    del.textContent = "❌";
-    del.onclick = () => { db.ref("messages").child(msgKey).remove(); };
-    p.appendChild(del);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "❌";
+    deleteBtn.onclick = () => { db.ref("messages").child(msgKey).remove(); };
+    p.appendChild(deleteBtn);
   }
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
@@ -198,121 +192,120 @@ messagesRef.on("child_added", (snapshot) => {
 });
 
 messagesRef.on("child_removed", (snapshot) => {
-  const el = [...chatMessages.children].find(e => e.dataset.key === snapshot.key);
-  if (el) el.remove();
+  const msgEl = [...chatMessages.children].find(el => el.dataset.key === snapshot.key);
+  if (msgEl) msgEl.remove();
 });
 
-/* ---------------------- SCHOOL SCHEDULE ---------------------- */
-const schoolSchedule = {
-    regular: [ 
-        { name: "Advisory", start: "08:00", end: "08:29" },
-        { name: "Period 1", start: "08:33", end: "09:28" },
-        { name: "Period 2", start: "09:32", end: "10:27" },
-        { name: "Break", start: "10:27", end: "10:37" },
-        { name: "Period 3", start: "10:41", end: "11:36" },
-        { name: "Period 4", start: "11:40", end: "12:35" },
-        { name: "Lunch", start: "12:35", end: "13:05" },
-        { name: "Period 5", start: "13:09", end: "14:04" },
-        { name: "Period 6", start: "14:08", end: "15:03" }
-    ],
-    tuesday: [
-        { name: "Period 1", start: "08:00", end: "09:03" },
-        { name: "Period 2", start: "09:07", end: "09:55" },
-        { name: "Break", start: "09:55", end: "10:05" },
-        { name: "Period 3", start: "10:09", end: "10:57" },
-        { name: "Period 4", start: "11:01", end: "11:49" },
-        { name: "Lunch", start: "11:49", end: "12:19" },
-        { name: "Period 5", start: "12:23", end: "13:11" },
-        { name: "Period 6", start: "13:15", end: "14:03" }
-    ],
-    minimum: [
-        { name: "Period 1", start: "08:00", end: "08:52" },
-        { name: "Period 2", start: "08:56", end: "09:33" },
-        { name: "Period 3", start: "09:37", end: "10:14" },
-        { name: "Brunch", start: "10:14", end: "10:44" },
-        { name: "Period 4", start: "10:48", end: "11:25" },
-        { name: "Period 5", start: "11:29", end: "12:06" },
-        { name: "Period 6", start: "12:10", end: "12:47" }
-    ]
-};
+// ---------------------- TIMEOUTS & MUSIC ----------------------
+db.ref("timeouts").on("value", (snapshot) => {
+  timeouts = snapshot.val() || {};
+  updateTimeoutDisplay();
+});
 
-const minDayDates = ["2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
-
-function updateSchoolClock() {
-    const now = new Date();
-    const day = now.getDay(); 
-    const dateStr = now.toISOString().split('T')[0];
-    const currentTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-    
-    // Update real-time clock text
-    document.getElementById('clock-real-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    let schedule = schoolSchedule.regular;
-    if (minDayDates.includes(dateStr)) schedule = schoolSchedule.minimum;
-    else if (day === 2) schedule = schoolSchedule.tuesday;
-    else if (day === 0 || day === 6) { 
-        document.getElementById('school-clock').style.display = 'none';
-        return; 
-    }
-
-    let currentEvent = null;
-    let nextEvent = null;
-
-    for (let i = 0; i < schedule.length; i++) {
-        const startSecs = parseTime(schedule[i].start);
-        const endSecs = parseTime(schedule[i].end);
-
-        if (currentTimeSec >= startSecs && currentTimeSec <= endSecs) {
-            currentEvent = schedule[i];
-            nextEvent = schedule[i + 1] || null;
-            break;
-        } else if (i < schedule.length - 1) {
-            const nextStart = parseTime(schedule[i+1].start);
-            if (currentTimeSec > endSecs && currentTimeSec < nextStart) {
-                currentEvent = { name: "Passing Period", end: schedule[i+1].start };
-                nextEvent = schedule[i+1];
-                break;
-            }
-        }
-    }
-
-    const clockEl = document.getElementById('school-clock');
-    if (!currentEvent) {
-        clockEl.style.display = 'none';
-    } else {
-        clockEl.style.display = 'block';
-        document.getElementById('current-period').textContent = `IT IS CURRENTLY ${currentEvent.name.toUpperCase()}`;
-        
-        const targetTimeSec = parseTime(currentEvent.end);
-        const diff = targetTimeSec - currentTimeSec;
-        document.getElementById('time-remaining').textContent = formatCountdown(diff);
-        
-        if (nextEvent) {
-            document.getElementById('next-up-label').style.display = 'block';
-            document.getElementById('next-up-label').textContent = `TIME BEFORE ${nextEvent.name.toUpperCase()}:`;
-        } else {
-            // No next event (Last Period) - hide the middle label
-            document.getElementById('next-up-label').style.display = 'none';
-        }
-    }
+function updateTimeoutDisplay() {
+  clearInterval(timeoutInterval);
+  const my = timeouts[identityKey];
+  if (!my || my.until <= Date.now()) { timerEl.textContent = ""; return; }
+  function tick() {
+    const seconds = Math.ceil(Math.max(0, my.until - Date.now()) / 1000);
+    timerEl.textContent = seconds > 0 ? `You are timed out for ${seconds}s more.` : "";
+    if (seconds <= 0) clearInterval(timeoutInterval);
+  }
+  tick();
+  timeoutInterval = setInterval(tick, 500);
 }
 
-function parseTime(t) {
-    const [h, m] = t.split(':').map(Number);
-    return h * 3600 + m * 60;
-}
-
-function formatCountdown(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-}
-
-setInterval(updateSchoolClock, 1000);
-updateSchoolClock();
-
-// BGM
 document.addEventListener('click', () => {
   const bgm = document.getElementById('bgm');
   if (bgm && bgm.paused) bgm.play().catch(()=>{});
 }, { once: true });
+
+// ---------------------- SCHOOL CLOCK LOGIC ----------------------
+// Schedules from
+const schedules = {
+  regular: [
+    { n: "ADVISORY", s: "08:00", e: "08:29" },
+    { n: "PERIOD 1", s: "08:33", e: "09:28" },
+    { n: "PERIOD 2", s: "09:32", e: "10:27" },
+    { n: "BREAK", s: "10:27", e: "10:37" },
+    { n: "PERIOD 3", s: "10:41", e: "11:36" },
+    { n: "PERIOD 4", s: "11:40", e: "12:35" },
+    { n: "LUNCH", s: "12:35", e: "13:05" },
+    { n: "PERIOD 5", s: "13:09", e: "14:04" },
+    { n: "PERIOD 6", s: "14:08", e: "15:03" }
+  ],
+  tuesday: [
+    { n: "PERIOD 1", s: "08:00", e: "09:03" },
+    { n: "PERIOD 2", s: "09:07", e: "09:55" },
+    { n: "BREAK", s: "09:55", e: "10:05" },
+    { n: "PERIOD 3", s: "10:09", e: "10:57" },
+    { n: "PERIOD 4", s: "11:01", e: "11:49" },
+    { n: "LUNCH", s: "11:49", e: "12:19" },
+    { n: "PERIOD 5", s: "12:23", e: "13:11" },
+    { n: "PERIOD 6", s: "13:15", e: "14:03" }
+  ],
+  minimum: [
+    { n: "PERIOD 1", s: "08:00", e: "08:52" },
+    { n: "PERIOD 2", s: "08:56", e: "09:33" },
+    { n: "PERIOD 3", s: "09:37", e: "10:14" },
+    { n: "BRUNCH", s: "10:14", e: "10:44" },
+    { n: "PERIOD 4", s: "10:48", e: "11:25" },
+    { n: "PERIOD 5", s: "11:29", e: "12:06" },
+    { n: "PERIOD 6", s: "12:10", e: "12:47" }
+  ]
+};
+
+const minDates = ["2025-09-05", "2025-10-24", "2025-11-21", "2025-12-19", "2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
+
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const time = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const day = now.getDay();
+  
+  let sched = schedules.regular;
+  if (minDates.includes(dateStr)) sched = schedules.minimum;
+  else if (day === 2) sched = schedules.tuesday;
+
+  const startLimit = parseTime("07:55");
+  const endLimit = parseTime(sched[sched.length - 1].e);
+
+  const clockEl = document.getElementById('school-clock');
+  // Disappear on weekends or outside school hours
+  if (day === 0 || day === 6 || time < startLimit || time > endLimit) {
+    clockEl.style.display = 'none';
+    return;
+  }
+
+  clockEl.style.display = 'block';
+  let current = null, next = null;
+
+  for (let i = 0; i < sched.length; i++) {
+    let s = parseTime(sched[i].s), e = parseTime(sched[i].e);
+    if (time >= s && time < e) {
+      current = sched[i];
+      next = sched[i+1] || null;
+      break;
+    } else if (i < sched.length - 1) {
+      let nextS = parseTime(sched[i+1].s);
+      if (time >= e && time < nextS) {
+        current = { n: "PASSING PERIOD", e: sched[i+1].s };
+        next = sched[i+1];
+        break;
+      }
+    }
+  }
+
+  if (current) {
+    document.getElementById('current-name').textContent = current.n;
+    const target = parseTime(current.e);
+    document.getElementById('timer-display').textContent = formatTimer(target - time);
+    document.getElementById('next-name').textContent = next ? next.n : "SCHOOL ENDS";
+  }
+}
+
+function parseTime(t) { const [h, m] = t.split(':').map(Number); return h * 3600 + m * 60; }
+function formatTimer(s) { return Math.floor(s/60) + ":" + (s%60).toString().padStart(2, '0'); }
+
+setInterval(updateClock, 1000);
+updateClock();
