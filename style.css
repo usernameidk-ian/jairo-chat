@@ -4,12 +4,11 @@ body {
   margin: 0;
   color: #fff;
   -webkit-font-smoothing: antialiased;
-  /* Custom wallpaper background */
   background: url('chatbackground.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
 }
- /* Gradient stuff(red, green, blue, transparency)*/
+
 body::before {
   content: "";
   position: fixed;
@@ -52,10 +51,6 @@ body::before {
   padding: 28px;
   position: relative;
   z-index: 1;
-}
-
-.left-panel {
-  display: none; 
 }
 
 /* ---------------------- CHAT BOX ---------------------- */
@@ -103,11 +98,12 @@ body::before {
   border: 1px solid rgba(255,255,255,0.1);
 }
 
+/* YELLOW SCROLLBAR */
 .chat-messages::-webkit-scrollbar {
   width: 8px;
 }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #00ff00;
+  background: #ffff00;
   border-radius: 4px;
 }
 .chat-messages::-webkit-scrollbar-track {
@@ -169,21 +165,25 @@ body::before {
   background: #1e1e1e;
   color: #fff;
 }
+
+/* YELLOW FOCUS */
 #chat-input:focus {
-  box-shadow: 0 0 6px #00ff00;
+  box-shadow: 0 0 6px #ffff00;
 }
+
+/* YELLOW SEND BUTTON */
 #send-chat {
   padding: 10px 14px;
   border-radius: 8px;
   border: none;
-  background: #00ff00;
+  background: #ffff00;
   color: #000;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
 }
 #send-chat:hover {
-  background: #33ff33;
+  background: #e6e600;
 }
 
 .timeout-timer {
@@ -192,9 +192,7 @@ body::before {
   font-size: 13px;
 }
 
-/* ---------------------- NEW FEATURES (APPLE BUTTON & SOUNDBOARD) ---------------------- */
-
-/* The Apple Button (Bottom Right) */
+/* ---------------------- ADMIN UI ---------------------- */
 #admin-toggle {
   position: fixed;
   bottom: 10px;
@@ -203,8 +201,8 @@ body::before {
   background: rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 50%;
-  width: 25px; /* Very small */
-  height: 25px; /* Very small */
+  width: 25px;
+  height: 25px;
   cursor: pointer;
   font-size: 12px;
   display: flex;
@@ -212,12 +210,7 @@ body::before {
   justify-content: center;
   padding: 0;
 }
-#admin-toggle:hover {
-  background: rgba(0,0,0,0.8);
-  transform: scale(1.1);
-}
 
-/* The Soundboard Popup */
 .soundboard {
   position: fixed;
   bottom: 40px;
@@ -226,23 +219,17 @@ body::before {
   background: rgba(20, 20, 20, 0.95);
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid #00ff00;
+  border: 1px solid #ffff00;
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,0.8);
   min-width: 160px;
 }
-.sb-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
 .sb-header h3 {
   margin: 0;
   font-size: 14px;
-  color: #00ff00;
+  color: #ffff00;
 }
 #close-sfx {
   background: transparent;
@@ -252,22 +239,7 @@ body::before {
   font-weight: bold;
 }
 
-.soundboard button:not(#close-sfx) {
-  background: #2f3136;
-  color: white;
-  border: 1px solid #444;
-  padding: 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  font-size: 13px;
-}
-.soundboard button:hover:not(#close-sfx) {
-  border-color: #00ff00;
-  background: #4f545c;
-}
-
-/* ---------------------- GIF & EMOJI POPUPS ---------------------- */
+/* ---------------------- GIF & EMOJI ---------------------- */
 .icon-btn {
   background: #2f3136;
   border: 1px solid #4f545c;
@@ -279,81 +251,79 @@ body::before {
   justify-content: center;
   height: 38px;
 }
-.icon-btn img {
-  height: 20px;
-  width: auto;
-}
-
 .media-popup {
   display: none;
   position: absolute;
   bottom: 60px;
   left: 12px;
   background: #18191c;
-  border: 1px solid #00ff00;
+  border: 1px solid #ffff00;
   padding: 8px;
   border-radius: 8px;
   z-index: 100;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-}
-.media-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
 }
 .media-grid img {
-  width: 80px; /* size previews i think */
+  width: 80px;
   height: 80px;
   cursor: pointer;
   border-radius: 4px;
   object-fit: cover;
-  transition: transform 0.1s;
-}
-.media-grid img:hover {
-  transform: scale(1.05);
 }
 
-/* ---------------------- SCHOOL CLOCK STYLING ---------------------- */
+/* ---------------------- YELLOW SCHOOL CLOCK ---------------------- */
 .school-clock {
-  background: rgba(0, 255, 0, 0.05);
-  border: 2px solid #00ff00;
+  background: rgba(255, 255, 0, 0.05);
+  border: 2px solid #ffff00;
   border-radius: 12px;
   padding: 15px;
   margin-bottom: 15px;
   text-align: center;
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
+}
+
+.clock-top-row {
+  margin-bottom: 8px;
+}
+#clock-label {
+  font-weight: bold;
+  color: #ffff00;
+  font-size: 12px;
+  margin-right: 5px;
+}
+#clock-real-time {
+  color: #ffff00;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 18px;
 }
 
 .school-clock h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #00ff00;
+  margin: 5px 0;
+  font-size: 18px;
+  color: #ffff00;
   text-transform: uppercase;
-  letter-spacing: 2px;
+}
+
+#next-up-label {
+  margin: 10px 0 0 0;
+  font-size: 14px;
+  color: #ffff00;
+  font-weight: bold;
 }
 
 #time-remaining {
-  font-size: 42px;
+  font-size: 52px;
   font-weight: bold;
   font-family: 'Courier New', Courier, monospace;
-  margin: 5px 0;
-  color: #fff;
-  text-shadow: 0 0 10px #00ff00;
+  color: #ffff00;
+  text-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
 }
 
-#next-up {
-  margin: 0;
-  font-size: 14px;
-  color: #aaa;
-}
-
-/* Sizes for items inside the chat */
 .chat-media {
-  max-width: 400px; /* size GIFs in chat */
+  max-width: 400px;
   border-radius: 8px;
   margin-top: 4px;
 }
 .chat-messages div:has(img[src*="e"]) img {
-  width: 100px; /* size emojis in chat */
+  width: 100px;
   height: auto;
 }
