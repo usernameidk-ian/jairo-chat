@@ -78,13 +78,6 @@ if (adminToggle) {
 
 if (closeSfx) closeSfx.onclick = () => soundBoard.style.display = 'none';
 
-// open game in new tab
-if (openGameBtn) {
-  openGameBtn.addEventListener("click", () => {
-    window.open("game.html", "_blank");
-  });
-}
-
 if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
 
 const messagesRef = db.ref("messages");
