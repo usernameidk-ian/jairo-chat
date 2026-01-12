@@ -28,11 +28,7 @@ body::before {
   z-index: 1;
   position: relative;
 }
-.topbar h1 {
-  margin: 0;
-  font-size: 18px;
-  color: #fff;
-}
+.topbar h1 { margin: 0; font-size: 18px; color: #fff; }
 .topbar .controls button {
   padding: 8px 12px;
   border-radius: 8px;
@@ -68,6 +64,21 @@ body::before {
   position: relative;
 }
 
+/* ---------------------- SCHOOL CLOCK ---------------------- */
+.school-clock {
+  text-align: center;
+  border: 2px solid #ffcc00;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background: rgba(0,0,0,0.3);
+}
+#currently-line { font-size: 20px; color: #fff; margin-bottom: 5px; }
+#current-name { font-weight: bold; color: #ffcc00; text-transform: uppercase; }
+#until-line { font-size: 14px; color: #fff; opacity: 0.9; }
+#next-name { font-weight: bold; color: #ffcc00; text-transform: uppercase; }
+#timer-display { font-size: 55px; font-weight: bold; color: #ffcc00; font-family: monospace; margin-top: 5px; }
+
 .chat-header {
   display: flex;
   gap: 8px;
@@ -75,10 +86,8 @@ body::before {
   justify-content: space-between;
   margin-bottom: 8px;
 }
-.chat-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
+.chat-header h2 { margin: 0; font-size: 18px; }
+
 #clear-chat {
   background: #4f545c;
   color: #fff;
@@ -98,17 +107,12 @@ body::before {
   border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* YELLOW SCROLLBAR */
-.chat-messages::-webkit-scrollbar {
-  width: 8px;
-}
+.chat-messages::-webkit-scrollbar { width: 8px; }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #ffff00;
+  background: #ffcc00;
   border-radius: 4px;
 }
-.chat-messages::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.2);
-}
+.chat-messages::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
 
 .chat-messages p {
   margin: 6px 0;
@@ -120,7 +124,6 @@ body::before {
   background: rgba(255,255,255,0.05);
   padding: 6px 10px;
   border-radius: 6px;
-  animation: fadeIn 0.25s ease-in-out;
 }
 
 .chat-messages img.admin-icon {
@@ -131,10 +134,7 @@ body::before {
   border-radius: 3px;
 }
 
-.chat-messages .username {
-  font-weight: 700;
-  margin-right: 6px;
-}
+.chat-messages .username { font-weight: 700; margin-right: 6px; }
 
 .chat-messages .msgtext {
   word-wrap: break-word;
@@ -144,16 +144,12 @@ body::before {
   color: #fff;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px);}
-  to { opacity: 1; transform: translateY(0);}
-}
-
 /* ---------------------- INPUT ROW ---------------------- */
 .chat-input-row {
   margin-top: 12px;
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 #chat-input {
   flex: 1;
@@ -165,26 +161,19 @@ body::before {
   background: #1e1e1e;
   color: #fff;
 }
-
-/* YELLOW FOCUS */
 #chat-input:focus {
-  box-shadow: 0 0 6px #ffff00;
+  box-shadow: 0 0 6px #ffcc00;
 }
-
-/* YELLOW SEND BUTTON */
 #send-chat {
   padding: 10px 14px;
   border-radius: 8px;
   border: none;
-  background: #ffff00;
+  background: #ffcc00;
   color: #000;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s;
 }
-#send-chat:hover {
-  background: #e6e600;
-}
+#send-chat:hover { background: #ffaa00; }
 
 .timeout-timer {
   margin-top: 8px;
@@ -192,54 +181,28 @@ body::before {
   font-size: 13px;
 }
 
-/* ---------------------- ADMIN UI ---------------------- */
+/* ---------------------- ADMIN FEATURES ---------------------- */
 #admin-toggle {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  z-index: 2000;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 50%;
-  width: 25px;
-  height: 25px;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+  position: fixed; bottom: 10px; right: 10px; z-index: 2000;
+  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 50%; width: 25px; height: 25px; cursor: pointer;
+  font-size: 12px; display: flex; align-items: center; justify-content: center; padding: 0;
 }
 
 .soundboard {
-  position: fixed;
-  bottom: 40px;
-  right: 10px;
-  z-index: 2000;
-  background: rgba(20, 20, 20, 0.95);
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #ffff00;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.8);
-  min-width: 160px;
+  position: fixed; bottom: 40px; right: 10px; z-index: 2000;
+  background: rgba(20, 20, 20, 0.95); padding: 12px; border-radius: 12px;
+  border: 1px solid #ffcc00; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.8); min-width: 160px;
 }
-.sb-header h3 {
-  margin: 0;
-  font-size: 14px;
-  color: #ffff00;
-}
-#close-sfx {
-  background: transparent;
-  border: none;
-  color: #ff4444;
-  cursor: pointer;
-  font-weight: bold;
+.sb-header h3 { margin: 0; font-size: 14px; color: #ffcc00; }
+#close-sfx { background: transparent; border: none; color: #ff4444; cursor: pointer; font-weight: bold; }
+
+.soundboard button:not(#close-sfx) {
+  background: #2f3136; color: white; border: 1px solid #444; padding: 6px; border-radius: 4px; cursor: pointer; text-align: left; font-size: 13px;
 }
 
-/* ---------------------- GIF & EMOJI ---------------------- */
+/* ---------------------- GIF & EMOJI POPUPS ---------------------- */
 .icon-btn {
   background: #2f3136;
   border: 1px solid #4f545c;
@@ -250,80 +213,30 @@ body::before {
   align-items: center;
   justify-content: center;
   height: 38px;
+  flex-shrink: 0;
 }
+
+/* FIX: Massive GIF icon width */
+#gif-btn { width: 45px; }
+
+.icon-btn img {
+  height: 20px;
+  width: auto;
+}
+
 .media-popup {
   display: none;
   position: absolute;
   bottom: 60px;
   left: 12px;
   background: #18191c;
-  border: 1px solid #ffff00;
+  border: 1px solid #ffcc00;
   padding: 8px;
   border-radius: 8px;
   z-index: 100;
 }
-.media-grid img {
-  width: 80px;
-  height: 80px;
-  cursor: pointer;
-  border-radius: 4px;
-  object-fit: cover;
-}
+.media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.media-grid img { width: 80px; height: 80px; cursor: pointer; border-radius: 4px; object-fit: cover; }
 
-/* ---------------------- YELLOW SCHOOL CLOCK ---------------------- */
-.school-clock {
-  background: rgba(255, 255, 0, 0.05);
-  border: 2px solid #ffff00;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 15px;
-  text-align: center;
-  box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
-}
-
-.clock-top-row {
-  margin-bottom: 8px;
-}
-#clock-label {
-  font-weight: bold;
-  color: #ffff00;
-  font-size: 12px;
-  margin-right: 5px;
-}
-#clock-real-time {
-  color: #ffff00;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 18px;
-}
-
-.school-clock h2 {
-  margin: 5px 0;
-  font-size: 18px;
-  color: #ffff00;
-  text-transform: uppercase;
-}
-
-#next-up-label {
-  margin: 10px 0 0 0;
-  font-size: 14px;
-  color: #ffff00;
-  font-weight: bold;
-}
-
-#time-remaining {
-  font-size: 52px;
-  font-weight: bold;
-  font-family: 'Courier New', Courier, monospace;
-  color: #ffff00;
-  text-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
-}
-
-.chat-media {
-  max-width: 400px;
-  border-radius: 8px;
-  margin-top: 4px;
-}
-.chat-messages div:has(img[src*="e"]) img {
-  width: 100px;
-  height: auto;
-}
+.chat-media { max-width: 400px; border-radius: 8px; margin-top: 4px; }
+.chat-messages div:has(img[src*="e"]) img { width: 100px; height: auto; }
