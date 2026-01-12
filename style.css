@@ -4,13 +4,12 @@ body {
   margin: 0;
   color: #fff;
   -webkit-font-smoothing: antialiased;
-  /* Keeping your current background image */
+  /* Custom wallpaper background */
   background: url('chatbackground.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
 }
-
- /* Gradient Layer */
+ /* Gradient stuff(red, green, blue, transparency)*/
 body::before {
   content: "";
   position: fixed;
@@ -193,8 +192,9 @@ body::before {
   font-size: 13px;
 }
 
-/* ---------------------- APPLE BUTTON & SOUNDBOARD ---------------------- */
+/* ---------------------- NEW FEATURES (APPLE BUTTON & SOUNDBOARD) ---------------------- */
 
+/* The Apple Button (Bottom Right) */
 #admin-toggle {
   position: fixed;
   bottom: 10px;
@@ -203,8 +203,8 @@ body::before {
   background: rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 50%;
-  width: 25px;
-  height: 25px;
+  width: 25px; /* Very small */
+  height: 25px; /* Very small */
   cursor: pointer;
   font-size: 12px;
   display: flex;
@@ -217,6 +217,7 @@ body::before {
   transform: scale(1.1);
 }
 
+/* The Soundboard Popup */
 .soundboard {
   position: fixed;
   bottom: 40px;
@@ -301,7 +302,7 @@ body::before {
   gap: 8px;
 }
 .media-grid img {
-  width: 80px; 
+  width: 80px; /* size previews i think */
   height: 80px;
   cursor: pointer;
   border-radius: 4px;
@@ -312,21 +313,13 @@ body::before {
   transform: scale(1.05);
 }
 
-/* ---------------------- MEDIA SIZES IN CHAT (FIXED) ---------------------- */
-
-/* GIFs - SIZE */
+/* Sizes for items inside the chat */
 .chat-media {
-  width: 350px !important; 
-  height: auto !important;
+  max-width: 400px; /* size GIFs in chat */
   border-radius: 8px;
   margin-top: 4px;
-  display: block;
 }
-
-/* Emojis - SIZE */
-/* This specifically looks for the 'e' in your emoji filenames */
-.chat-messages img[src*="e"] {
-  width: 100px !important; 
-  height: auto !important;
-  display: inline-block;
+.chat-messages div:has(img[src*="e"]) img {
+  width: 100px; /* size emojis in chat */
+  height: auto;
 }
