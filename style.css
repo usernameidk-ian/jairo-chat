@@ -221,32 +221,62 @@ body::before {
   border-radius: 4px;
   cursor: pointer;
 }
-.vault-toggle {
+
+/* The buttons for GIF/Emoji */
+.icon-btn {
   background: #2f3136;
-  border: 1px solid #444;
-  color: white;
+  border: 1px solid #4f545c;
   border-radius: 8px;
+  padding: 0 10px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px; /* Matches the input height */
 }
-.vault-popup {
+.icon-btn img {
+  height: 20px; /* Forces the huge GIF icon to stay small */
+  width: auto;
+}
+
+/* Popup menu sizing */
+.media-popup {
+  display: none;
   position: absolute;
   bottom: 60px;
-  left: 10px;
+  left: 12px;
   background: #18191c;
   border: 1px solid #00ff00;
   padding: 8px;
   border-radius: 8px;
   z-index: 100;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-.vault-grid {
+.media-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.vault-grid img {
-  width: 50px;
-  height: 50px;
+.media-grid img {
+  width: 65px; /* Smaller preview size */
+  height: 65px;
   cursor: pointer;
   border-radius: 4px;
   object-fit: cover;
+  transition: transform 0.1s;
+}
+.media-grid img:hover {
+  transform: scale(1.05);
+}
+
+/* Sizes for items inside the chat */
+.chat-media {
+  max-width: 180px; /* Smaller GIF in chat */
+  border-radius: 8px;
+  margin-top: 4px;
+}
+/* This targets the e1.png - e5.png specifically in chat */
+.chat-messages div:has(img[src*="e"]) img {
+  width: 45px; /* Bigger emojis in chat */
+  height: auto;
 }
