@@ -4,14 +4,12 @@ body {
   margin: 0;
   color: #fff;
   -webkit-font-smoothing: antialiased;
-
   /* Custom wallpaper background */
   background: url('snowmaninsnow.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
 }
-
-/* Overlay gradient for green-to-red Christmas vibe */
+ /* Gradient stuff */
 body::before {
   content: "";
   position: fixed;
@@ -56,16 +54,15 @@ body::before {
   z-index: 1;
 }
 
-/* ---------------------- LEFT PANEL (hidden) ---------------------- */
 .left-panel {
-  display: none; /* removed the game preview */
+  display: none; 
 }
 
 /* ---------------------- CHAT BOX ---------------------- */
 .chat-box {
   flex: 1 1 720px;
   max-width: 720px;
-  background: rgba(0,0,0,0.85); /* semi-transparent */
+  background: rgba(0,0,0,0.85);
   border-radius: 12px;
   padding: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
@@ -73,10 +70,9 @@ body::before {
   display: flex;
   flex-direction: column;
   z-index: 1;
-  position: relative; /* Added for popup alignment */
+  position: relative;
 }
 
-/* ---------------------- CHAT HEADER ---------------------- */
 .chat-header {
   display: flex;
   gap: 8px;
@@ -99,7 +95,7 @@ body::before {
 
 /* ---------------------- CHAT MESSAGES ---------------------- */
 .chat-messages {
-  background: rgba(50,50,50,0.5); /* semi-transparent to show wallpaper */
+  background: rgba(50,50,50,0.5);
   border-radius: 8px;
   padding: 12px;
   height: 420px;
@@ -107,7 +103,6 @@ body::before {
   border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Scrollbar styling */
 .chat-messages::-webkit-scrollbar {
   width: 8px;
 }
@@ -119,7 +114,6 @@ body::before {
   background: rgba(0,0,0,0.2);
 }
 
-/* Individual message */
 .chat-messages p {
   margin: 6px 0;
   line-height: 1.25;
@@ -133,7 +127,6 @@ body::before {
   animation: fadeIn 0.25s ease-in-out;
 }
 
-/* Admin icon */
 .chat-messages img.admin-icon {
   width: 16px;
   height: 16px;
@@ -142,22 +135,19 @@ body::before {
   border-radius: 3px;
 }
 
-/* Username */
 .chat-messages .username {
   font-weight: 700;
   margin-right: 6px;
 }
 
-/* Message text */
 .chat-messages .msgtext {
-  word-wrap: break-word;     /* wrap long words */
-  overflow-wrap: anywhere;   /* wrap anywhere if needed */
-  white-space: pre-wrap;     /* preserve line breaks and wrap text */
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
   flex: 1;
   color: #fff;
 }
 
-/* Fade-in animation */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px);}
   to { opacity: 1; transform: translateY(0);}
@@ -196,33 +186,88 @@ body::before {
   background: #33ff33;
 }
 
-/* ---------------------- TIMEOUT ---------------------- */
 .timeout-timer {
   margin-top: 8px;
   color: #ffb4b4;
   font-size: 13px;
 }
 
-/* ---------------------- NEW FEATURES (SOUND & VAULTS) ---------------------- */
-.soundboard {
+/* ---------------------- NEW FEATURES (APPLE BUTTON & SOUNDBOARD) ---------------------- */
+
+/* The Apple Button (Bottom Right) */
+#admin-toggle {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 2000;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 25px; /* Very small */
+  height: 25px; /* Very small */
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#admin-toggle:hover {
   background: rgba(0,0,0,0.8);
-  padding: 10px;
+  transform: scale(1.1);
+}
+
+/* The Soundboard Popup */
+.soundboard {
+  position: fixed;
+  bottom: 40px;
+  right: 10px;
+  z-index: 2000;
+  background: rgba(20, 20, 20, 0.95);
+  padding: 12px;
   border-radius: 12px;
   border: 1px solid #00ff00;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.8);
+  min-width: 160px;
 }
-.soundboard button {
+.sb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.sb-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #00ff00;
+}
+#close-sfx {
+  background: transparent;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.soundboard button:not(#close-sfx) {
   background: #2f3136;
   color: white;
   border: 1px solid #444;
-  padding: 5px;
+  padding: 6px;
   border-radius: 4px;
   cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+}
+.soundboard button:hover:not(#close-sfx) {
+  border-color: #00ff00;
+  background: #4f545c;
 }
 
-/* The buttons for GIF/Emoji */
+/* ---------------------- GIF & EMOJI POPUPS ---------------------- */
 .icon-btn {
   background: #2f3136;
   border: 1px solid #4f545c;
@@ -232,14 +277,13 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 38px; /* Matches the input height */
+  height: 38px;
 }
 .icon-btn img {
-  height: 20px; /* Forces the huge GIF icon to stay small */
+  height: 20px;
   width: auto;
 }
 
-/* Popup menu sizing */
 .media-popup {
   display: none;
   position: absolute;
@@ -258,8 +302,8 @@ body::before {
   gap: 8px;
 }
 .media-grid img {
-  width: 65px; /* Smaller preview size */
-  height: 65px;
+  width: 80px; /* Bigger previews */
+  height: 80px;
   cursor: pointer;
   border-radius: 4px;
   object-fit: cover;
@@ -271,11 +315,10 @@ body::before {
 
 /* Sizes for items inside the chat */
 .chat-media {
-  max-width: 800px; /* Smaller GIF in chat */
+  max-width: 400px; /* Bigger GIFs in chat */
   border-radius: 8px;
   margin-top: 4px;
 }
-/* This targets the e1.png - e5.png specifically in chat */
 .chat-messages div:has(img[src*="e"]) img {
   width: 100px; /* Bigger emojis in chat */
   height: auto;
