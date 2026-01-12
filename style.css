@@ -313,6 +313,40 @@ body::before {
   transform: scale(1.05);
 }
 
+/* ---------------------- SCHOOL CLOCK STYLING ---------------------- */
+.school-clock {
+  background: rgba(0, 255, 0, 0.05);
+  border: 2px solid #00ff00;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+}
+
+.school-clock h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #00ff00;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+#time-remaining {
+  font-size: 42px;
+  font-weight: bold;
+  font-family: 'Courier New', Courier, monospace;
+  margin: 5px 0;
+  color: #fff;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+#next-up {
+  margin: 0;
+  font-size: 14px;
+  color: #aaa;
+}
+
 /* Sizes for items inside the chat */
 .chat-media {
   max-width: 400px; /* size GIFs in chat */
