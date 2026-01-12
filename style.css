@@ -271,12 +271,12 @@ body::before {
 
 /* Sizes for items inside the chat */
 .chat-media {
-  max-width: 350px; /* Smaller GIF in chat */
+  max-width: 550px; /* Smaller GIF in chat */
   border-radius: 8px;
   margin-top: 4px;
 }
 /* This targets the e1.png - e5.png specifically in chat */
 .chat-messages div:has(img[src*="e"]) img {
-  width: 80px; /* Bigger emojis in chat */
+  width: 100px; /* Bigger emojis in chat */
   height: auto;
 }
