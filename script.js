@@ -1,4 +1,29 @@
-/* ---------------------- USER & ADMIN SETUP ---------------------- */
+eriod - School's almost out!";
+        }
+    }
+}
+
+function parseTime(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 3600 + m * 60;
+}
+
+function formatCountdown(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function convertTo12Hour(timeStr) {
+    let [h, m] = timeStr.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+setInterval(updateSchoolClock, 1000);
+updateSchoolClock();
+// ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
 // keep raw and trimmed variations
@@ -59,7 +84,7 @@ function stringToColor(str) {
 
 const userColor = stringToColor(username);
 
-/* ---------------------- UI ELEMENTS & FIREBASE SETUP ---------------------- */
+// ---------------------- UI ELEMENTS & FIREBASE SETUP ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
@@ -119,17 +144,20 @@ if (isAdmin && clearChatBtn) {
   });
 }
 
-/* ---------------------- SOUNDBOARD LOGIC (FIXED) ---------------------- */
+// ---------------------- SOUNDBOARD LOGIC (FIXED) ----------------------
 
+// Capture the exact time the user opened the page
 const loadTime = Date.now();
 
 window.triggerSound = function(soundName) {
   if (!isAdmin) return;
+  // Send the sound AND the current time to Firebase
   soundRef.set({ name: soundName, time: Date.now() });
 };
 
 soundRef.on("value", (snapshot) => {
   const data = snapshot.val();
+  // ONLY play if the sound timestamp is NEWER than when we loaded the page
   if (data && data.time > loadTime) {
     const sfx = document.getElementById('sfx-player');
     sfx.src = data.name + ".mp3";
@@ -137,7 +165,7 @@ soundRef.on("value", (snapshot) => {
   }
 });
 
-/* ---------------------- GIF & EMOJI LISTS ---------------------- */
+// ---------------------- GIF & EMOJI LISTS ----------------------
 const myGifs = [
   "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
   "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
@@ -166,7 +194,7 @@ populateVault(document.getElementById('emoji-list'), myEmojis, true);
 gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
 emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
 
-/* ---------------------- SEND MESSAGE ---------------------- */
+// ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
@@ -184,7 +212,7 @@ chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendChat.click();
 });
 
-/* ---------------------- MESSAGE RECEIVING ---------------------- */
+// ---------------------- MESSAGE RECEIVING ----------------------
 messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
@@ -248,7 +276,7 @@ messagesRef.on("child_removed", (snapshot) => {
   if (msgEl) msgEl.remove();
 });
 
-/* ---------------------- TIMEOUTS & MUSIC ---------------------- */
+// ---------------------- TIMEOUTS & MUSIC ----------------------
 db.ref("timeouts").on("value", (snapshot) => {
   timeouts = snapshot.val() || {};
   updateTimeoutDisplay();
@@ -271,15 +299,16 @@ function updateTimeoutDisplay() {
   timeoutInterval = setInterval(tick, 500);
 }
 
+// Play BGM on first interaction
 document.addEventListener('click', () => {
   const bgm = document.getElementById('bgm');
   if (bgm && bgm.paused) bgm.play().catch(()=>{});
 }, { once: true });
 
-/* ---------------------- SCHOOL SCHEDULE LOGIC ---------------------- */
+// ---------------------- SCHOOL SCHEDULE LOGIC ----------------------
 
 const schoolSchedule = {
-    regular: [ 
+    regular: [ // Mon, Wed, Thu, Fri
         { name: "Advisory", start: "08:00", end: "08:29" },
         { name: "Period 1", start: "08:33", end: "09:28" },
         { name: "Period 2", start: "09:32", end: "10:27" },
@@ -311,23 +340,19 @@ const schoolSchedule = {
     ]
 };
 
+// List of Minimum Day dates based on your schedule image
 const minDayDates = ["2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
 
 function updateSchoolClock() {
     const now = new Date();
-    
-    // --- TESTING MODE ---
-    // Change these back to 'now.getDay()' and 'now.getHours()*3600...' tomorrow!
-    const day = 1; 
-    const currentTimeSec = (8 * 3600) + (45 * 60); 
-    // --------------------
-
+    const day = now.getDay(); 
     const dateStr = now.toISOString().split('T')[0];
+    const currentTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
     
     let schedule = schoolSchedule.regular;
     if (minDayDates.includes(dateStr)) schedule = schoolSchedule.minimum;
     else if (day === 2) schedule = schoolSchedule.tuesday;
-    else if (day === 0 || day === 6) { 
+    else if (day === 0 || day === 6) { // Weekend
         document.getElementById('school-clock').style.display = 'none';
         return; 
     }
@@ -391,5 +416,7 @@ function convertTo12Hour(timeStr) {
     return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
+// Update the clock every second
 setInterval(updateSchoolClock, 1000);
+// Run once immediately so it doesn't wait a second to appear
 updateSchoolClock();
