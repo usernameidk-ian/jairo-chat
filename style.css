@@ -5,7 +5,7 @@ body {
   color: #fff;
   -webkit-font-smoothing: antialiased;
   /* Custom wallpaper background */
-  background: url('snowmaninsnow.png') no-repeat center center fixed;
+  background: url('chatbackground.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
 }
