@@ -31,9 +31,13 @@
 
     <main class="chat-box">
       <div id="school-clock" class="school-clock" style="display:none;">
-        <h2 id="current-period">PERIOD X</h2>
+        <div class="clock-top-row">
+          <span id="clock-label">TIME:</span>
+          <span id="clock-real-time">00:00:00 AM</span>
+        </div>
+        <h2 id="current-period">IT IS CURRENTLY PERIOD X</h2>
+        <p id="next-up-label">TIME BEFORE NEXT PERIOD:</p>
         <div id="time-remaining">00:00</div>
-        <p id="next-up">Time until Period Y</p>
       </div>
 
       <div class="chat-header">
