@@ -73,6 +73,7 @@ body::before {
   display: flex;
   flex-direction: column;
   z-index: 1;
+  position: relative; /* Added for popup alignment */
 }
 
 /* ---------------------- CHAT HEADER ---------------------- */
@@ -200,4 +201,52 @@ body::before {
   margin-top: 8px;
   color: #ffb4b4;
   font-size: 13px;
+}
+
+/* ---------------------- NEW FEATURES (SOUND & VAULTS) ---------------------- */
+.soundboard {
+  background: rgba(0,0,0,0.8);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #00ff00;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.soundboard button {
+  background: #2f3136;
+  color: white;
+  border: 1px solid #444;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.vault-toggle {
+  background: #2f3136;
+  border: 1px solid #444;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.vault-popup {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  background: #18191c;
+  border: 1px solid #00ff00;
+  padding: 8px;
+  border-radius: 8px;
+  z-index: 100;
+}
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.vault-grid img {
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  border-radius: 4px;
+  object-fit: cover;
 }
