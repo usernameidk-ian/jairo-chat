@@ -59,6 +59,8 @@ const sendChat = document.getElementById("send-chat");
 const clearChatBtn = document.getElementById("clear-chat");
 const timerEl = document.getElementById("timeout-timer");
 
+const openGameBtn = document.getElementById("open-game");
+
 const gifBtn = document.getElementById('gif-btn');
 const emojiBtn = document.getElementById('emoji-btn');
 const gifVault = document.getElementById('gif-vault');
@@ -69,6 +71,12 @@ const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
 
 chatInput.focus();
+
+if (openGameBtn) {
+  openGameBtn.addEventListener("click", () => {
+    window.open("game.html", "_blank");
+  });
+}
 
 if (adminToggle) {
   adminToggle.onclick = () => {
@@ -113,12 +121,23 @@ soundRef.on("value", (snapshot) => {
 });
 
 // ---------------------- GIF & EMOJI LISTS ----------------------
+// NOTE: You must create a folder named 'gifs' and put 1.gif, 2.gif... inside itttt
 const myGifs = [
-  "https://tenor.com/view/ishowspeed-yapping-i-stand-at-the-end-of-my-days-i-have-sinned-at-the-end-of-my-days-speed-talking-gif-17714085846938483931.gif",
-  "https://tenor.com/view/speed-ishowspeed-ishowspeed-jump-jump-at-camera-gif-13692130268687196891.gif",
-  "https://tenor.com/view/ishowspeed-hey-calming-down-funny-fortnite-gif-14401934564791130107.gif",
-  "https://tenor.com/view/speed-shock-scared-scary-speed-covering-mouth-ishowspeed-gif-9313694227637759402.gif",
-  "https://tenor.com/view/ishowspeed-speed-clueless-acting-as-if-he-understands-speed-clueless-gif-9460732332464534725.gif"
+  "gifs/1.gif",
+  "gifs/2.gif",
+  "gifs/3.gif",
+  "gifs/4.gif",
+  "gifs/5.gif",
+  "gifs/6.gif",
+  "gifs/7.gif",
+  "gifs/8.gif",
+  "gifs/9.gif",
+  "gifs/10.gif",
+  "gifs/11.gif",
+  "gifs/12.gif",
+  "gifs/13.gif",
+  "gifs/14.gif",
+  "gifs/15.gif"
 ];
 
 const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
@@ -127,6 +146,7 @@ function populateVault(container, items) {
   items.forEach(url => {
     const img = document.createElement('img');
     img.src = url;
+    img.alt = "media";
     img.onclick = () => {
       messagesRef.push({ text: url, username: username, timestamp: Date.now() });
       gifVault.style.display = 'none';
@@ -135,8 +155,8 @@ function populateVault(container, items) {
     container.appendChild(img);
   });
 }
-populateVault(document.getElementById('gif-list'), myGifs, true);
-populateVault(document.getElementById('emoji-list'), myEmojis, true);
+populateVault(document.getElementById('gif-list'), myGifs);
+populateVault(document.getElementById('emoji-list'), myEmojis);
 
 gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
 emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
@@ -166,6 +186,8 @@ messagesRef.on("child_added", (snapshot) => {
     userSpan.style.color = stringToColor(msg.username);
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
+    
+    // Check for Tenor URL OR local file path ending in extension
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
@@ -222,7 +244,6 @@ document.addEventListener('click', () => {
 }, { once: true });
 
 // ---------------------- SCHOOL CLOCK LOGIC ----------------------
-// Schedules from
 const schedules = {
   regular: [
     { n: "ADVISORY", s: "08:00", e: "08:29" },
