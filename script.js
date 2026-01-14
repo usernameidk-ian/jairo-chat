@@ -121,7 +121,7 @@ soundRef.on("value", (snapshot) => {
 });
 
 // ---------------------- GIF & EMOJI LISTS ----------------------
-// NOTE: You must create a folder named 'gifs' and put 1.gif, 2.gif... inside itttt
+// NOTE: You must create a folder named 'gifs' and put 1.gif, 2.gif... inside it
 const myGifs = [
   "gifs/1.gif",
   "gifs/2.gif",
@@ -179,15 +179,27 @@ messagesRef.on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
   const p = document.createElement("p");
+
   if (msg && msg.text) {
+    // 1. Create Timestamp
+    const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
+    const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const dateStr = ts.toLocaleDateString();
+    
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "timestamp";
+    timeSpan.textContent = `[${timeStr} ${dateStr}]`;
+
+    // 2. Create Username
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
+
+    // 3. Create Content
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
     
-    // Check for Tenor URL OR local file path ending in extension
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
@@ -199,16 +211,38 @@ messagesRef.on("child_added", (snapshot) => {
       textSpan.textContent = " " + msg.text;
       contentDiv.appendChild(textSpan);
     }
+
     addAdminIcon(p, msg.username);
+    p.appendChild(timeSpan); // Add timestamp first
     p.appendChild(userSpan);
     p.appendChild(contentDiv);
   }
+
+  // 4. Admin Buttons (Delete & Timeout)
   if (isAdmin) {
+    // Delete Button
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
+    deleteBtn.className = "admin-action-btn";
     deleteBtn.onclick = () => { db.ref("messages").child(msgKey).remove(); };
     p.appendChild(deleteBtn);
+
+    // Timeout Button
+    const timeoutBtn = document.createElement("button");
+    timeoutBtn.textContent = "⏱️";
+    timeoutBtn.className = "admin-action-btn";
+    timeoutBtn.onclick = () => {
+        const duration = prompt(`How many seconds to timeout ${msg.username}?`);
+        if (duration && !isNaN(duration)) {
+            const targetKey = msg.username.replace(/\s+/g, "").toLowerCase();
+            const untilTime = Date.now() + (parseInt(duration) * 1000);
+            db.ref("timeouts").child(targetKey).set({ until: untilTime });
+            alert(`Timed out ${msg.username} for ${duration} seconds.`);
+        }
+    };
+    p.appendChild(timeoutBtn);
   }
+
   p.dataset.key = msgKey;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
