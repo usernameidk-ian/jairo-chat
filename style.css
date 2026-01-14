@@ -134,6 +134,13 @@ body::before {
   border-radius: 3px;
 }
 
+.chat-messages .timestamp {
+  font-size: 10px;
+  color: #888;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
 .chat-messages .username { font-weight: 700; margin-right: 6px; }
 
 .chat-messages .msgtext {
@@ -143,6 +150,16 @@ body::before {
   flex: 1;
   color: #fff;
 }
+
+/* ---------------------- ADMIN BUTTONS IN CHAT ---------------------- */
+.admin-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+.admin-action-btn:hover { transform: scale(1.2); }
 
 /* ---------------------- INPUT ROW ---------------------- */
 .chat-input-row {
@@ -238,5 +255,15 @@ body::before {
 .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .media-grid img { width: 80px; height: 80px; cursor: pointer; border-radius: 4px; object-fit: cover; }
 
-.chat-media { max-width: 400px; border-radius: 8px; margin-top: 4px; }
+/* FIX: GIF SIZING - UNIFORM HEIGHT */
+.chat-media { 
+  height: 180px;         /* Forces all gifs/images to be this tall */
+  width: auto;           /* Width adjusts automatically */
+  max-width: 100%;       /* Ensures it doesn't overflow container */
+  object-fit: contain;   /* Ensures the whole image is visible (no cropping) */
+  border-radius: 8px; 
+  margin-top: 4px; 
+  background-color: rgba(0,0,0,0.2);
+}
+
 .chat-messages div:has(img[src*="e"]) img { width: 100px; height: auto; }
