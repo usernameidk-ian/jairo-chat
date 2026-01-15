@@ -58,6 +58,7 @@ const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
 const clearChatBtn = document.getElementById("clear-chat");
 const timerEl = document.getElementById("timeout-timer");
+const typingIndicator = document.getElementById("typing-indicator");
 
 const openGameBtn = document.getElementById("open-game");
 
@@ -90,6 +91,7 @@ if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
 
 const messagesRef = db.ref("messages");
 const soundRef = db.ref("global_sfx"); 
+const typingRef = db.ref("typing");
 
 let timeouts = {};
 let timeoutInterval = null;
@@ -121,23 +123,10 @@ soundRef.on("value", (snapshot) => {
 });
 
 // ---------------------- GIF & EMOJI LISTS ----------------------
-// NOTE: You must create a folder named 'gifs' and put 1.gif, 2.gif... inside it
 const myGifs = [
-  "gifs/1.gif",
-  "gifs/2.gif",
-  "gifs/3.gif",
-  "gifs/4.gif",
-  "gifs/5.gif",
-  "gifs/6.gif",
-  "gifs/7.gif",
-  "gifs/8.gif",
-  "gifs/9.gif",
-  "gifs/10.gif",
-  "gifs/11.gif",
-  "gifs/12.gif",
-  "gifs/13.gif",
-  "gifs/14.gif",
-  "gifs/15.gif"
+  "gifs/1.gif", "gifs/2.gif", "gifs/3.gif", "gifs/4.gif", "gifs/5.gif",
+  "gifs/6.gif", "gifs/7.gif", "gifs/8.gif", "gifs/9.gif", "gifs/10.gif",
+  "gifs/11.gif", "gifs/12.gif", "gifs/13.gif", "gifs/14.gif", "gifs/15.gif"
 ];
 
 const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
@@ -151,6 +140,8 @@ function populateVault(container, items) {
       messagesRef.push({ text: url, username: username, timestamp: Date.now() });
       gifVault.style.display = 'none';
       emojiVault.style.display = 'none';
+      // Stop typing status if sending gif
+      typingRef.child(identityKey).remove();
     };
     container.appendChild(img);
   });
@@ -172,6 +163,9 @@ sendChat.addEventListener("click", () => {
   }
   messagesRef.push({ text, username: username, timestamp: Date.now() });
   chatInput.value = "";
+  
+  // Stop typing status immediately
+  typingRef.child(identityKey).remove();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
@@ -181,7 +175,6 @@ messagesRef.on("child_added", (snapshot) => {
   const p = document.createElement("p");
 
   if (msg && msg.text) {
-    // 1. Create Timestamp
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const dateStr = ts.toLocaleDateString();
@@ -190,13 +183,11 @@ messagesRef.on("child_added", (snapshot) => {
     timeSpan.className = "timestamp";
     timeSpan.textContent = `[${timeStr} ${dateStr}]`;
 
-    // 2. Create Username
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
     userSpan.style.color = stringToColor(msg.username);
 
-    // 3. Create Content
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
     
@@ -213,21 +204,18 @@ messagesRef.on("child_added", (snapshot) => {
     }
 
     addAdminIcon(p, msg.username);
-    p.appendChild(timeSpan); // Add timestamp first
+    p.appendChild(timeSpan);
     p.appendChild(userSpan);
     p.appendChild(contentDiv);
   }
 
-  // 4. Admin Buttons (Delete & Timeout)
   if (isAdmin) {
-    // Delete Button
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
     deleteBtn.className = "admin-action-btn";
     deleteBtn.onclick = () => { db.ref("messages").child(msgKey).remove(); };
     p.appendChild(deleteBtn);
 
-    // Timeout Button
     const timeoutBtn = document.createElement("button");
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
@@ -277,7 +265,69 @@ document.addEventListener('click', () => {
   if (bgm && bgm.paused) bgm.play().catch(()=>{});
 }, { once: true });
 
-// ---------------------- SCHOOL CLOCK LOGIC ----------------------
+// ---------------------- TYPING INDICATOR ----------------------
+let typeTimeout;
+
+// 1. Detect when I type
+chatInput.addEventListener('input', () => {
+  const myTimeout = timeouts[identityKey];
+  if (myTimeout && myTimeout.until > Date.now()) return; // Don't show typing if timed out
+
+  typingRef.child(identityKey).set({ name: username, time: Date.now() });
+  
+  // Also remove me if I disconnect
+  typingRef.child(identityKey).onDisconnect().remove();
+
+  // Stop "typing" status if I stop typing for 3 seconds
+  clearTimeout(typeTimeout);
+  typeTimeout = setTimeout(() => {
+    typingRef.child(identityKey).remove();
+  }, 3000);
+});
+
+// 2. Listen for others typing
+let currentTypers = [];
+let dots = 1;
+
+typingRef.on('value', (snapshot) => {
+  const data = snapshot.val() || {};
+  currentTypers = [];
+  
+  Object.keys(data).forEach(key => {
+    if (key !== identityKey) { // Don't show myself
+      currentTypers.push(data[key].name);
+    }
+  });
+  updateTypingText();
+});
+
+// 3. Animation Loop (Changes dots every 500ms)
+setInterval(() => {
+  dots++;
+  if (dots > 3) dots = 1;
+  updateTypingText();
+}, 500);
+
+function updateTypingText() {
+  if (currentTypers.length === 0) {
+    typingIndicator.textContent = "";
+    typingIndicator.style.display = "none";
+    return;
+  }
+  
+  typingIndicator.style.display = "block";
+  const dotStr = ".".repeat(dots); // . or .. or ...
+  
+  if (currentTypers.length === 1) {
+    typingIndicator.textContent = `${currentTypers[0]} is typing${dotStr}`;
+  } else if (currentTypers.length === 2) {
+    typingIndicator.textContent = `${currentTypers[0]} and ${currentTypers[1]} are typing${dotStr}`;
+  } else {
+    typingIndicator.textContent = `more than 3 people are typing${dotStr}`;
+  }
+}
+
+// ---------------------- SCHOOL CLOCK ----------------------
 const schedules = {
   regular: [
     { n: "ADVISORY", s: "08:00", e: "08:29" },
