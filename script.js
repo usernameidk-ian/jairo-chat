@@ -123,7 +123,6 @@ soundRef.on("value", (snapshot) => {
 });
 
 // ---------------------- GIF & EMOJI LISTS ----------------------
-// ADDED: GIFs 16-25
 const myGifs = [
   "gifs/1.gif", "gifs/2.gif", "gifs/3.gif", "gifs/4.gif", "gifs/5.gif",
   "gifs/6.gif", "gifs/7.gif", "gifs/8.gif", "gifs/9.gif", "gifs/10.gif",
@@ -132,7 +131,6 @@ const myGifs = [
   "gifs/21.gif", "gifs/22.gif", "gifs/23.gif", "gifs/24.gif", "gifs/25.gif"
 ];
 
-// ADDED: Emojis 6-10
 const myEmojis = [
   "e1.png", "e2.png", "e3.png", "e4.png", "e5.png",
   "e6.png", "e7.png", "e8.png", "e9.png", "e10.png"
@@ -156,8 +154,33 @@ function populateVault(container, items) {
 populateVault(document.getElementById('gif-list'), myGifs);
 populateVault(document.getElementById('emoji-list'), myEmojis);
 
-gifBtn.onclick = () => { gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; emojiVault.style.display = 'none'; };
-emojiBtn.onclick = () => { emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; gifVault.style.display = 'none'; };
+gifBtn.onclick = () => { 
+  gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; 
+  emojiVault.style.display = 'none'; 
+};
+
+emojiBtn.onclick = () => { 
+  emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; 
+  gifVault.style.display = 'none'; 
+};
+
+// ADDED: Close popups when clicking outside
+document.addEventListener('click', (event) => {
+  const isClickInsideGif = gifVault.contains(event.target);
+  const isClickOnGifBtn = gifBtn.contains(event.target);
+  const isClickInsideEmoji = emojiVault.contains(event.target);
+  const isClickOnEmojiBtn = emojiBtn.contains(event.target);
+
+  // If the click is NOT inside the Gif vault AND NOT on the Gif button
+  if (!isClickInsideGif && !isClickOnGifBtn) {
+    gifVault.style.display = 'none';
+  }
+
+  // If the click is NOT inside the Emoji vault AND NOT on the Emoji button
+  if (!isClickInsideEmoji && !isClickOnEmojiBtn) {
+    emojiVault.style.display = 'none';
+  }
+});
 
 // ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
