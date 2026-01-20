@@ -123,13 +123,20 @@ soundRef.on("value", (snapshot) => {
 });
 
 // ---------------------- GIF & EMOJI LISTS ----------------------
+// ADDED: GIFs 16-25
 const myGifs = [
   "gifs/1.gif", "gifs/2.gif", "gifs/3.gif", "gifs/4.gif", "gifs/5.gif",
   "gifs/6.gif", "gifs/7.gif", "gifs/8.gif", "gifs/9.gif", "gifs/10.gif",
-  "gifs/11.gif", "gifs/12.gif", "gifs/13.gif", "gifs/14.gif", "gifs/15.gif"
+  "gifs/11.gif", "gifs/12.gif", "gifs/13.gif", "gifs/14.gif", "gifs/15.gif",
+  "gifs/16.gif", "gifs/17.gif", "gifs/18.gif", "gifs/19.gif", "gifs/20.gif",
+  "gifs/21.gif", "gifs/22.gif", "gifs/23.gif", "gifs/24.gif", "gifs/25.gif"
 ];
 
-const myEmojis = ["e1.png", "e2.png", "e3.png", "e4.png", "e5.png"];
+// ADDED: Emojis 6-10
+const myEmojis = [
+  "e1.png", "e2.png", "e3.png", "e4.png", "e5.png",
+  "e6.png", "e7.png", "e8.png", "e9.png", "e10.png"
+];
 
 function populateVault(container, items) {
   items.forEach(url => {
