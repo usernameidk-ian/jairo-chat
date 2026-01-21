@@ -1,3 +1,13 @@
+// ---------------------- DEVICE FINGERPRINTING (THE FIX) ----------------------
+// 1. Check if they have an ID. If not, brand them with one.
+let deviceID = localStorage.getItem('chat_device_id');
+if (!deviceID) {
+  deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+  localStorage.setItem('chat_device_id', deviceID);
+}
+
+console.log("Your Device ID is:", deviceID); // specific to this computer
+
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
@@ -142,10 +152,15 @@ function populateVault(container, items) {
     img.src = url;
     img.alt = "media";
     img.onclick = () => {
-      messagesRef.push({ text: url, username: username, timestamp: Date.now() });
+      // 2. SEND FINGERPRINT WITH MEDIA
+      messagesRef.push({ 
+        text: url, 
+        username: username, 
+        timestamp: Date.now(),
+        fingerprint: deviceID // <--- Added here
+      });
       gifVault.style.display = 'none';
       emojiVault.style.display = 'none';
-      // Stop typing status if sending gif
       typingRef.child(identityKey).remove();
     };
     container.appendChild(img);
@@ -164,37 +179,38 @@ emojiBtn.onclick = () => {
   gifVault.style.display = 'none'; 
 };
 
-// ADDED: Close popups when clicking outside
 document.addEventListener('click', (event) => {
   const isClickInsideGif = gifVault.contains(event.target);
   const isClickOnGifBtn = gifBtn.contains(event.target);
   const isClickInsideEmoji = emojiVault.contains(event.target);
   const isClickOnEmojiBtn = emojiBtn.contains(event.target);
 
-  // If the click is NOT inside the Gif vault AND NOT on the Gif button
-  if (!isClickInsideGif && !isClickOnGifBtn) {
-    gifVault.style.display = 'none';
-  }
-
-  // If the click is NOT inside the Emoji vault AND NOT on the Emoji button
-  if (!isClickInsideEmoji && !isClickOnEmojiBtn) {
-    emojiVault.style.display = 'none';
-  }
+  if (!isClickInsideGif && !isClickOnGifBtn) gifVault.style.display = 'none';
+  if (!isClickInsideEmoji && !isClickOnEmojiBtn) emojiVault.style.display = 'none';
 });
 
 // ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
-  const myTimeout = timeouts[identityKey];
+  
+  // 3. CHECK TIMEOUT BASED ON DEVICE ID, NOT NAME
+  const myTimeout = timeouts[deviceID]; // <--- Changed logic here
+  
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("you are timed out, refrain from chatting till ur timeout is done.");
+    alert("Your device is timed out. Refreshing won't help :)");
     return;
   }
-  messagesRef.push({ text, username: username, timestamp: Date.now() });
-  chatInput.value = "";
   
-  // Stop typing status immediately
+  // 4. SEND FINGERPRINT WITH TEXT
+  messagesRef.push({ 
+    text, 
+    username: username, 
+    timestamp: Date.now(),
+    fingerprint: deviceID // <--- Added here
+  });
+  
+  chatInput.value = "";
   typingRef.child(identityKey).remove();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
@@ -249,13 +265,27 @@ messagesRef.on("child_added", (snapshot) => {
     const timeoutBtn = document.createElement("button");
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
+    
+    // 5. ADMIN TIMEOUT LOGIC UPGRADE
     timeoutBtn.onclick = () => {
         const duration = prompt(`How many seconds to timeout ${msg.username}?`);
         if (duration && !isNaN(duration)) {
-            const targetKey = msg.username.replace(/\s+/g, "").toLowerCase();
+            // We target the FINGERPRINT now, not the name
+            const targetFingerprint = msg.fingerprint; 
+            
+            if (!targetFingerprint) {
+                alert("Cannot timeout: This is an old message without a Device ID.");
+                return;
+            }
+
             const untilTime = Date.now() + (parseInt(duration) * 1000);
-            db.ref("timeouts").child(targetKey).set({ until: untilTime });
-            alert(`Timed out ${msg.username} for ${duration} seconds.`);
+            
+            // Save to database under the DEVICE ID
+            db.ref("timeouts").child(targetFingerprint).set({ 
+                until: untilTime,
+                originalName: msg.username // Just for your reference
+            });
+            alert(`Timed out device (user: ${msg.username}) for ${duration} seconds.`);
         }
     };
     p.appendChild(timeoutBtn);
@@ -279,12 +309,22 @@ db.ref("timeouts").on("value", (snapshot) => {
 
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
-  const my = timeouts[identityKey];
-  if (!my || my.until <= Date.now()) { timerEl.textContent = ""; return; }
+  
+  // 6. CHECK MY DEVICE ID, NOT MY NAME
+  const myStatus = timeouts[deviceID]; 
+
+  if (!myStatus || myStatus.until <= Date.now()) { 
+    timerEl.textContent = ""; 
+    return; 
+  }
+  
   function tick() {
-    const seconds = Math.ceil(Math.max(0, my.until - Date.now()) / 1000);
-    timerEl.textContent = seconds > 0 ? `You are timed out for ${seconds}s more.` : "";
-    if (seconds <= 0) clearInterval(timeoutInterval);
+    const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
+    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
+    if (seconds <= 0) {
+        clearInterval(timeoutInterval);
+        timerEl.textContent = "";
+    }
   }
   tick();
   timeoutInterval = setInterval(tick, 500);
@@ -298,24 +338,21 @@ document.addEventListener('click', () => {
 // ---------------------- TYPING INDICATOR ----------------------
 let typeTimeout;
 
-// 1. Detect when I type
 chatInput.addEventListener('input', () => {
-  const myTimeout = timeouts[identityKey];
-  if (myTimeout && myTimeout.until > Date.now()) return; // Don't show typing if timed out
+  // Check timeout using Device ID
+  const myTimeout = timeouts[deviceID];
+  if (myTimeout && myTimeout.until > Date.now()) return; 
 
   typingRef.child(identityKey).set({ name: username, time: Date.now() });
   
-  // Also remove me if I disconnect
   typingRef.child(identityKey).onDisconnect().remove();
 
-  // Stop "typing" status if I stop typing for 3 seconds
   clearTimeout(typeTimeout);
   typeTimeout = setTimeout(() => {
     typingRef.child(identityKey).remove();
   }, 3000);
 });
 
-// 2. Listen for others typing
 let currentTypers = [];
 let dots = 1;
 
@@ -324,14 +361,13 @@ typingRef.on('value', (snapshot) => {
   currentTypers = [];
   
   Object.keys(data).forEach(key => {
-    if (key !== identityKey) { // Don't show myself
+    if (key !== identityKey) { 
       currentTypers.push(data[key].name);
     }
   });
   updateTypingText();
 });
 
-// 3. Animation Loop (Changes dots every 500ms)
 setInterval(() => {
   dots++;
   if (dots > 3) dots = 1;
@@ -346,7 +382,7 @@ function updateTypingText() {
   }
   
   typingIndicator.style.display = "block";
-  const dotStr = ".".repeat(dots); // . or .. or ...
+  const dotStr = ".".repeat(dots);
   
   if (currentTypers.length === 1) {
     typingIndicator.textContent = `${currentTypers[0]} is typing${dotStr}`;
