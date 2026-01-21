@@ -1,4 +1,5 @@
 // ---------------------- DEVICE FINGERPRINTING ----------------------
+// This ensures that even if they change their name, we know it's the same computer.
 let deviceID = localStorage.getItem('chat_device_id');
 if (!deviceID) {
   deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -6,9 +7,7 @@ if (!deviceID) {
 }
 console.log("Your Device ID is:", deviceID); 
 
-// ---------------------- PROFANITY FILTER (NEW) ----------------------
-// Add words inside this list (lowercase). 
-// The code automatically handles capital letters (e.g., "Ass" becomes "###")
+// ---------------------- SMART PROFANITY FILTER ----------------------
 const badWords = [
   "ass", 
   "bitch", 
@@ -16,18 +15,36 @@ const badWords = [
   "fuck", 
   "dick", 
   "pussy", 
-  "nigger",
-  "nigga",
   "fucking",
+  "cock",
+  "nigga",
+  "nigger",
+  "motherfucker",
+  "asshole",
+  "cunt",
+  "dumbass",
+  "faggot",
+  "piss",
+  "slut",
+  "tranny",
+  "cum",
+  "blowjob",
+  "fag"
 ];
 
 function filterProfanity(text) {
   let cleanText = text;
   badWords.forEach(word => {
-    // This creates a "Regular Expression" to find the word regardless of case
-    const regex = new RegExp(word, "gi"); 
-    const hash = "#".repeat(word.length);
-    cleanText = cleanText.replace(regex, hash);
+    // 1. Split the bad word into letters
+    // 2. Allow any number of spaces, symbols, or dots between letters
+    // 3. Allow repeated letters (e.g. fuuuuck)
+    const pattern = word.split('').map(char => `${char}+[\\s\\W_]*`).join('');
+    
+    // Create the "Smart" Regex
+    const regex = new RegExp(pattern, "gi"); 
+    
+    // Replace the found match with hashtags of the same length
+    cleanText = cleanText.replace(regex, (match) => "#".repeat(match.length));
   });
   return cleanText;
 }
@@ -179,7 +196,7 @@ function populateVault(container, items) {
       // FIX 1: CHECK TIMEOUT BEFORE SENDING GIF/EMOJI
       const myTimeout = timeouts[deviceID];
       if (myTimeout && myTimeout.until > Date.now()) {
-        alert("Your device is timed out. No GIFs allowed!");
+        alert("Your device is timed out. No GIFs or Emojis allowed!");
         return;
       }
 
@@ -224,6 +241,7 @@ sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   
+  // FIX 2: CHECK TIMEOUT BEFORE SENDING TEXT
   const myTimeout = timeouts[deviceID]; 
   
   if (myTimeout && myTimeout.until > Date.now()) {
@@ -231,11 +249,11 @@ sendChat.addEventListener("click", () => {
     return;
   }
   
-  // FIX 2: APPLY FILTER BEFORE SENDING
+  // FIX 3: APPLY SMART FILTER
   const safeText = filterProfanity(text);
 
   messagesRef.push({ 
-    text: safeText, // Send the filtered text
+    text: safeText, 
     username: username, 
     timestamp: Date.now(),
     fingerprint: deviceID
@@ -297,6 +315,7 @@ messagesRef.on("child_added", (snapshot) => {
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
     
+    // ADMIN TIMEOUT LOGIC
     timeoutBtn.onclick = () => {
         const duration = prompt(`How many seconds to timeout ${msg.username}?`);
         if (duration && !isNaN(duration)) {
@@ -309,6 +328,7 @@ messagesRef.on("child_added", (snapshot) => {
 
             const untilTime = Date.now() + (parseInt(duration) * 1000);
             
+            // Save timeout to the device ID
             db.ref("timeouts").child(targetFingerprint).set({ 
                 until: untilTime,
                 originalName: msg.username 
@@ -365,6 +385,7 @@ document.addEventListener('click', () => {
 let typeTimeout;
 
 chatInput.addEventListener('input', () => {
+  // Prevent typing indicator if timed out
   const myTimeout = timeouts[deviceID];
   if (myTimeout && myTimeout.until > Date.now()) return; 
 
