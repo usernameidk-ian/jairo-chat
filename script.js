@@ -29,7 +29,10 @@ const badWords = [
   "tranny",
   "cum",
   "blowjob",
-  "fag"
+  "fag",
+  "sh!t",
+  "hoe",
+  "porn"
 ];
 
 function filterProfanity(text) {
