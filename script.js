@@ -1,12 +1,36 @@
-// ---------------------- DEVICE FINGERPRINTING (THE FIX) ----------------------
-// 1. Check if they have an ID. If not, brand them with one.
+// ---------------------- DEVICE FINGERPRINTING ----------------------
 let deviceID = localStorage.getItem('chat_device_id');
 if (!deviceID) {
   deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   localStorage.setItem('chat_device_id', deviceID);
 }
+console.log("Your Device ID is:", deviceID); 
 
-console.log("Your Device ID is:", deviceID); // specific to this computer
+// ---------------------- PROFANITY FILTER (NEW) ----------------------
+// Add words inside this list (lowercase). 
+// The code automatically handles capital letters (e.g., "Ass" becomes "###")
+const badWords = [
+  "ass", 
+  "bitch", 
+  "shit", 
+  "fuck", 
+  "dick", 
+  "pussy", 
+  "nigger",
+  "nigga",
+  "fucking",
+];
+
+function filterProfanity(text) {
+  let cleanText = text;
+  badWords.forEach(word => {
+    // This creates a "Regular Expression" to find the word regardless of case
+    const regex = new RegExp(word, "gi"); 
+    const hash = "#".repeat(word.length);
+    cleanText = cleanText.replace(regex, hash);
+  });
+  return cleanText;
+}
 
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
@@ -152,12 +176,18 @@ function populateVault(container, items) {
     img.src = url;
     img.alt = "media";
     img.onclick = () => {
-      // 2. SEND FINGERPRINT WITH MEDIA
+      // FIX 1: CHECK TIMEOUT BEFORE SENDING GIF/EMOJI
+      const myTimeout = timeouts[deviceID];
+      if (myTimeout && myTimeout.until > Date.now()) {
+        alert("Your device is timed out. No GIFs allowed!");
+        return;
+      }
+
       messagesRef.push({ 
         text: url, 
         username: username, 
         timestamp: Date.now(),
-        fingerprint: deviceID // <--- Added here
+        fingerprint: deviceID
       });
       gifVault.style.display = 'none';
       emojiVault.style.display = 'none';
@@ -194,20 +224,21 @@ sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   
-  // 3. CHECK TIMEOUT BASED ON DEVICE ID, NOT NAME
-  const myTimeout = timeouts[deviceID]; // <--- Changed logic here
+  const myTimeout = timeouts[deviceID]; 
   
   if (myTimeout && myTimeout.until > Date.now()) {
     alert("Your device is timed out. Refreshing won't help :)");
     return;
   }
   
-  // 4. SEND FINGERPRINT WITH TEXT
+  // FIX 2: APPLY FILTER BEFORE SENDING
+  const safeText = filterProfanity(text);
+
   messagesRef.push({ 
-    text, 
+    text: safeText, // Send the filtered text
     username: username, 
     timestamp: Date.now(),
-    fingerprint: deviceID // <--- Added here
+    fingerprint: deviceID
   });
   
   chatInput.value = "";
@@ -266,11 +297,9 @@ messagesRef.on("child_added", (snapshot) => {
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
     
-    // 5. ADMIN TIMEOUT LOGIC UPGRADE
     timeoutBtn.onclick = () => {
         const duration = prompt(`How many seconds to timeout ${msg.username}?`);
         if (duration && !isNaN(duration)) {
-            // We target the FINGERPRINT now, not the name
             const targetFingerprint = msg.fingerprint; 
             
             if (!targetFingerprint) {
@@ -280,10 +309,9 @@ messagesRef.on("child_added", (snapshot) => {
 
             const untilTime = Date.now() + (parseInt(duration) * 1000);
             
-            // Save to database under the DEVICE ID
             db.ref("timeouts").child(targetFingerprint).set({ 
                 until: untilTime,
-                originalName: msg.username // Just for your reference
+                originalName: msg.username 
             });
             alert(`Timed out device (user: ${msg.username}) for ${duration} seconds.`);
         }
@@ -309,8 +337,6 @@ db.ref("timeouts").on("value", (snapshot) => {
 
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
-  
-  // 6. CHECK MY DEVICE ID, NOT MY NAME
   const myStatus = timeouts[deviceID]; 
 
   if (!myStatus || myStatus.until <= Date.now()) { 
@@ -339,7 +365,6 @@ document.addEventListener('click', () => {
 let typeTimeout;
 
 chatInput.addEventListener('input', () => {
-  // Check timeout using Device ID
   const myTimeout = timeouts[deviceID];
   if (myTimeout && myTimeout.until > Date.now()) return; 
 
