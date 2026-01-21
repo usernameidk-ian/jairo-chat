@@ -32,7 +32,8 @@ const badWords = [
   "fag",
   "sh!t",
   "hoe",
-  "porn"
+  "porn",
+  "rape"
 ];
 
 function filterProfanity(text) {
