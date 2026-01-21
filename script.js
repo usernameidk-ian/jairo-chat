@@ -196,7 +196,7 @@ function populateVault(container, items) {
       // FIX 1: CHECK TIMEOUT BEFORE SENDING GIF/EMOJI
       const myTimeout = timeouts[deviceID];
       if (myTimeout && myTimeout.until > Date.now()) {
-        alert("Your device is timed out. No GIFs or Emojis allowed!");
+        alert("you're timed out buddy.");
         return;
       }
 
@@ -245,7 +245,7 @@ sendChat.addEventListener("click", () => {
   const myTimeout = timeouts[deviceID]; 
   
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("Your device is timed out. Refreshing won't help :)");
+    alert("you're timed out.");
     return;
   }
   
@@ -366,7 +366,7 @@ function updateTimeoutDisplay() {
   
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
-    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
+    timerEl.textContent = seconds > 0 ? `youre timed out for ${seconds}s more.` : "";
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
