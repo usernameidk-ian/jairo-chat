@@ -1,57 +1,10 @@
 // ---------------------- DEVICE FINGERPRINTING ----------------------
-// This ensures that even if they change their name, we know it's the same computer.
 let deviceID = localStorage.getItem('chat_device_id');
 if (!deviceID) {
   deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   localStorage.setItem('chat_device_id', deviceID);
 }
 console.log("Your Device ID is:", deviceID); 
-
-// ---------------------- SMART PROFANITY FILTER ----------------------
-const badWords = [
-  "ass", 
-  "bitch", 
-  "shit", 
-  "fuck", 
-  "dick", 
-  "pussy", 
-  "fucking",
-  "cock",
-  "nigga",
-  "nigger",
-  "motherfucker",
-  "asshole",
-  "cunt",
-  "dumbass",
-  "faggot",
-  "piss",
-  "slut",
-  "tranny",
-  "cum",
-  "blowjob",
-  "fag",
-  "sh!t",
-  "hoe",
-  "porn",
-  "rape"
-];
-
-function filterProfanity(text) {
-  let cleanText = text;
-  badWords.forEach(word => {
-    // 1. Split the bad word into letters
-    // 2. Allow any number of spaces, symbols, or dots between letters
-    // 3. Allow repeated letters (e.g. fuuuuck)
-    const pattern = word.split('').map(char => `${char}+[\\s\\W_]*`).join('');
-    
-    // Create the "Smart" Regex
-    const regex = new RegExp(pattern, "gi"); 
-    
-    // Replace the found match with hashtags of the same length
-    cleanText = cleanText.replace(regex, (match) => "#".repeat(match.length));
-  });
-  return cleanText;
-}
 
 // ---------------------- USER & ADMIN SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
@@ -64,7 +17,6 @@ const cleanName = trimmed.replace(/\s+/g, "").toLowerCase();
 const adminUsername = "bian";
 const adminPassword = "hehehaha123";
 
-let password = "";
 let isAdmin = false;
 
 if (cleanName === adminUsername && trimmed !== adminUsername) {
@@ -73,7 +25,7 @@ if (cleanName === adminUsername && trimmed !== adminUsername) {
 }
 
 if (trimmed === adminUsername) {
-  password = prompt("Enter admin password:");
+  const password = prompt("Enter admin password:");
   if (password === adminPassword) {
     isAdmin = true;
     username = adminUsername;
@@ -148,7 +100,8 @@ const messagesRef = db.ref("messages");
 const soundRef = db.ref("global_sfx"); 
 const typingRef = db.ref("typing");
 
-let timeouts = {};
+// FIX FOR REFRESH EXPLOIT: Start as null to indicate data hasn't loaded yet
+let timeouts = null; 
 let timeoutInterval = null;
 
 if (isAdmin && clearChatBtn) {
@@ -197,10 +150,15 @@ function populateVault(container, items) {
     img.src = url;
     img.alt = "media";
     img.onclick = () => {
-      // FIX 1: CHECK TIMEOUT BEFORE SENDING GIF/EMOJI
+      // CHECK 1: WAIT FOR DATA TO LOAD
+      if (timeouts === null) {
+        alert("Connecting to server... wait a sec.");
+        return;
+      }
+      // CHECK 2: TIMEOUT STATUS
       const myTimeout = timeouts[deviceID];
       if (myTimeout && myTimeout.until > Date.now()) {
-        alert("you're timed out buddy.");
+        alert("Your device is timed out. No GIFs/Emojis allowed!");
         return;
       }
 
@@ -245,19 +203,22 @@ sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
   
-  // FIX 2: CHECK TIMEOUT BEFORE SENDING TEXT
+  // FIX: Safety Lock - If timeouts is still null, Firebase hasn't replied yet.
+  if (timeouts === null) {
+    console.log("Still loading timeout data...");
+    return; // Silently fail or alert() if you want
+  }
+
   const myTimeout = timeouts[deviceID]; 
   
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("you're timed out.");
+    alert("Your device is timed out. Refreshing won't help :)");
     return;
   }
   
-  // FIX 3: APPLY SMART FILTER
-  const safeText = filterProfanity(text);
-
+  // NO FILTER HERE ANYMORE - Just Raw Text
   messagesRef.push({ 
-    text: safeText, 
+    text: text, 
     username: username, 
     timestamp: Date.now(),
     fingerprint: deviceID
@@ -290,6 +251,7 @@ messagesRef.on("child_added", (snapshot) => {
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
     
+    // IMAGE/GIF DETECTION
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
@@ -319,7 +281,7 @@ messagesRef.on("child_added", (snapshot) => {
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
     
-    // ADMIN TIMEOUT LOGIC
+    // ADMIN TIMEOUT
     timeoutBtn.onclick = () => {
         const duration = prompt(`How many seconds to timeout ${msg.username}?`);
         if (duration && !isNaN(duration)) {
@@ -332,7 +294,6 @@ messagesRef.on("child_added", (snapshot) => {
 
             const untilTime = Date.now() + (parseInt(duration) * 1000);
             
-            // Save timeout to the device ID
             db.ref("timeouts").child(targetFingerprint).set({ 
                 until: untilTime,
                 originalName: msg.username 
@@ -355,12 +316,15 @@ messagesRef.on("child_removed", (snapshot) => {
 
 // ---------------------- TIMEOUTS & MUSIC ----------------------
 db.ref("timeouts").on("value", (snapshot) => {
-  timeouts = snapshot.val() || {};
+  timeouts = snapshot.val() || {}; // Data is loaded now
   updateTimeoutDisplay();
 });
 
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
+  
+  if (!timeouts) return; // Safety check
+
   const myStatus = timeouts[deviceID]; 
 
   if (!myStatus || myStatus.until <= Date.now()) { 
@@ -370,7 +334,7 @@ function updateTimeoutDisplay() {
   
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
-    timerEl.textContent = seconds > 0 ? `youre timed out for ${seconds}s more.` : "";
+    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -389,9 +353,8 @@ document.addEventListener('click', () => {
 let typeTimeout;
 
 chatInput.addEventListener('input', () => {
-  // Prevent typing indicator if timed out
-  const myTimeout = timeouts[deviceID];
-  if (myTimeout && myTimeout.until > Date.now()) return; 
+  // Check timeout before showing typing indicator
+  if (timeouts && timeouts[deviceID] && timeouts[deviceID].until > Date.now()) return;
 
   typingRef.child(identityKey).set({ name: username, time: Date.now() });
   
@@ -493,7 +456,6 @@ function updateClock() {
   const endLimit = parseTime(sched[sched.length - 1].e);
 
   const clockEl = document.getElementById('school-clock');
-  // Disappear on weekends or outside school hours
   if (day === 0 || day === 6 || time < startLimit || time > endLimit) {
     clockEl.style.display = 'none';
     return;
