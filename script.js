@@ -158,7 +158,7 @@ function populateVault(container, items) {
       // CHECK 2: TIMEOUT STATUS
       const myTimeout = timeouts[deviceID];
       if (myTimeout && myTimeout.until > Date.now()) {
-        alert("Your device is timed out. No GIFs/Emojis allowed!");
+        alert("you're timed out buddy.");
         return;
       }
 
@@ -205,14 +205,14 @@ sendChat.addEventListener("click", () => {
   
   // FIX: Safety Lock - If timeouts is still null, Firebase hasn't replied yet.
   if (timeouts === null) {
-    console.log("Still loading timeout data...");
+    console.log("Still loading data...");
     return; // Silently fail or alert() if you want
   }
 
   const myTimeout = timeouts[deviceID]; 
   
   if (myTimeout && myTimeout.until > Date.now()) {
-    alert("Your device is timed out. Refreshing won't help :)");
+    alert("you're timed out.");
     return;
   }
   
