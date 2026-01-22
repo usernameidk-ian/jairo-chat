@@ -15,7 +15,7 @@ const cleanName = trimmed.replace(/\s+/g, "").toLowerCase();
 
 // admin credentials
 const adminUsername = "bian";
-const adminPassword = "hehehaha123";
+const adminPassword = "hehehahahehehaha";
 
 let isAdmin = false;
 
