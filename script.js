@@ -66,6 +66,7 @@ const sendChat = document.getElementById("send-chat");
 const clearChatBtn = document.getElementById("clear-chat");
 const timerEl = document.getElementById("timeout-timer");
 const typingIndicator = document.getElementById("typing-indicator");
+const charCounter = document.getElementById("char-counter");
 
 const openGameBtn = document.getElementById("open-game");
 
@@ -100,7 +101,6 @@ const messagesRef = db.ref("messages");
 const soundRef = db.ref("global_sfx"); 
 const typingRef = db.ref("typing");
 
-// FIX FOR REFRESH EXPLOIT: Start as null to indicate data hasn't loaded yet
 let timeouts = null; 
 let timeoutInterval = null;
 
@@ -139,9 +139,10 @@ const myGifs = [
   "gifs/21.gif", "gifs/22.gif", "gifs/23.gif", "gifs/24.gif", "gifs/25.gif"
 ];
 
+// UPDATED: Now points to emojis/ folder
 const myEmojis = [
-  "e1.png", "e2.png", "e3.png", "e4.png", "e5.png",
-  "e6.png", "e7.png", "e8.png", "e9.png", "e10.png"
+  "emojis/e1.png", "emojis/e2.png", "emojis/e3.png", "emojis/e4.png", "emojis/e5.png",
+  "emojis/e6.png", "emojis/e7.png", "emojis/e8.png", "emojis/e9.png", "emojis/e10.png"
 ];
 
 function populateVault(container, items) {
@@ -150,12 +151,10 @@ function populateVault(container, items) {
     img.src = url;
     img.alt = "media";
     img.onclick = () => {
-      // CHECK 1: WAIT FOR DATA TO LOAD
       if (timeouts === null) {
         alert("Connecting to server... wait a sec.");
         return;
       }
-      // CHECK 2: TIMEOUT STATUS
       const myTimeout = timeouts[deviceID];
       if (myTimeout && myTimeout.until > Date.now()) {
         alert("you're timed out buddy.");
@@ -198,25 +197,82 @@ document.addEventListener('click', (event) => {
   if (!isClickInsideEmoji && !isClickOnEmojiBtn) emojiVault.style.display = 'none';
 });
 
+// ---------------------- CHARACTER LIMIT LOGIC ----------------------
+const MAX_CHARS = 2000;
+
+chatInput.addEventListener("input", () => {
+    const currentLength = chatInput.value.length;
+    const remaining = MAX_CHARS - currentLength;
+    
+    charCounter.textContent = remaining;
+    
+    if (remaining < 0) {
+        charCounter.classList.add("limit-exceeded");
+        sendChat.disabled = true;
+    } else {
+        charCounter.classList.remove("limit-exceeded");
+        sendChat.disabled = false;
+    }
+});
+
+// ---------------------- ANTI-SPAM (RATE LIMITING) ----------------------
+let spamTimestamps = [];
+let isRateLimited = false;
+
+function checkRateLimit() {
+    const now = Date.now();
+    // Remove timestamps older than 5 seconds
+    spamTimestamps = spamTimestamps.filter(t => t > now - 5000);
+    
+    if (spamTimestamps.length >= 10) {
+        return true;
+    }
+    spamTimestamps.push(now);
+    return false;
+}
+
 // ---------------------- SEND MESSAGE ----------------------
 sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
-  
-  // FIX: Safety Lock - If timeouts is still null, Firebase hasn't replied yet.
-  if (timeouts === null) {
-    console.log("Still loading data...");
-    return; // Silently fail or alert() if you want
+
+  // 1. Character Limit Check
+  if (text.length > MAX_CHARS) {
+    alert("Message too long! Remove characters.");
+    return;
   }
 
+  // 2. Loading Safety Check
+  if (timeouts === null) {
+    console.log("Still loading data...");
+    return; 
+  }
+
+  // 3. Server Timeout Check
   const myTimeout = timeouts[deviceID]; 
-  
   if (myTimeout && myTimeout.until > Date.now()) {
     alert("you're timed out.");
     return;
   }
   
-  // NO FILTER HERE ANYMORE - Just Raw Text
+  // 4. Local Rate Limit Check
+  if (isRateLimited) return; // Already blocked
+
+  if (checkRateLimit()) {
+      isRateLimited = true;
+      alert("You are being rate limited (too fast!). Cooling down for 3 seconds.");
+      sendChat.disabled = true;
+      chatInput.disabled = true;
+      
+      setTimeout(() => {
+          isRateLimited = false;
+          sendChat.disabled = false;
+          chatInput.disabled = false;
+          chatInput.focus();
+      }, 3000);
+      return;
+  }
+
   messagesRef.push({ 
     text: text, 
     username: username, 
@@ -225,15 +281,45 @@ sendChat.addEventListener("click", () => {
   });
   
   chatInput.value = "";
+  charCounter.textContent = MAX_CHARS; // Reset counter
   typingRef.child(identityKey).remove();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
-messagesRef.on("child_added", (snapshot) => {
+// ---------------------- MESSAGES & ENDLESS SCROLL ----------------------
+// Track the oldest message we currently have loaded
+let oldestLoadedKey = null;
+
+// Initial Load: Last 50 messages
+// We use limitToLast(50) so we don't crash browsers with 5000 messages
+messagesRef.limitToLast(50).on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
-  const p = document.createElement("p");
+  
+  // If this is the very first message we load, save its key for scrolling up later
+  if (!oldestLoadedKey) oldestLoadedKey = msgKey;
 
+  const p = createMessageElement(msg, msgKey);
+  chatMessages.appendChild(p);
+  
+  // Auto-scroll to bottom only if we are already near the bottom
+  // (Prevents snapping down if user is reading history)
+  if (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+  } else if (!oldestLoadedKey || chatMessages.children.length <= 50) {
+      // Force scroll on initial load
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+});
+
+messagesRef.on("child_removed", (snapshot) => {
+  const msgEl = [...chatMessages.children].find(el => el.dataset.key === snapshot.key);
+  if (msgEl) msgEl.remove();
+});
+
+// Helper function to create the message DOM element
+function createMessageElement(msg, msgKey) {
+  const p = document.createElement("p");
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -251,7 +337,6 @@ messagesRef.on("child_added", (snapshot) => {
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
     
-    // IMAGE/GIF DETECTION
     if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
       const img = document.createElement("img");
       img.src = msg.text;
@@ -270,6 +355,7 @@ messagesRef.on("child_added", (snapshot) => {
     p.appendChild(contentDiv);
   }
 
+  // Admin Controls
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
@@ -280,20 +366,15 @@ messagesRef.on("child_added", (snapshot) => {
     const timeoutBtn = document.createElement("button");
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
-    
-    // ADMIN TIMEOUT
     timeoutBtn.onclick = () => {
         const duration = prompt(`How many seconds to timeout ${msg.username}?`);
         if (duration && !isNaN(duration)) {
             const targetFingerprint = msg.fingerprint; 
-            
             if (!targetFingerprint) {
                 alert("Cannot timeout: This is an old message without a Device ID.");
                 return;
             }
-
             const untilTime = Date.now() + (parseInt(duration) * 1000);
-            
             db.ref("timeouts").child(targetFingerprint).set({ 
                 until: untilTime,
                 originalName: msg.username 
@@ -305,25 +386,62 @@ messagesRef.on("child_added", (snapshot) => {
   }
 
   p.dataset.key = msgKey;
-  chatMessages.appendChild(p);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return p;
+}
+
+// ENDLESS SCROLL LISTENER
+chatMessages.addEventListener("scroll", () => {
+    // If scrolled to top and we have a key to load from
+    if (chatMessages.scrollTop === 0 && oldestLoadedKey) {
+        loadOldMessages();
+    }
 });
 
-messagesRef.on("child_removed", (snapshot) => {
-  const msgEl = [...chatMessages.children].find(el => el.dataset.key === snapshot.key);
-  if (msgEl) msgEl.remove();
-});
+function loadOldMessages() {
+    // Load 50 messages ending BEFORE the current oldest key
+    messagesRef.orderByKey().endBefore(oldestLoadedKey).limitToLast(50).once("value", (snapshot) => {
+        if (!snapshot.exists()) return; // No more messages
+        
+        const oldHeight = chatMessages.scrollHeight;
+        const fragment = document.createDocumentFragment();
+        let newOldest = oldestLoadedKey;
+
+        // Snapshot comes in order (Old -> New), so we collect them
+        // We prepend them in order before the first child
+        const messages = [];
+        snapshot.forEach(child => {
+            messages.push({ key: child.key, val: child.val() });
+        });
+
+        if (messages.length > 0) {
+            newOldest = messages[0].key; // Update the marker
+        }
+
+        messages.forEach(item => {
+            const p = createMessageElement(item.val, item.key);
+            fragment.appendChild(p);
+        });
+
+        // Insert at the very top
+        chatMessages.insertBefore(fragment, chatMessages.firstChild);
+
+        // Update key tracker
+        oldestLoadedKey = newOldest;
+
+        // Restore scroll position so it doesn't jump to the top
+        chatMessages.scrollTop = chatMessages.scrollHeight - oldHeight;
+    });
+}
 
 // ---------------------- TIMEOUTS & MUSIC ----------------------
 db.ref("timeouts").on("value", (snapshot) => {
-  timeouts = snapshot.val() || {}; // Data is loaded now
+  timeouts = snapshot.val() || {}; 
   updateTimeoutDisplay();
 });
 
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
-  
-  if (!timeouts) return; // Safety check
+  if (!timeouts) return; 
 
   const myStatus = timeouts[deviceID]; 
 
@@ -353,7 +471,6 @@ document.addEventListener('click', () => {
 let typeTimeout;
 
 chatInput.addEventListener('input', () => {
-  // Check timeout before showing typing indicator
   if (timeouts && timeouts[deviceID] && timeouts[deviceID].until > Date.now()) return;
 
   typingRef.child(identityKey).set({ name: username, time: Date.now() });
