@@ -1,6 +1,6 @@
 /* ---------------------- GENERAL ---------------------- */
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   margin: 0;
   color: #fff;
   -webkit-font-smoothing: antialiased;
@@ -25,10 +25,11 @@ body::before {
   padding: 14px 24px;
   background: rgba(0,0,0,0.7);
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  z-index: 1;
+  z-index: 10;
   position: relative;
 }
 .topbar h1 { margin: 0; font-size: 18px; color: #fff; }
+.topbar .controls { display: flex; gap: 10px; }
 .topbar .controls button {
   padding: 8px 12px;
   border-radius: 8px;
@@ -36,7 +37,36 @@ body::before {
   background: #2f3136;
   color: #fff;
   cursor: pointer;
+  transition: background 0.2s;
 }
+.topbar .controls button:hover { background: #40444b; }
+
+#settings-btn { font-size: 16px; padding: 6px 10px; }
+
+/* ---------------------- SETTINGS MODAL ---------------------- */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); z-index: 3000;
+  display: flex; justify-content: center; align-items: center;
+}
+.modal-content {
+  background: #36393f; width: 300px; padding: 20px;
+  border-radius: 10px; border: 1px solid #202225;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; border-bottom: 1px solid #4f545c; padding-bottom: 10px;
+}
+.modal-header h3 { margin: 0; color: #fff; }
+#close-settings { background: none; border: none; color: #bbb; cursor: pointer; font-size: 18px; }
+#close-settings:hover { color: #fff; }
+
+.modal-body label { display: block; margin-bottom: 10px; font-weight: bold; color: #b9bbbe; }
+.color-picker-wrapper { display: flex; align-items: center; gap: 10px; background: #2f3136; padding: 10px; border-radius: 8px; }
+#color-picker { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
+#color-preview { font-weight: bold; font-size: 16px; }
+.note { font-size: 11px; color: #72767d; margin-top: 10px; font-style: italic; }
 
 /* ---------------------- PAGE LAYOUT ---------------------- */
 .container {
@@ -161,7 +191,7 @@ body::before {
 }
 .admin-action-btn:hover { transform: scale(1.2); }
 
-/* ---------------------- INPUT ROW (UPDATED) ---------------------- */
+/* ---------------------- INPUT ROW ---------------------- */
 .chat-input-row {
   margin-top: 12px;
   display: flex;
@@ -182,7 +212,6 @@ body::before {
   box-shadow: 0 0 6px #ffcc00;
 }
 
-/* NEW: Character Counter */
 #char-counter {
   font-size: 12px;
   color: #888;
@@ -190,10 +219,7 @@ body::before {
   text-align: right;
   font-family: monospace;
 }
-#char-counter.limit-exceeded {
-  color: #ff4444;
-  font-weight: bold;
-}
+#char-counter.limit-exceeded { color: #ff4444; font-weight: bold; }
 
 #send-chat {
   padding: 10px 14px;
@@ -204,21 +230,10 @@ body::before {
   font-weight: bold;
   cursor: pointer;
 }
-
-/* Disable state for when limit is reached */
-#send-chat:disabled {
-  background: #555;
-  color: #888;
-  cursor: not-allowed;
-}
-
+#send-chat:disabled { background: #555; color: #888; cursor: not-allowed; }
 #send-chat:hover:not(:disabled) { background: #ffaa00; }
 
-.timeout-timer {
-  margin-top: 8px;
-  color: #ffb4b4;
-  font-size: 13px;
-}
+.timeout-timer { margin-top: 8px; color: #ffb4b4; font-size: 13px; }
 
 /* ---------------------- ADMIN FEATURES ---------------------- */
 #admin-toggle {
@@ -241,43 +256,21 @@ body::before {
   background: #2f3136; color: white; border: 1px solid #444; padding: 6px; border-radius: 4px; cursor: pointer; text-align: left; font-size: 13px;
 }
 
-/* ---------------------- GIF & EMOJI POPUPS ---------------------- */
+/* ---------------------- MEDIA POPUPS ---------------------- */
 .icon-btn {
-  background: #2f3136;
-  border: 1px solid #4f545c;
-  border-radius: 8px;
-  padding: 0 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 38px;
-  flex-shrink: 0;
+  background: #2f3136; border: 1px solid #4f545c; border-radius: 8px;
+  padding: 0 10px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; height: 38px; flex-shrink: 0;
 }
-
 #gif-btn { width: 45px; }
-
-.icon-btn img {
-  height: 20px;
-  width: auto;
-}
+.icon-btn img { height: 20px; width: auto; }
 
 .media-popup {
-  display: none;
-  position: absolute;
-  bottom: 60px;
-  left: 12px;
-  background: #18191c;
-  border: 1px solid #ffcc00;
-  padding: 8px;
-  border-radius: 8px;
-  z-index: 100;
-  max-height: 260px;
-  overflow-y: auto;
-  width: 280px; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  display: none; position: absolute; bottom: 60px; left: 12px;
+  background: #18191c; border: 1px solid #ffcc00; padding: 8px;
+  border-radius: 8px; z-index: 100; max-height: 260px; overflow-y: auto;
+  width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-
 .media-popup::-webkit-scrollbar { width: 6px; }
 .media-popup::-webkit-scrollbar-thumb { background: #ffcc00; border-radius: 3px; }
 .media-popup::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
@@ -286,25 +279,14 @@ body::before {
 .media-grid img { width: 100%; height: 80px; cursor: pointer; border-radius: 4px; object-fit: cover; }
 
 .chat-media { 
-  height: 180px;         
-  width: auto;           
-  max-width: 100%;       
-  object-fit: contain;   
-  border-radius: 8px; 
-  margin-top: 4px; 
-  background-color: rgba(0,0,0,0.2);
+  height: 180px; width: auto; max-width: 100%; object-fit: contain;   
+  border-radius: 8px; margin-top: 4px; background-color: rgba(0,0,0,0.2);
 }
 
 .chat-messages div:has(img[src*="e"]) img { width: 100px; height: auto; }
 
 /* ---------------------- TYPING INDICATOR ---------------------- */
 .typing-indicator {
-  font-size: 12px;
-  color: #b9bbbe; 
-  margin-top: 4px;
-  margin-bottom: 2px;
-  margin-left: 2px;
-  font-weight: bold;
-  min-height: 15px; 
-  display: none;
+  font-size: 12px; color: #b9bbbe; margin-top: 4px; margin-bottom: 2px;
+  margin-left: 2px; font-weight: bold; min-height: 15px; display: none;
 }
