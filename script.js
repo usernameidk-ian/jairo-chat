@@ -6,12 +6,15 @@ if (!deviceID) {
 }
 console.log("Your Device ID is:", deviceID); 
 
-// ---------------------- USER & ADMIN SETUP ----------------------
+// ---------------------- USER & SETTINGS SETUP ----------------------
 let username = prompt("Enter your username:") || "unknown loser(anonymous)";
 
 username = username.toString();
 const trimmed = username.trim();            
 const cleanName = trimmed.replace(/\s+/g, "").toLowerCase(); 
+
+// Load Saved Color
+let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
 
 // admin credentials
 const adminUsername = "bian";
@@ -38,7 +41,6 @@ if (trimmed === adminUsername) {
 }
 
 const identityKey = cleanName || username.replace(/\s+/g, "").toLowerCase();
-
 const adminIconSrc = "purplestar.png"; 
 
 function addAdminIcon(p, messageUsername) {
@@ -51,6 +53,7 @@ function addAdminIcon(p, messageUsername) {
   }
 }
 
+// Fallback color generator
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -68,6 +71,13 @@ const timerEl = document.getElementById("timeout-timer");
 const typingIndicator = document.getElementById("typing-indicator");
 const charCounter = document.getElementById("char-counter");
 
+// Settings Elements
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettings = document.getElementById('close-settings');
+const colorPicker = document.getElementById('color-picker');
+const colorPreview = document.getElementById('color-preview');
+
 const openGameBtn = document.getElementById("open-game");
 
 const gifBtn = document.getElementById('gif-btn');
@@ -80,6 +90,27 @@ const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
 
 chatInput.focus();
+
+// --- SETTINGS LOGIC ---
+if (settingsBtn) {
+  // Initialize picker with saved color
+  colorPicker.value = myColor;
+  colorPreview.style.color = myColor;
+
+  settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
+  closeSettings.onclick = () => { settingsModal.style.display = 'none'; };
+
+  colorPicker.addEventListener('input', (e) => {
+    myColor = e.target.value;
+    colorPreview.style.color = myColor;
+    localStorage.setItem("chat_username_color", myColor);
+  });
+  
+  // Close modal if clicking outside
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) settingsModal.style.display = 'none';
+  });
+}
 
 if (openGameBtn) {
   openGameBtn.addEventListener("click", () => {
@@ -139,7 +170,6 @@ const myGifs = [
   "gifs/21.gif", "gifs/22.gif", "gifs/23.gif", "gifs/24.gif", "gifs/25.gif"
 ];
 
-// UPDATED: Now points to emojis/ folder
 const myEmojis = [
   "emojis/e1.png", "emojis/e2.png", "emojis/e3.png", "emojis/e4.png", "emojis/e5.png",
   "emojis/e6.png", "emojis/e7.png", "emojis/e8.png", "emojis/e9.png", "emojis/e10.png"
@@ -164,6 +194,7 @@ function populateVault(container, items) {
       messagesRef.push({ 
         text: url, 
         username: username, 
+        color: myColor, // Send color
         timestamp: Date.now(),
         fingerprint: deviceID
       });
@@ -203,9 +234,7 @@ const MAX_CHARS = 2000;
 chatInput.addEventListener("input", () => {
     const currentLength = chatInput.value.length;
     const remaining = MAX_CHARS - currentLength;
-    
     charCounter.textContent = remaining;
-    
     if (remaining < 0) {
         charCounter.classList.add("limit-exceeded");
         sendChat.disabled = true;
@@ -215,18 +244,14 @@ chatInput.addEventListener("input", () => {
     }
 });
 
-// ---------------------- ANTI-SPAM (RATE LIMITING) ----------------------
+// ---------------------- ANTI-SPAM ----------------------
 let spamTimestamps = [];
 let isRateLimited = false;
 
 function checkRateLimit() {
     const now = Date.now();
-    // Remove timestamps older than 5 seconds
     spamTimestamps = spamTimestamps.filter(t => t > now - 5000);
-    
-    if (spamTimestamps.length >= 10) {
-        return true;
-    }
+    if (spamTimestamps.length >= 10) return true;
     spamTimestamps.push(now);
     return false;
 }
@@ -236,34 +261,26 @@ sendChat.addEventListener("click", () => {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  // 1. Character Limit Check
   if (text.length > MAX_CHARS) {
     alert("Message too long! Remove characters.");
     return;
   }
-
-  // 2. Loading Safety Check
   if (timeouts === null) {
     console.log("Still loading data...");
     return; 
   }
-
-  // 3. Server Timeout Check
   const myTimeout = timeouts[deviceID]; 
   if (myTimeout && myTimeout.until > Date.now()) {
     alert("you're timed out.");
     return;
   }
-  
-  // 4. Local Rate Limit Check
-  if (isRateLimited) return; // Already blocked
+  if (isRateLimited) return;
 
   if (checkRateLimit()) {
       isRateLimited = true;
       alert("You are being rate limited (too fast!). Cooling down for 3 seconds.");
       sendChat.disabled = true;
       chatInput.disabled = true;
-      
       setTimeout(() => {
           isRateLimited = false;
           sendChat.disabled = false;
@@ -276,39 +293,76 @@ sendChat.addEventListener("click", () => {
   messagesRef.push({ 
     text: text, 
     username: username, 
+    color: myColor, // Send custom color
     timestamp: Date.now(),
     fingerprint: deviceID
   });
   
   chatInput.value = "";
-  charCounter.textContent = MAX_CHARS; // Reset counter
+  charCounter.textContent = MAX_CHARS; 
   typingRef.child(identityKey).remove();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
-// ---------------------- MESSAGES & ENDLESS SCROLL ----------------------
-// Track the oldest message we currently have loaded
+// ---------------------- MESSAGES (FIXED GHOST BUG) ----------------------
 let oldestLoadedKey = null;
 
-// Initial Load: Last 50 messages
-// We use limitToLast(50) so we don't crash browsers with 5000 messages
+// Helper to check if element is scrolled to bottom
+function isNearBottom() {
+  return chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200;
+}
+
+// Listener: Insert messages in Correct Order
 messagesRef.limitToLast(50).on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
-  
-  // If this is the very first message we load, save its key for scrolling up later
+
+  // Prevent duplicates
+  if (document.querySelector(`[data-key="${msgKey}"]`)) return;
+
+  // Track the oldest key for infinite scroll
   if (!oldestLoadedKey) oldestLoadedKey = msgKey;
 
   const p = createMessageElement(msg, msgKey);
-  chatMessages.appendChild(p);
-  
-  // Auto-scroll to bottom only if we are already near the bottom
-  // (Prevents snapping down if user is reading history)
-  if (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200) {
+  const children = Array.from(chatMessages.children);
+  const wasNearBottom = isNearBottom();
+
+  if (children.length === 0) {
+    chatMessages.appendChild(p);
+  } else {
+    // Determine where to insert based on key (chronological order)
+    const firstChild = children[0];
+    const lastChild = children[children.length - 1];
+
+    if (msgKey > lastChild.dataset.key) {
+      // It's newer than the last message -> Append to bottom
+      chatMessages.appendChild(p);
+    } else if (msgKey < firstChild.dataset.key) {
+      // It's older than the first message -> Prepend to top
+      // (This handles the "Ghost Message" backfill logic)
+      chatMessages.insertBefore(p, firstChild);
+      oldestLoadedKey = msgKey; // Update tracking
+    } else {
+      // It belongs somewhere in the middle
+      let inserted = false;
+      for (let i = 0; i < children.length; i++) {
+        if (msgKey < children[i].dataset.key) {
+          chatMessages.insertBefore(p, children[i]);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) chatMessages.appendChild(p);
+    }
+  }
+
+  // Only scroll down if it was a NEW message and user was at bottom
+  if (wasNearBottom && msgKey > (children.length ? children[children.length-1].dataset.key : "")) {
       chatMessages.scrollTop = chatMessages.scrollHeight;
-  } else if (!oldestLoadedKey || chatMessages.children.length <= 50) {
-      // Force scroll on initial load
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  // Force scroll on very first load
+  if (children.length < 2) {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 });
 
@@ -332,7 +386,9 @@ function createMessageElement(msg, msgKey) {
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
-    userSpan.style.color = stringToColor(msg.username);
+    
+    // USE CUSTOM COLOR IF EXISTS, ELSE HASH
+    userSpan.style.color = msg.color ? msg.color : stringToColor(msg.username);
 
     const contentDiv = document.createElement("div");
     contentDiv.className = "msg-content";
@@ -389,46 +445,45 @@ function createMessageElement(msg, msgKey) {
   return p;
 }
 
-// ENDLESS SCROLL LISTENER
+// ENDLESS SCROLL LISTENER (Modified to work with new sorted insert)
 chatMessages.addEventListener("scroll", () => {
-    // If scrolled to top and we have a key to load from
     if (chatMessages.scrollTop === 0 && oldestLoadedKey) {
         loadOldMessages();
     }
 });
 
 function loadOldMessages() {
-    // Load 50 messages ending BEFORE the current oldest key
     messagesRef.orderByKey().endBefore(oldestLoadedKey).limitToLast(50).once("value", (snapshot) => {
-        if (!snapshot.exists()) return; // No more messages
+        if (!snapshot.exists()) return;
         
         const oldHeight = chatMessages.scrollHeight;
-        const fragment = document.createDocumentFragment();
         let newOldest = oldestLoadedKey;
-
-        // Snapshot comes in order (Old -> New), so we collect them
-        // We prepend them in order before the first child
         const messages = [];
+        
         snapshot.forEach(child => {
             messages.push({ key: child.key, val: child.val() });
         });
 
-        if (messages.length > 0) {
-            newOldest = messages[0].key; // Update the marker
-        }
+        if (messages.length > 0) newOldest = messages[0].key;
 
-        messages.forEach(item => {
-            const p = createMessageElement(item.val, item.key);
-            fragment.appendChild(p);
+        // Since we are loading history, we just insert them at the top in order
+        messages.reverse().forEach(item => { // Reverse because we want to prepend newest first of this batch? 
+            // Actually, we should just iterate normally and prepend, but order matters.
+            // Let's rely on standard loop but prepend:
+            // messages is [Oldest -> Newest]. 
         });
 
-        // Insert at the very top
+        // Better way: DocumentFragment + Prepend
+        const fragment = document.createDocumentFragment();
+        messages.forEach(item => {
+           const p = createMessageElement(item.val, item.key);
+           fragment.appendChild(p);
+        });
+
+        // Insert before the first child
         chatMessages.insertBefore(fragment, chatMessages.firstChild);
 
-        // Update key tracker
         oldestLoadedKey = newOldest;
-
-        // Restore scroll position so it doesn't jump to the top
         chatMessages.scrollTop = chatMessages.scrollHeight - oldHeight;
     });
 }
@@ -442,14 +497,11 @@ db.ref("timeouts").on("value", (snapshot) => {
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
   if (!timeouts) return; 
-
   const myStatus = timeouts[deviceID]; 
-
   if (!myStatus || myStatus.until <= Date.now()) { 
     timerEl.textContent = ""; 
     return; 
   }
-  
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
     timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
@@ -474,7 +526,6 @@ chatInput.addEventListener('input', () => {
   if (timeouts && timeouts[deviceID] && timeouts[deviceID].until > Date.now()) return;
 
   typingRef.child(identityKey).set({ name: username, time: Date.now() });
-  
   typingRef.child(identityKey).onDisconnect().remove();
 
   clearTimeout(typeTimeout);
@@ -489,11 +540,8 @@ let dots = 1;
 typingRef.on('value', (snapshot) => {
   const data = snapshot.val() || {};
   currentTypers = [];
-  
   Object.keys(data).forEach(key => {
-    if (key !== identityKey) { 
-      currentTypers.push(data[key].name);
-    }
+    if (key !== identityKey) currentTypers.push(data[key].name);
   });
   updateTypingText();
 });
@@ -510,7 +558,6 @@ function updateTypingText() {
     typingIndicator.style.display = "none";
     return;
   }
-  
   typingIndicator.style.display = "block";
   const dotStr = ".".repeat(dots);
   
@@ -557,17 +604,30 @@ const schedules = {
   ]
 };
 
-const minDates = ["2026-02-18", "2026-02-20", "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"];
+// ADDED YOUR DATES HERE
+const minDates = [
+    "2026-02-18", "2026-02-20", 
+    "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"
+];
 
 function updateClock() {
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  // Using simplified date string matching to avoid timezone mess
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${d}`;
+  
   const time = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
   const day = now.getDay();
   
   let sched = schedules.regular;
-  if (minDates.includes(dateStr)) sched = schedules.minimum;
-  else if (day === 2) sched = schedules.tuesday;
+  
+  if (minDates.includes(dateStr)) {
+      sched = schedules.minimum;
+  } else if (day === 2) {
+      sched = schedules.tuesday;
+  }
 
   const startLimit = parseTime("07:55");
   const endLimit = parseTime(sched[sched.length - 1].e);
