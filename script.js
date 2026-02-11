@@ -15,6 +15,8 @@ const cleanName = trimmed.replace(/\s+/g, "").toLowerCase();
 
 // Load Saved Color
 let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
+// Load Cursor Preference
+let showCursors = localStorage.getItem("chat_show_cursors") !== "false"; // Default true
 
 // admin credentials
 const adminUsername = "bian";
@@ -34,6 +36,10 @@ if (trimmed === adminUsername) {
     username = adminUsername;
     const toggleBtn = document.getElementById('admin-toggle');
     if(toggleBtn) toggleBtn.style.display = 'flex'; 
+    const viewSuggBtn = document.getElementById('view-suggestions-btn');
+    if(viewSuggBtn) viewSuggBtn.style.display = 'inline-block';
+    const clearBtn = document.getElementById('clear-chat');
+    if(clearBtn) clearBtn.style.display = "inline-block";
   } else {
     alert("just kidding, you are NOT the real bian, loser.");
     username = "fake bian (loser)";
@@ -62,7 +68,7 @@ function stringToColor(str) {
   return color;
 }
 
-// ---------------------- UI ELEMENTS & FIREBASE SETUP ----------------------
+// ---------------------- UI ELEMENTS ----------------------
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
@@ -71,20 +77,31 @@ const timerEl = document.getElementById("timeout-timer");
 const typingIndicator = document.getElementById("typing-indicator");
 const charCounter = document.getElementById("char-counter");
 
-// Settings Elements
+// Settings
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettings = document.getElementById('close-settings');
 const colorPicker = document.getElementById('color-picker');
 const colorPreview = document.getElementById('color-preview');
+const toggleCursorsCheckbox = document.getElementById('toggle-cursors');
+
+// Suggestion Box
+const suggestionBtn = document.getElementById('suggestion-btn');
+const suggestionModal = document.getElementById('suggestion-modal');
+const closeSuggestion = document.getElementById('close-suggestion');
+const suggestionInput = document.getElementById('suggestion-input');
+const submitSuggestion = document.getElementById('submit-suggestion');
+const suggCharCount = document.getElementById('sugg-char-count');
+const adminSuggPanel = document.getElementById('admin-suggestions-panel');
+const viewSuggBtn = document.getElementById('view-suggestions-btn');
+const closeAdminSugg = document.getElementById('close-admin-suggestions');
+const suggestionList = document.getElementById('suggestion-list');
 
 const openGameBtn = document.getElementById("open-game");
-
 const gifBtn = document.getElementById('gif-btn');
 const emojiBtn = document.getElementById('emoji-btn');
 const gifVault = document.getElementById('gif-vault');
 const emojiVault = document.getElementById('emoji-vault');
-
 const adminToggle = document.getElementById('admin-toggle');
 const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
@@ -93,9 +110,9 @@ chatInput.focus();
 
 // --- SETTINGS LOGIC ---
 if (settingsBtn) {
-  // Initialize picker with saved color
   colorPicker.value = myColor;
   colorPreview.style.color = myColor;
+  toggleCursorsCheckbox.checked = showCursors;
 
   settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
   closeSettings.onclick = () => { settingsModal.style.display = 'none'; };
@@ -105,13 +122,200 @@ if (settingsBtn) {
     colorPreview.style.color = myColor;
     localStorage.setItem("chat_username_color", myColor);
   });
+
+  toggleCursorsCheckbox.addEventListener('change', (e) => {
+    showCursors = e.target.checked;
+    localStorage.setItem("chat_show_cursors", showCursors);
+    // Hide cursors immediately if turned off
+    const layer = document.getElementById('cursor-layer');
+    if (!showCursors) layer.innerHTML = ''; 
+  });
   
-  // Close modal if clicking outside
   settingsModal.addEventListener('click', (e) => {
     if (e.target === settingsModal) settingsModal.style.display = 'none';
   });
 }
 
+// --- SUGGESTION BOX LOGIC ---
+if (suggestionBtn) {
+    suggestionBtn.onclick = () => { suggestionModal.style.display = 'flex'; };
+    closeSuggestion.onclick = () => { suggestionModal.style.display = 'none'; };
+    suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) suggestionModal.style.display = 'none'; });
+
+    suggestionInput.addEventListener('input', () => {
+        suggCharCount.textContent = 1000 - suggestionInput.value.length;
+    });
+
+    submitSuggestion.onclick = () => {
+        const text = suggestionInput.value.trim();
+        if (!text) return;
+        
+        // 30 min cooldown check
+        const lastSent = localStorage.getItem('sugg_last_sent');
+        if (lastSent) {
+            const diff = Date.now() - parseInt(lastSent);
+            if (diff < 30 * 60 * 1000) {
+                const minsLeft = Math.ceil((30 * 60 * 1000 - diff) / 60000);
+                alert(`Please wait ${minsLeft} minutes before sending another suggestion.`);
+                return;
+            }
+        }
+
+        db.ref('suggestions').push({
+            username: username,
+            text: text,
+            timestamp: Date.now()
+        });
+
+        localStorage.setItem('sugg_last_sent', Date.now());
+        alert("Suggestion sent! Thanks for the idea.");
+        suggestionInput.value = "";
+        suggestionModal.style.display = 'none';
+    };
+}
+
+// --- ADMIN VIEW SUGGESTIONS ---
+if (isAdmin) {
+    if (viewSuggBtn) {
+        viewSuggBtn.onclick = () => {
+            adminSuggPanel.style.display = (adminSuggPanel.style.display === 'none') ? 'block' : 'none';
+        };
+    }
+    if (closeAdminSugg) {
+        closeAdminSugg.onclick = () => { adminSuggPanel.style.display = 'none'; };
+    }
+
+    db.ref('suggestions').on('child_added', (snapshot) => {
+        const s = snapshot.val();
+        const key = snapshot.key;
+        
+        const card = document.createElement('div');
+        card.className = "suggestion-card";
+        card.innerHTML = `
+            <div class="sugg-meta">
+                <span><b>${s.username}</b></span>
+                <span>${new Date(s.timestamp).toLocaleTimeString()}</span>
+            </div>
+            <div class="sugg-text">${s.text}</div>
+            <div style="text-align:right; margin-top:5px;">
+                <button class="sugg-del" onclick="deleteSuggestion('${key}')">Delete</button>
+            </div>
+        `;
+        card.id = `sugg-${key}`;
+        suggestionList.prepend(card);
+    });
+
+    db.ref('suggestions').on('child_removed', (snapshot) => {
+        const el = document.getElementById(`sugg-${snapshot.key}`);
+        if(el) el.remove();
+    });
+
+    window.deleteSuggestion = function(key) {
+        if(confirm("Delete this suggestion?")) {
+            db.ref('suggestions').child(key).remove();
+        }
+    };
+}
+
+// ---------------------- MULTIPLAYER CURSORS ----------------------
+const cursorLayer = document.getElementById('cursor-layer');
+const cursorRef = db.ref('cursors');
+
+// Throttle function to limit Firebase writes
+function throttle(func, limit) {
+    let lastFunc;
+    let lastRan;
+    return function() {
+        const context = this;
+        const args = arguments;
+        if (!lastRan) {
+            func.apply(context, args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(lastFunc);
+            lastFunc = setTimeout(function() {
+                if ((Date.now() - lastRan) >= limit) {
+                    func.apply(context, args);
+                    lastRan = Date.now();
+                }
+            }, limit - (Date.now() - lastRan));
+        }
+    }
+}
+
+// Track mouse and send data (Max 10 times per second)
+document.addEventListener('mousemove', throttle((e) => {
+    // Calculate percentage position
+    const x = (e.clientX / window.innerWidth) * 100;
+    const y = (e.clientY / window.innerHeight) * 100;
+
+    cursorRef.child(deviceID).set({
+        x: x,
+        y: y,
+        username: username,
+        color: myColor,
+        timestamp: Date.now()
+    });
+}, 100));
+
+// Cleanup old cursors on disconnect
+cursorRef.child(deviceID).onDisconnect().remove();
+
+// Render Cursors
+cursorRef.on('value', (snapshot) => {
+    if (!showCursors) return;
+
+    const cursors = snapshot.val() || {};
+    const now = Date.now();
+
+    // Loop through known cursors
+    Object.keys(cursors).forEach(key => {
+        if (key === deviceID) return; // Don't show my own
+
+        const data = cursors[key];
+        
+        // Ghost cleanup: if older than 10 seconds, ignore/remove
+        if (now - data.timestamp > 10000) return;
+
+        let el = document.getElementById(`cursor-${key}`);
+        
+        if (!el) {
+            el = document.createElement('div');
+            el.id = `cursor-${key}`;
+            el.className = 'live-cursor';
+            // SVG Arrow
+            el.innerHTML = `
+                <svg class="cursor-svg" viewBox="0 0 24 24" fill="${data.color}">
+                    <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"/>
+                </svg>
+                <div class="cursor-nametag">${data.username}</div>
+            `;
+            cursorLayer.appendChild(el);
+        }
+
+        // Update position
+        el.style.left = data.x + "%";
+        el.style.top = data.y + "%";
+        
+        // Update color/name if changed
+        const svgPath = el.querySelector('path');
+        if(svgPath) svgPath.setAttribute('fill', data.color);
+        const nametag = el.querySelector('.cursor-nametag');
+        if(nametag) nametag.textContent = data.username;
+    });
+
+    // Remove DOM elements that are no longer in Firebase
+    const existingIds = Object.keys(cursors).map(k => `cursor-${k}`);
+    Array.from(cursorLayer.children).forEach(child => {
+        const key = child.id.replace('cursor-', '');
+        if (!cursors[key] || (now - cursors[key].timestamp > 10000)) {
+            child.remove();
+        }
+    });
+});
+
+
+// ---------------------- OTHER LOGIC (Game, Admin Toggle) ----------------------
 if (openGameBtn) {
   openGameBtn.addEventListener("click", () => {
     window.open("game.html", "_blank");
@@ -126,15 +330,6 @@ if (adminToggle) {
 
 if (closeSfx) closeSfx.onclick = () => soundBoard.style.display = 'none';
 
-if (isAdmin && clearChatBtn) clearChatBtn.style.display = "inline-block";
-
-const messagesRef = db.ref("messages");
-const soundRef = db.ref("global_sfx"); 
-const typingRef = db.ref("typing");
-
-let timeouts = null; 
-let timeoutInterval = null;
-
 if (isAdmin && clearChatBtn) {
   clearChatBtn.addEventListener("click", () => {
     if (confirm("Delete all messages?")) {
@@ -143,6 +338,14 @@ if (isAdmin && clearChatBtn) {
     }
   });
 }
+
+// ---------------------- FIREBASE REFS ----------------------
+const messagesRef = db.ref("messages");
+const soundRef = db.ref("global_sfx"); 
+const typingRef = db.ref("typing");
+
+let timeouts = null; 
+let timeoutInterval = null;
 
 // ---------------------- SOUNDBOARD LOGIC ----------------------
 const loadTime = Date.now();
@@ -194,7 +397,7 @@ function populateVault(container, items) {
       messagesRef.push({ 
         text: url, 
         username: username, 
-        color: myColor, // Send color
+        color: myColor, 
         timestamp: Date.now(),
         fingerprint: deviceID
       });
@@ -293,7 +496,7 @@ sendChat.addEventListener("click", () => {
   messagesRef.push({ 
     text: text, 
     username: username, 
-    color: myColor, // Send custom color
+    color: myColor, 
     timestamp: Date.now(),
     fingerprint: deviceID
   });
@@ -304,23 +507,18 @@ sendChat.addEventListener("click", () => {
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
-// ---------------------- MESSAGES (FIXED GHOST BUG) ----------------------
+// ---------------------- MESSAGES LOGIC ----------------------
 let oldestLoadedKey = null;
 
-// Helper to check if element is scrolled to bottom
 function isNearBottom() {
   return chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200;
 }
 
-// Listener: Insert messages in Correct Order
 messagesRef.limitToLast(50).on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
 
-  // Prevent duplicates
   if (document.querySelector(`[data-key="${msgKey}"]`)) return;
-
-  // Track the oldest key for infinite scroll
   if (!oldestLoadedKey) oldestLoadedKey = msgKey;
 
   const p = createMessageElement(msg, msgKey);
@@ -330,20 +528,15 @@ messagesRef.limitToLast(50).on("child_added", (snapshot) => {
   if (children.length === 0) {
     chatMessages.appendChild(p);
   } else {
-    // Determine where to insert based on key (chronological order)
     const firstChild = children[0];
     const lastChild = children[children.length - 1];
 
     if (msgKey > lastChild.dataset.key) {
-      // It's newer than the last message -> Append to bottom
       chatMessages.appendChild(p);
     } else if (msgKey < firstChild.dataset.key) {
-      // It's older than the first message -> Prepend to top
-      // (This handles the "Ghost Message" backfill logic)
       chatMessages.insertBefore(p, firstChild);
-      oldestLoadedKey = msgKey; // Update tracking
+      oldestLoadedKey = msgKey;
     } else {
-      // It belongs somewhere in the middle
       let inserted = false;
       for (let i = 0; i < children.length; i++) {
         if (msgKey < children[i].dataset.key) {
@@ -356,11 +549,9 @@ messagesRef.limitToLast(50).on("child_added", (snapshot) => {
     }
   }
 
-  // Only scroll down if it was a NEW message and user was at bottom
   if (wasNearBottom && msgKey > (children.length ? children[children.length-1].dataset.key : "")) {
       chatMessages.scrollTop = chatMessages.scrollHeight;
   }
-  // Force scroll on very first load
   if (children.length < 2) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -371,7 +562,6 @@ messagesRef.on("child_removed", (snapshot) => {
   if (msgEl) msgEl.remove();
 });
 
-// Helper function to create the message DOM element
 function createMessageElement(msg, msgKey) {
   const p = document.createElement("p");
   if (msg && msg.text) {
@@ -386,8 +576,6 @@ function createMessageElement(msg, msgKey) {
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
-    
-    // USE CUSTOM COLOR IF EXISTS, ELSE HASH
     userSpan.style.color = msg.color ? msg.color : stringToColor(msg.username);
 
     const contentDiv = document.createElement("div");
@@ -411,7 +599,6 @@ function createMessageElement(msg, msgKey) {
     p.appendChild(contentDiv);
   }
 
-  // Admin Controls
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
@@ -445,7 +632,6 @@ function createMessageElement(msg, msgKey) {
   return p;
 }
 
-// ENDLESS SCROLL LISTENER (Modified to work with new sorted insert)
 chatMessages.addEventListener("scroll", () => {
     if (chatMessages.scrollTop === 0 && oldestLoadedKey) {
         loadOldMessages();
@@ -455,34 +641,21 @@ chatMessages.addEventListener("scroll", () => {
 function loadOldMessages() {
     messagesRef.orderByKey().endBefore(oldestLoadedKey).limitToLast(50).once("value", (snapshot) => {
         if (!snapshot.exists()) return;
-        
         const oldHeight = chatMessages.scrollHeight;
         let newOldest = oldestLoadedKey;
         const messages = [];
-        
         snapshot.forEach(child => {
             messages.push({ key: child.key, val: child.val() });
         });
-
         if (messages.length > 0) newOldest = messages[0].key;
 
-        // Since we are loading history, we just insert them at the top in order
-        messages.reverse().forEach(item => { // Reverse because we want to prepend newest first of this batch? 
-            // Actually, we should just iterate normally and prepend, but order matters.
-            // Let's rely on standard loop but prepend:
-            // messages is [Oldest -> Newest]. 
-        });
-
-        // Better way: DocumentFragment + Prepend
         const fragment = document.createDocumentFragment();
         messages.forEach(item => {
            const p = createMessageElement(item.val, item.key);
            fragment.appendChild(p);
         });
 
-        // Insert before the first child
         chatMessages.insertBefore(fragment, chatMessages.firstChild);
-
         oldestLoadedKey = newOldest;
         chatMessages.scrollTop = chatMessages.scrollHeight - oldHeight;
     });
@@ -570,7 +743,7 @@ function updateTypingText() {
   }
 }
 
-// ---------------------- SCHOOL CLOCK ----------------------
+// ---------------------- SCHOOL CLOCK (Min Date Arrays) ----------------------
 const schedules = {
   regular: [
     { n: "ADVISORY", s: "08:00", e: "08:29" },
@@ -604,7 +777,6 @@ const schedules = {
   ]
 };
 
-// ADDED YOUR DATES HERE
 const minDates = [
     "2026-02-18", "2026-02-20", 
     "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"
@@ -612,7 +784,6 @@ const minDates = [
 
 function updateClock() {
   const now = new Date();
-  // Using simplified date string matching to avoid timezone mess
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
