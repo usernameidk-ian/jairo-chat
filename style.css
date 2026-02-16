@@ -346,3 +346,25 @@ body::before {
   font-size: 12px; color: #b9bbbe; margin-top: 4px; margin-bottom: 2px;
   margin-left: 2px; font-weight: bold; min-height: 15px; display: none;
 }
+
+/* ---------------------- AUTH & LOGIN STYLES ---------------------- */
+.auth-box { width: 340px; padding: 30px; box-sizing: border-box; }
+.auth-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: bold; color: #b9bbbe; letter-spacing: 0.5px; }
+.auth-input { 
+    width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; 
+    background: #1e1e24; border: 1px solid #202225; color: white; 
+    border-radius: 4px; font-size: 14px; outline: none; transition: 0.2s;
+}
+.auth-input:focus { border-color: #5865F2; }
+.auth-btn { 
+    width: 100%; padding: 12px; font-weight: bold; font-size: 16px; 
+    border-radius: 4px; border: none; cursor: pointer; transition: 0.2s; margin-bottom: 10px; 
+}
+.auth-btn.blurple { background: #5865F2; color: white; }
+.auth-btn.blurple:hover { background: #4752c4; }
+.auth-btn.outline { background: transparent; color: white; border: 1px solid #4f545c; }
+.auth-btn.outline:hover { background: #4f545c; }
+.auth-switch { text-align: left; font-size: 13px; color: #b9bbbe; margin-top: 10px; }
+.auth-switch span { color: #00aff4; cursor: pointer; font-weight: bold; }
+.auth-switch span:hover { text-decoration: underline; }
+.auth-error { color: #ed4245; font-size: 13px; margin-top: -10px; margin-bottom: 15px; min-height: 15px; font-weight: bold;}
