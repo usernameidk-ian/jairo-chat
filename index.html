@@ -6,6 +6,50 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  
+  <div id="auth-overlay" class="modal-overlay" style="display: flex; z-index: 10000; backdrop-filter: blur(10px); background: rgba(0,0,0,0.85);">
+    <div class="modal-content auth-box">
+      
+      <div id="auth-choice-view">
+        <h2 style="margin-top:0; text-align:center;">Welcome to jairo</h2>
+        
+        <div style="margin-top: 30px;">
+            <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 8px;">New here? Create an account below</p>
+            <button class="auth-btn blurple" id="btn-show-register">Create an account</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 8px;">Already have an account? Log in here.</p>
+            <button class="auth-btn outline" id="btn-show-login">Log in</button>
+        </div>
+      </div>
+
+      <div id="auth-login-view" style="display:none;">
+        <h2 style="margin-top:0; text-align:center;">Welcome back!</h2>
+        <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 20px;">We're so excited to see you again!</p>
+        <label class="auth-label">USERNAME</label>
+        <input type="text" id="login-user" class="auth-input" autocomplete="off" placeholder="Type your username here">
+        <label class="auth-label">PASSWORD</label>
+        <input type="password" id="login-pass" class="auth-input" placeholder="Type your password here">
+        <p id="login-err" class="auth-error"></p>
+        <button class="auth-btn blurple" id="btn-login-submit">Log In</button>
+        <p class="auth-switch">Need an account? <span id="link-to-register">Register</span></p>
+      </div>
+
+      <div id="auth-register-view" style="display:none;">
+        <h2 style="margin-top:0; text-align:center;">Create an account</h2>
+        <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 20px;">Claim your username forever.</p>
+        <label class="auth-label">USERNAME</label>
+        <input type="text" id="reg-user" class="auth-input" autocomplete="off" maxlength="20" placeholder="Type your username here">
+        <label class="auth-label">PASSWORD</label>
+        <input type="password" id="reg-pass" class="auth-input" placeholder="Type your password here">
+        <p id="reg-err" class="auth-error"></p>
+        <button class="auth-btn blurple" id="btn-reg-submit">Register</button>
+        <p class="auth-switch">Already have an account? <span id="link-to-login">Log In</span></p>
+      </div>
+
+    </div>
+  </div>
   <div id="cursor-layer"></div>
 
   <header class="topbar">
@@ -25,7 +69,7 @@
         <button id="close-sfx">✕</button>
       </div>
       <button onclick="triggerSound('s1')">huh?</button>
-      <button onclick="triggerSound('s2')">ayogama hahaha(laughing)</button>
+      <button onclick="triggerSound('s2')">ayogama hahaha</button>
       <button onclick="triggerSound('s3')">metal bar drop</button>
       <button onclick="triggerSound('s4')">helo hru im under the water</button>
       <button onclick="triggerSound('s5')">ishowspeed bark</button>
@@ -103,6 +147,9 @@
             <span style="color:#b9bbbe; font-size:14px;">Show Other Cursors</span>
         </div>
         <p class="note">Customize your experience.</p>
+        
+        <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
+        <button id="logout-btn" style="width:100%; padding:10px; background:#ed4245; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 14px;">Log Out</button>
       </div>
     </div>
   </div>
@@ -126,7 +173,6 @@
 
   <audio id="bgm" loop>
     <source src="nothingyet.mp3" type="audio/mpeg" />
-    Your browser does not support audio.
   </audio>
 
   <audio id="sfx-player"></audio>
