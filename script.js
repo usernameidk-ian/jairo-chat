@@ -18,7 +18,7 @@ let identityKey = "";
 let isAdmin = false;
 
 // ADMIN CREDENTIALS
-const adminUsername = "testjairo";
+const adminUsername = "bian";
 const adminPassword = "hehehahahehehaha";
 
 const authOverlay = document.getElementById('auth-overlay');
