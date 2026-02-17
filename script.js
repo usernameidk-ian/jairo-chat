@@ -19,7 +19,7 @@ let isAdmin = false;
 
 // ADMIN CREDENTIALS
 const adminUsername = "JAIRO";
-const adminPassword = "jairo123";
+const adminPassword = "computer0901";
 
 const authOverlay = document.getElementById('auth-overlay');
 const viewChoice = document.getElementById('auth-choice-view');
