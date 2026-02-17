@@ -368,3 +368,51 @@ body::before {
 .auth-switch span { color: #00aff4; cursor: pointer; font-weight: bold; }
 .auth-switch span:hover { text-decoration: underline; }
 .auth-error { color: #ed4245; font-size: 13px; margin-top: -10px; margin-bottom: 15px; min-height: 15px; font-weight: bold;}
+
+/* ---------------------- AUTH UPDATES ---------------------- */
+.auth-box { background: #000000 !important; }
+.auth-label, .auth-switch { color: #ffffff !important; }
+.auth-btn.yellow-btn { background: #ffcc00 !important; color: #000 !important; }
+.auth-btn.yellow-btn:hover { background: #ffaa00 !important; }
+
+/* ---------------------- DRAWING FEATURE ---------------------- */
+#drawing-layer {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 50;
+}
+#drawing-layer path {
+  pointer-events: stroke; cursor: crosshair; transition: opacity 0.2s;
+}
+#drawing-layer path:hover { opacity: 0.7; }
+
+body.drawing-mode-active {
+  /* Requires you to have a custom cursor PNG named draw-cursor.png in your folder */
+  cursor: url('draw-cursor.png') 0 20, crosshair !important;
+}
+
+#draw-toggle-btn.active {
+  background: #007bff !important; border-color: #0056b3 !important; color: white !important;
+}
+
+#draw-tools {
+  display: none; position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 8px; z-index: 2000;
+  border: 1px solid #ffcc00; gap: 15px; color: white; align-items: center; justify-content: center;
+}
+#draw-tools input[type="color"] { background: none; border: none; cursor: pointer; height: 30px; }
+
+.draw-tooltip {
+  display: none; position: fixed; background: rgba(0,0,0,0.9); color: #fff;
+  padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 2500;
+  border: 1px solid #ffcc00; font-weight: bold;
+}
+
+.admin-draw-menu {
+  display: none; position: fixed; background: #2f3136; border: 1px solid #ffcc00;
+  padding: 8px; border-radius: 6px; z-index: 3000; display: flex; flex-direction: column; gap: 6px;
+}
+.admin-draw-menu button {
+  border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;
+}
+#del-draw-btn { background: #ed4245; color: white; }
+#time-draw-btn { background: #ffcc00; color: black; }
