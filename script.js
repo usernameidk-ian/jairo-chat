@@ -18,8 +18,8 @@ let identityKey = "";
 let isAdmin = false;
 
 // ADMIN CREDENTIALS
-const adminUsername = "JAIROO";
-const adminPassword = "jairo12345";
+const adminUsername = "bian";
+const adminPassword = "hehehahahehehaha";
 
 const authOverlay = document.getElementById('auth-overlay');
 const viewChoice = document.getElementById('auth-choice-view');
