@@ -7,62 +7,72 @@
 </head>
 <body>
   
-  <div id="auth-overlay" class="modal-overlay" style="display: flex; z-index: 10000; backdrop-filter: blur(10px); background: rgba(0,0,0,0.85);">
+  <div id="auth-overlay" class="modal-overlay" style="display: flex; z-index: 10000; background: #000;">
     <div class="modal-content auth-box">
       
       <div id="auth-choice-view">
-        <h2 style="margin-top:0; text-align:center;">Welcome to jairo</h2>
-        
+        <h2 style="margin-top:0; text-align:center; color:#fff;">welcome to jairo chat</h2>
         <div style="margin-top: 30px;">
-            <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 8px;">New here? Create an account below</p>
-            <button class="auth-btn blurple" id="btn-show-register">Create an account</button>
+            <p style="text-align:center; color:#fff; font-size: 14px; margin-bottom: 8px;">New here? Create an account below</p>
+            <button class="auth-btn yellow-btn" id="btn-show-register">Create an account</button>
         </div>
-
         <div style="margin-top: 20px;">
-            <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 8px;">Already have an account? Log in here.</p>
+            <p style="text-align:center; color:#fff; font-size: 14px; margin-bottom: 8px;">Already have an account? Log in here.</p>
             <button class="auth-btn outline" id="btn-show-login">Log in</button>
         </div>
       </div>
 
       <div id="auth-login-view" style="display:none;">
-        <h2 style="margin-top:0; text-align:center;">Welcome back!</h2>
-        <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 20px;">We're so excited to see you again!</p>
+        <h2 style="margin-top:0; text-align:center; color:#fff;">Welcome back!</h2>
+        <p style="text-align:center; color:#fff; font-size: 14px; margin-bottom: 20px;">We're so excited to see you again!</p>
         <label class="auth-label">USERNAME</label>
         <input type="text" id="login-user" class="auth-input" autocomplete="off" placeholder="Type your username here">
         <label class="auth-label">PASSWORD</label>
         <input type="password" id="login-pass" class="auth-input" placeholder="Type your password here">
         <p id="login-err" class="auth-error"></p>
-        <button class="auth-btn blurple" id="btn-login-submit">Log In</button>
+        <button class="auth-btn yellow-btn" id="btn-login-submit">Log In</button>
         <p class="auth-switch">Need an account? <span id="link-to-register">Register</span></p>
       </div>
 
       <div id="auth-register-view" style="display:none;">
-        <h2 style="margin-top:0; text-align:center;">Create an account</h2>
-        <p style="text-align:center; color:#b9bbbe; font-size: 14px; margin-bottom: 20px;">Claim your username forever.</p>
+        <h2 style="margin-top:0; text-align:center; color:#fff;">Create an account</h2>
+        <p style="text-align:center; color:#fff; font-size: 14px; margin-bottom: 20px;">Claim your username forever.</p>
         <label class="auth-label">USERNAME</label>
         <input type="text" id="reg-user" class="auth-input" autocomplete="off" maxlength="20" placeholder="Type your username here">
         <label class="auth-label">PASSWORD</label>
         <input type="password" id="reg-pass" class="auth-input" placeholder="Type your password here">
         <p id="reg-err" class="auth-error"></p>
-        <button class="auth-btn blurple" id="btn-reg-submit">Register</button>
+        <button class="auth-btn yellow-btn" id="btn-reg-submit">Register</button>
         <p class="auth-switch">Already have an account? <span id="link-to-login">Log In</span></p>
       </div>
-
     </div>
   </div>
+
   <div id="cursor-layer"></div>
+  
+  <svg id="drawing-layer" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice"></svg>
+  <div id="draw-tooltip" class="draw-tooltip"></div>
+  <div id="admin-draw-menu" class="admin-draw-menu">
+      <button id="del-draw-btn">❌ Delete</button>
+      <button id="time-draw-btn">⏱️ Timeout Drawer</button>
+  </div>
 
   <header class="topbar">
     <h1>yapping (chat) - QOL Update</h1>
     <div class="controls">
+      <button id="draw-toggle-btn" title="Toggle Drawing Mode">🎨</button>
       <button id="suggestion-btn" title="Submit a Suggestion">📬</button>
       <button id="settings-btn">⚙️ Settings</button>
       <button id="open-game" title="Open the game in a new tab">Play Game</button>
     </div>
   </header>
 
+  <div id="draw-tools">
+      <label>Color: <input type="color" id="draw-color" value="#ffffff"></label>
+      <label>Thickness: <input type="range" id="draw-thickness" min="3" max="25" value="6"></label>
+  </div>
+
   <div class="container">
-    
     <div id="admin-soundboard" class="soundboard" style="display:none;">
       <div class="sb-header">
         <h3>Admin SFX</h3>
@@ -106,15 +116,10 @@
       </div>
 
       <div id="chat-messages" class="chat-messages"></div>
-
       <div id="typing-indicator" class="typing-indicator"></div>
 
-      <div id="gif-vault" class="media-popup">
-        <div class="media-grid" id="gif-list"></div>
-      </div>
-      <div id="emoji-vault" class="media-popup">
-        <div class="media-grid" id="emoji-list"></div>
-      </div>
+      <div id="gif-vault" class="media-popup"><div class="media-grid" id="gif-list"></div></div>
+      <div id="emoji-vault" class="media-popup"><div class="media-grid" id="emoji-list"></div></div>
 
       <div class="chat-input-row">
         <button id="gif-btn" class="icon-btn"><img src="gificon.png" alt="GIF"></button>
@@ -123,7 +128,6 @@
         <div id="char-counter">2000</div>
         <button id="send-chat">Send</button>
       </div>
-
       <p id="timeout-timer" class="timeout-timer"></p>
     </main>
   </div>
@@ -142,12 +146,15 @@
         </div>
         <br>
         <label>Visuals:</label>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
             <input type="checkbox" id="toggle-cursors" checked>
-            <span style="color:#b9bbbe; font-size:14px;">Show Other Cursors</span>
+            <span style="color:#fff; font-size:14px;">Show Other Cursors</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="toggle-drawings" checked>
+            <span style="color:#fff; font-size:14px;">Show Drawings</span>
         </div>
         <p class="note">Customize your experience.</p>
-        
         <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
         <button id="logout-btn" style="width:100%; padding:10px; background:#ed4245; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 14px;">Log Out</button>
       </div>
@@ -163,36 +170,21 @@
       <div class="modal-body">
         <p style="font-size:12px; color:#aaa; margin-top:0;">Only the Admin will see this.</p>
         <textarea id="suggestion-input" maxlength="1000" placeholder="Type your idea here..." style="width:100%; height:100px; background:#202225; color:white; border:1px solid #4f545c; border-radius:4px; padding:5px; resize:none;"></textarea>
-        <div style="text-align:right; font-size:10px; color:#777; margin-bottom:10px;">
-            <span id="sugg-char-count">1000</span> chars left
-        </div>
+        <div style="text-align:right; font-size:10px; color:#777; margin-bottom:10px;"><span id="sugg-char-count">1000</span> chars left</div>
         <button id="submit-suggestion" style="width:100%; padding:10px; background:#5865F2; color:white; border:none; border-radius:4px; cursor:pointer;">Submit Idea</button>
       </div>
     </div>
   </div>
 
-  <audio id="bgm" loop>
-    <source src="nothingyet.mp3" type="audio/mpeg" />
-  </audio>
-
+  <audio id="bgm" loop><source src="nothingyet.mp3" type="audio/mpeg" /></audio>
   <audio id="sfx-player"></audio>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw",
-      authDomain: "cookie-clicker-chat.firebaseapp.com",
-      databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com",
-      projectId: "cookie-clicker-chat",
-      storageBucket: "cookie-clicker-chat.firebasestorage.app",
-      messagingSenderId: "758507208645",
-      appId: "1:758507208645:web:068b66b4eb6ab4753555ac"
-    };
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const firebaseConfig = { apiKey: "AIzaSyA0tbUqzIN1klxMykCcI9rg1a2EVZqMbtw", authDomain: "cookie-clicker-chat.firebaseapp.com", databaseURL: "https://cookie-clicker-chat-default-rtdb.firebaseio.com", projectId: "cookie-clicker-chat", storageBucket: "cookie-clicker-chat.firebasestorage.app", messagingSenderId: "758507208645", appId: "1:758507208645:web:068b66b4eb6ab4753555ac" };
+    const app = firebase.initializeApp(firebaseConfig); const db = firebase.database();
   </script>
-
   <script src="script.js"></script>
 </body>
 </html>
