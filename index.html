@@ -49,10 +49,7 @@
   </div>
 
   <div id="cursor-layer"></div>
-  
-  <svg id="drawing-layer" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice"></svg>
-  <div id="draw-tooltip" class="draw-tooltip"></div>
-  <div id="admin-draw-menu" class="admin-draw-menu">
+
       <button id="del-draw-btn">❌ Delete</button>
       <button id="time-draw-btn">⏱️ Timeout Drawer</button>
   </div>
@@ -60,17 +57,11 @@
   <header class="topbar">
     <h1>yapping (chat) - QOL Update</h1>
     <div class="controls">
-      <button id="draw-toggle-btn" title="Toggle Drawing Mode">🎨</button>
       <button id="suggestion-btn" title="Submit a Suggestion">📬</button>
       <button id="settings-btn">⚙️ Settings</button>
       <button id="open-game" title="Open the game in a new tab">Play Game</button>
     </div>
   </header>
-
-  <div id="draw-tools">
-      <label>Color: <input type="color" id="draw-color" value="#ffffff"></label>
-      <label>Thickness: <input type="range" id="draw-thickness" min="3" max="25" value="6"></label>
-  </div>
 
   <div class="container">
     <div id="admin-soundboard" class="soundboard" style="display:none;">
@@ -150,9 +141,6 @@
             <input type="checkbox" id="toggle-cursors" checked>
             <span style="color:#fff; font-size:14px;">Show Other Cursors</span>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <input type="checkbox" id="toggle-drawings" checked>
-            <span style="color:#fff; font-size:14px;">Show Drawings</span>
         </div>
         <p class="note">Customize your experience.</p>
         <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
