@@ -21,6 +21,10 @@ let isAdmin = false;
 const adminUsername = "testjairo";
 const adminPassword = "hehehahahehehaha";
 
+// test 2nd admin
+const adminUsername = "bian";
+const adminPassword = "hehehaha";
+
 const authOverlay = document.getElementById('auth-overlay');
 const viewChoice = document.getElementById('auth-choice-view');
 const viewLogin = document.getElementById('auth-login-view');
