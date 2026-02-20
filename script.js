@@ -17,9 +17,11 @@ let cleanName = "";
 let identityKey = "";
 let isAdmin = false;
 
-// ADMIN CREDENTIALS
-const adminUsername = "bian";
-const adminPassword = "hehehahahehehaha";
+// ADMIN CREDENTIALS & BADGES
+const admins = {
+  "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
+  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" }
+};
 
 const authOverlay = document.getElementById('auth-overlay');
 const viewChoice = document.getElementById('auth-choice-view');
@@ -38,8 +40,8 @@ document.getElementById('btn-reg-submit').onclick = () => {
     const p = document.getElementById('reg-pass').value;
     const err = document.getElementById('reg-err');
     
-    if(!u || !p) { err.textContent = "Fill in both fields!"; return; }
-    if(u.toLowerCase() === adminUsername) { err.textContent = "This username is reserved!"; return; }
+        if(!u || !p) { err.textContent = "Fill in both fields!"; return; }
+    if(admins[u.toLowerCase()]) { err.textContent = "This username is reserved!"; return; }
 
     const cName = u.replace(/\s+/g, "").toLowerCase();
     
@@ -65,9 +67,10 @@ document.getElementById('btn-login-submit').onclick = () => {
     if(!u || !p) { err.textContent = "Fill in both fields!"; return; }
     
     // Admin Override
-    if(u.toLowerCase() === adminUsername) {
-        if (p === adminPassword) {
-            completeLogin(adminUsername, true);
+    const lowerU = u.toLowerCase();
+    if(admins[lowerU]) {
+        if (p === admins[lowerU].password) {
+            completeLogin(u, true);
         } else {
             err.textContent = "Incorrect admin password!";
         }
@@ -91,49 +94,18 @@ document.getElementById('btn-login-submit').onclick = () => {
     });
 };
 
-// Complete Login Process
-function completeLogin(uname, forceAdmin = false) {
-    username = uname;
-    cleanName = username.replace(/\s+/g, "").toLowerCase();
-    identityKey = cleanName;
-    
-    localStorage.setItem('chat_logged_in_user', username);
-    authOverlay.style.display = 'none';
-    
-    // Admin UI unlocks
-    if (cleanName === adminUsername || forceAdmin) {
-        isAdmin = true;
-        const toggleBtn = document.getElementById('admin-toggle');
-        if(toggleBtn) toggleBtn.style.display = 'flex'; 
-        const viewSuggBtn = document.getElementById('view-suggestions-btn');
-        if(viewSuggBtn) viewSuggBtn.style.display = 'inline-block';
-        const clearBtn = document.getElementById('clear-chat');
-        if(clearBtn) clearBtn.style.display = "inline-block";
-    }
-}
 
-// Auto-Login Check on Refresh
-const savedUser = localStorage.getItem('chat_logged_in_user');
-if(savedUser) {
-    if(savedUser.toLowerCase() === adminUsername) {
-        authOverlay.style.display = 'flex'; viewChoice.style.display = 'none'; viewLogin.style.display = 'block';
-    } else {
-        completeLogin(savedUser);
-    }
-} else {
-    authOverlay.style.display = 'flex';
-}
 
 // ---------------------- 3. USER SETTINGS & VISUALS ----------------------
 let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
 let showCursors = localStorage.getItem("chat_show_cursors") !== "false"; 
-const adminIconSrc = "purplestar.png"; 
 
-// Adds the purple star for the Admin
+// Adds the specific badge for the Admin
 function addAdminIcon(p, messageUsername) {
-  if (messageUsername === adminUsername) {
+  const lowerName = messageUsername.toLowerCase();
+  if (admins[lowerName]) {
     const icon = document.createElement("img");
-    icon.src = adminIconSrc;
+    icon.src = admins[lowerName].badge;
     icon.className = "admin-icon";
     icon.alt = "admin";
     p.prepend(icon); 
@@ -156,7 +128,34 @@ const sendChat = document.getElementById("send-chat");
 const clearChatBtn = document.getElementById("clear-chat");
 const timerEl = document.getElementById("timeout-timer");
 const typingIndicator = document.getElementById("typing-indicator");
-const charCounter = document.getElementById("char-counter");
+const charCounter = document.getElementById("char-counter"// Complete Login Process
+function completeLogin(uname, forceAdmin = false) {
+    username = uname;
+    cleanName = username.replace(/\s+/g, "").toLowerCase();
+    identityKey = cleanName;
+    
+    localStorage.setItem('chat_logged_in_user', username);
+    authOverlay.style.display = 'none';
+    
+    // Admin UI unlocks
+    if (admins[cleanName] || forceAdmin) {
+        isAdmin = true;
+        const toggleBtn = document.getElementById('admin-toggle');
+        if(toggleBtn) toggleBtn.style.display = 'flex'; 
+        const viewSuggBtn = document.getElementById('view-suggestions-btn');
+        if(viewSuggBtn) viewSuggBtn.style.display = 'inline-block';
+        const clearBtn = document.getElementById('clear-chat');
+        if(clearBtn) clearBtn.style.display = "inline-block";
+    }
+}
+
+// Auto-Login Check on Refresh
+const savedUser = localStorage.getItem('chat_logged_in_user');
+if(savedUser) {
+    completeLogin(savedUser); // Admin logout bug fixed here!
+} else {
+    authOverlay.style.display = 'flex';
+}
 
 // Settings & Logout Elements
 const settingsBtn = document.getElementById('settings-btn');
