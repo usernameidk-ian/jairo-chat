@@ -87,16 +87,6 @@
 
     <button id="admin-toggle" style="display:none;">🍏</button>
 
-    <!-- MEMBER LIST (placed near top-left) -->
-    <div id="member-list-container" style="position: fixed; top: 72px; left: 12px; z-index:2000; max-width: 260px;">
-      <button id="member-list-toggle" class="auth-btn outline" style="display:flex; align-items:center; gap:8px; padding:8px 10px;">
-        Member List <span id="member-list-arrow">↓</span>
-      </button>
-      <div id="member-list-panel" style="display:none; margin-top:8px;">
-        <div id="member-list" style="background:#1f2023; border:1px solid #2f3136; padding:8px; border-radius:8px; max-height: 420px; overflow:auto;"></div>
-      </div>
-    </div>
-
     <main class="chat-box">
       <div id="school-clock" class="school-clock" style="display:none;">
         <div id="currently-line">it is currently <span id="current-name"></span></div>
@@ -147,19 +137,6 @@
             <input type="checkbox" id="toggle-cursors" checked>
             <span style="color:#fff; font-size:14px;">Show Other Cursors</span>
         </div>
-
-        <!-- CUSTOM ICON input (Settings) -->
-        <div style="margin-top:12px;">
-          <label>Custom Icon URL:</label>
-          <input id="custom-icon-url" type="text" placeholder="https://... .png/.jpg/.gif" style="width:100%; margin-bottom:8px;">
-          <div style="display:flex; gap:8px; align-items:center;">
-            <div id="custom-icon-preview" style="width:40px; height:40px; border-radius:6px; background:#222; display:flex; align-items:center; justify-content:center;">⚪</div>
-            <div style="flex:1;">
-              <div id="custom-icon-msg" style="font-size:12px; color:#9aa0a6;"></div>
-            </div>
-          </div>
-        </div>
-
         </div>
         <p class="note">Customize your experience.</p>
         <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
@@ -181,60 +158,6 @@
         <button id="submit-suggestion" style="width:100%; padding:10px; background:#5865F2; color:white; border:none; border-radius:4px; cursor:pointer;">Submit Idea</button>
       </div>
     </div>
-  </div>
-
-  <!-- Admin Jumpscare / Per-user SFX modal -->
-  <div id="admin-jumpscare-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-content" style="width:360px;">
-      <div class="modal-header">
-        <h3>Admin Tools</h3>
-        <button id="close-jumpscare-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-          <button id="tab-sounds" class="auth-btn outline" style="flex:1;">Sounds</button>
-          <button id="tab-jumps" class="auth-btn outline" style="flex:1;">Jumpscare</button>
-        </div>
-
-        <!-- Sounds tab -->
-        <div id="admin-sounds-tab">
-          <label>Select online user:</label>
-          <select id="sfx-target-select" style="width:100%; margin-bottom:8px;"></select>
-          <label>Select sound:</label>
-          <select id="sfx-select" style="width:100%; margin-bottom:8px;">
-            <option value="s1">huh?</option>
-            <option value="s2">ayogama hahaha</option>
-            <option value="s3">metal bar drop</option>
-            <option value="s4">helo hru im under the water</option>
-            <option value="s5">ishowspeed bark</option>
-            <option value="s6">kinda low pitch screaming</option>
-            <option value="s7">alarm</option>
-            <option value="s8">whistle</option>
-            <option value="s9">glass breaking</option>
-            <option value="s10">train horn</option>
-          </select>
-          <button id="send-user-sfx" class="auth-btn yellow-btn" style="width:100%;">Send Sound to User</button>
-        </div>
-
-        <!-- Jumpscare tab -->
-        <div id="admin-jumps-tab" style="display:none;">
-          <label>Image URL (.png/.jpg/.gif):</label>
-          <input id="jumps-url" type="text" placeholder="https://..." style="width:100%; margin-bottom:8px;">
-          <div id="jumps-preview" style="height:120px; display:flex; align-items:center; justify-content:center; background:#111; border-radius:6px; margin-bottom:8px;">
-            <span style="color:#999;">Preview will appear here</span>
-          </div>
-          <label>Pick online target:</label>
-          <select id="jumps-target-select" style="width:100%; margin-bottom:8px;"></select>
-          <button id="send-jumpscare" class="auth-btn yellow-btn" style="width:100%;">Jumpscare Selected User</button>
-          <p id="jumps-err" style="color:#ff8b8b; font-size:12px; margin-top:8px; display:none;"></p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Jumpscare overlay. created dynamically in JS if needed; included here as fallback -->
-  <div id="jumpscare-overlay" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:100000; background: rgba(0,0,0,0.9);">
-    <img id="jumpscare-img" src="" style="max-width:95%; max-height:95%; border-radius:8px;" />
   </div>
 
   <audio id="bgm" loop><source src="nothingyet.mp3" type="audio/mpeg" /></audio>
