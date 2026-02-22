@@ -119,7 +119,7 @@ function addAdminIconAndGlow(userSpan, messageUsername) {
     icon.src = admins[lowerName].badge;
     icon.className = "admin-icon";
     userSpan.parentNode.prepend(icon); 
-    userSpan.classList.add("admin-glow");
+    userSpan.classList.add("admin-glow"); // Makes the name glow based on their selected color
   }
 }
 function stringToColor(str) {
@@ -168,7 +168,8 @@ customIconUrl.addEventListener('input', (e) => {
         customIconPreview.style.display = 'none'; iconError.style.display = 'none';
         updatePresence(); return;
     }
-    const isValid = url.match(/\.(jpeg|jpg|gif|png|webp)/i) && url.length < 500;
+    // Expanded to 5000 characters for long image links
+    const isValid = url.match(/\.(jpeg|jpg|gif|png|webp)/i) && url.length < 5000;
     if(isValid) {
         iconError.style.display = 'none'; myCustomIcon = url;
         customIconPreview.src = url; customIconPreview.style.display = 'block';
@@ -186,7 +187,7 @@ toggleCursorsCheckbox.addEventListener('change', (e) => {
 
 logoutBtn.onclick = () => { localStorage.removeItem('chat_logged_in_user'); db.ref('presence/'+identityKey).remove().then(()=> location.reload()); };
 
-// ---------------------- 6. MEMBER LIST (NEW) ----------------------
+// ---------------------- 6. MEMBER LIST ----------------------
 const memToggle = document.getElementById('toggle-member-list');
 const memList = document.getElementById('member-list-content');
 let onlineUsersList = [];
@@ -207,6 +208,7 @@ db.ref('presence').on('value', snap => {
         const k = child.key;
         onlineUsersList.push(u);
 
+        // Populate the dropdown for admin sounds/jumpscares with online users
         if(isAdmin && targetSelect) {
             const opt = document.createElement('option');
             opt.value = u.deviceID; opt.textContent = u.username;
@@ -216,7 +218,7 @@ db.ref('presence').on('value', snap => {
         const div = document.createElement('div');
         div.className = 'member-item';
         
-        // Timeout Display Logic
+        // Timeout Display Logic inside Member List
         let timeoutHtml = "";
         let tData = timeouts ? timeouts[u.deviceID] : null;
         if(isAdmin && tData && tData.until > Date.now()) {
@@ -295,7 +297,7 @@ document.getElementById('btn-send-jc').onclick = () => {
     triggerCommand('jumpscare', jcUrl.value.trim());
 };
 
-// Listen for Commands
+// Listen for Commands (Targeted to everyone or specifically your device)
 db.ref('commands/all').on('value', snap => { processCommand(snap.val()); });
 db.ref('commands/' + deviceID).on('value', snap => { processCommand(snap.val()); });
 
@@ -316,20 +318,53 @@ function processCommand(cmd) {
     }
 }
 
-// ---------------------- 8-9. (Skipped/Merged Firebase Refs) ----------------------
+// ---------------------- 8-9. FIREBASE REFS ----------------------
 const messagesRef = db.ref("messages");
 const typingRef = db.ref("typing");
 let timeouts = null; 
 
 // ---------------------- 10. GIF & EMOJI PICKERS ----------------------
-const myGifs = [ "gifs/1.gif", "gifs/2.gif" /* PUT YOUR GIFS HERE */ ];
-const myEmojis = [ "emojis/e1.png", "emojis/e2.png" /* PUT YOUR EMOJIS HERE */ ];
-// ... (Keep the rest of your populateVault logic exactly the same) ...
-function populateVault(container, items) { /* Keep Your Code */ }
+const myGifs = [ "gifs/1.gif", "gifs/2.gif" /* Add more paths here if needed */ ];
+const myEmojis = [ "emojis/e1.png", "emojis/e2.png" /* Add more paths here if needed */ ];
+
+const gifBtn = document.getElementById('gif-btn');
+const emojiBtn = document.getElementById('emoji-btn');
+const gifVault = document.getElementById('gif-vault');
+const emojiVault = document.getElementById('emoji-vault');
+const gifList = document.getElementById('gif-list');
+const emojiList = document.getElementById('emoji-list');
+
+function populateVault(container, items) {
+    container.innerHTML = '';
+    items.forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.onclick = () => {
+            chatInput.value = src; // Sets input exactly to the link so it renders correctly
+            chatInput.focus();
+        };
+        container.appendChild(img);
+    });
+}
+
+if (gifBtn && gifVault) {
+    gifBtn.onclick = () => {
+        gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block';
+        emojiVault.style.display = 'none';
+    };
+    populateVault(gifList, myGifs);
+}
+
+if (emojiBtn && emojiVault) {
+    emojiBtn.onclick = () => {
+        emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block';
+        gifVault.style.display = 'none';
+    };
+    populateVault(emojiList, myEmojis);
+}
 
 // ---------------------- 11. CHAT LOGIC & SHADOW TIMEOUTS ----------------------
 const MAX_CHARS = 2000;
-let isRateLimited = false;
 
 sendChat.addEventListener("click", () => {
   if (!username) return;
@@ -457,7 +492,7 @@ function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
   if (!timeouts) return; 
   const myStatus = timeouts[deviceID]; 
-  // Don't show the timer text if it's a shadow timeout!
+  // Doesn't show the timer text if it's a shadow timeout
   if (!myStatus || myStatus.until <= Date.now() || myStatus.type === 'shadow') { timerEl.textContent = ""; return; }
   
   function tick() {
