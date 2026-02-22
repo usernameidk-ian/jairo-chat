@@ -375,30 +375,52 @@ body::before {
 .auth-btn.yellow-btn { background: #ffcc00 !important; color: #000 !important; }
 .auth-btn.yellow-btn:hover { background: #ffaa00 !important; }
 
-/* ADMIN GLOW */
-.admin-glow { text-shadow: 0 0 8px currentColor; }
+/* ---------- MEMBER LIST & ADMIN POPUPS (ADDITIONS) ---------- */
+#member-list-toggle { background:#2f3136; color:#fff; border-radius:8px; border:1px solid #4f545c; }
+#member-list-panel { margin-top:8px; }
+.member-row { display:flex; align-items:center; gap:8px; padding:6px; border-radius:6px; margin-bottom:6px; background:#202225; }
+.member-row .member-icon { width:28px; height:28px; border-radius:6px; object-fit:cover; background:#111; }
+.member-row .member-name { font-weight:700; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
+.member-row .member-actions { display:flex; gap:6px; align-items:center; }
+.member-status { font-size:14px; margin-right:6px; }
+.member-row .admin-delete { cursor:pointer; color:#ff7777; }
+.timeout-badge { cursor:pointer; padding:2px 6px; border-radius:6px; font-size:12px; }
 
-/* MEMBER LIST */
-#member-list-container { position: absolute; top: 70px; left: 24px; z-index: 50; }
-#toggle-member-list { background: #2f3136; color: #fff; border: 1px solid #4f545c; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-#member-list-content { background: rgba(30, 30, 30, 0.95); border: 1px solid #ffcc00; padding: 10px; border-radius: 8px; width: 220px; max-height: 300px; overflow-y: auto; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-.member-item { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #333; }
-.member-info { display: flex; align-items: center; gap: 6px; overflow: hidden; }
-.member-actions { display: flex; gap: 4px; }
-.m-icon { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
-.m-status { font-size: 10px; }
-.admin-member-btn { background: transparent; border: none; cursor: pointer; font-size: 14px; padding: 0; }
-.admin-member-btn:hover { transform: scale(1.2); }
+/* tooltip styling on hover for timeout */
+.timeout-badge[data-type="normal"] { color: #ff6b6b; } /* red-ish */
+.timeout-badge[data-type="shadow"] { color: #c7a7ff; } /* purple-ish */
 
-/* CUSTOM ICON & TIMEOUT POPOVER */
-.chat-custom-icon { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; margin-right: 6px; vertical-align: middle; }
-.timeout-popover { position: absolute; background: #2f3136; border: 1px solid #4f545c; display: flex; gap: 5px; padding: 5px; border-radius: 5px; transform: translateY(-30px); z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-.timeout-popover button { background: none; border: none; font-size: 16px; cursor: pointer; }
-.timeout-popover button:hover { transform: scale(1.2); }
+/* small floating popup for admin action next to messages */
+.admin-timeout-popup {
+  position: absolute;
+  background: #111;
+  border: 1px solid #2f3136;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+  z-index: 3001;
+  display:flex; gap:6px;
+  align-items:center;
+}
+.admin-timeout-popup button { cursor:pointer; padding:6px 8px; border-radius:6px; border:none; background:#2f3136; color:#fff; }
 
-/* ADMIN PANEL TABS */
-.admin-tab { flex: 1; background: #2f3136; color: #fff; border: 1px solid #444; padding: 6px; cursor: pointer; border-radius: 4px; }
-.admin-tab.active-tab { background: #ffcc00; color: #000; font-weight: bold; }
+/* jumpscare overlay */
+#jumpscare-overlay {
+  position: fixed; inset:0; display:none; z-index:100000;
+  align-items:center; justify-content:center; background: rgba(0,0,0,0.9);
+}
+#jumpscare-overlay img { max-width:95%; max-height:95%; border-radius:8px; }
 
-/* JUMPSCARE */
-#jumpscare-overlay { display: none; position: fixed; inset: 0; z-index: 999999; background: #000; justify-content: center; align-items: center; }
+/* admin modal tweaks */
+#admin-jumpscare-modal .modal-content { max-width: 380px; }
+
+/* settings custom icon */
+#custom-icon-preview img { width:40px; height:40px; border-radius:6px; object-fit:cover; }
+
+/* glow for admin names in chat (when admin) */
+.chat-messages .username.admin-glow { text-shadow: 0 0 8px rgba(255,200,60,0.6); }
+
+/* small responsiveness */
+@media (max-width: 900px) {
+  #member-list-container { display:none; } /* hide on small screens to save space */
+}
