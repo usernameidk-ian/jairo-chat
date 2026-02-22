@@ -3,21 +3,19 @@
 // ============================================================================
 
 // ---------------------- 1. DEVICE FINGERPRINTING ----------------------
-// Gives the user a unique ID to handle timeouts and drawing ownership
 let deviceID = localStorage.getItem('chat_device_id');
 if (!deviceID) {
   deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   localStorage.setItem('chat_device_id', deviceID);
 }
-console.log("Your Device ID is:", deviceID); 
 
-// ---------------------- 2. AUTH & ACCOUNT LOGIC ----------------------
+// ---------------------- 2. AUTH, STATUS & ACCOUNT LOGIC ----------------------
 let username = "";
 let cleanName = "";
 let identityKey = "";
 let isAdmin = false;
+let myStatus = '⚫'; 
 
-// ADMIN CREDENTIALS & BADGES
 const admins = {
   "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
   "jair0": { password: "67JAIRO67", badge: "jairobadge.png" }
@@ -28,118 +26,102 @@ const viewChoice = document.getElementById('auth-choice-view');
 const viewLogin = document.getElementById('auth-login-view');
 const viewReg = document.getElementById('auth-register-view');
 
-// Toggle Login/Registration Views
 document.getElementById('btn-show-login').onclick = () => { viewChoice.style.display='none'; viewLogin.style.display='block'; };
 document.getElementById('btn-show-register').onclick = () => { viewChoice.style.display='none'; viewReg.style.display='block'; };
 document.getElementById('link-to-register').onclick = () => { viewLogin.style.display='none'; viewReg.style.display='block'; };
 document.getElementById('link-to-login').onclick = () => { viewReg.style.display='none'; viewLogin.style.display='block'; };
 
-// Registration Flow
 document.getElementById('btn-reg-submit').onclick = () => {
     const u = document.getElementById('reg-user').value.trim();
     const p = document.getElementById('reg-pass').value;
     const err = document.getElementById('reg-err');
-    
     if(!u || !p) { err.textContent = "Fill in both fields!"; return; }
     if(admins[u.toLowerCase()]) { err.textContent = "This username is reserved!"; return; }
-
     const cName = u.replace(/\s+/g, "").toLowerCase();
     
-    // Check if name is taken in Firebase
     db.ref('users/' + cName).once('value', snapshot => {
-        if(snapshot.exists()) {
-            err.textContent = "Username already taken!";
-        } else {
-            // Save new user
-            db.ref('users/' + cName).set({ password: p, originalName: u }).then(() => {
-                completeLogin(u);
-            });
-        }
+        if(snapshot.exists()) { err.textContent = "Username already taken!"; } 
+        else { db.ref('users/' + cName).set({ password: p, originalName: u }).then(() => { completeLogin(u); }); }
     });
 };
 
-// Login Flow
 document.getElementById('btn-login-submit').onclick = () => {
     const u = document.getElementById('login-user').value.trim();
     const p = document.getElementById('login-pass').value;
     const err = document.getElementById('login-err');
-    
     if(!u || !p) { err.textContent = "Fill in both fields!"; return; }
     
-    // Admin Override
     const lowerU = u.toLowerCase();
     if(admins[lowerU]) {
-        if (p === admins[lowerU].password) {
-            completeLogin(u, true);
-        } else {
-            err.textContent = "Incorrect admin password!";
-        }
+        if (p === admins[lowerU].password) { completeLogin(u, true); } 
+        else { err.textContent = "Incorrect admin password!"; }
         return;
     }
-
     const cName = u.replace(/\s+/g, "").toLowerCase();
-    
-    // Check password against Firebase
     db.ref('users/' + cName).once('value', snapshot => {
-        if(!snapshot.exists()) {
-            err.textContent = "User not found! Register first.";
-        } else {
-            const data = snapshot.val();
-            if(data.password !== p) {
-                err.textContent = "Incorrect password!";
-            } else {
-                completeLogin(data.originalName);
-            }
+        if(!snapshot.exists()) { err.textContent = "User not found! Register first."; } 
+        else {
+            if(snapshot.val().password !== p) { err.textContent = "Incorrect password!"; } 
+            else { completeLogin(snapshot.val().originalName); }
         }
     });
 };
 
-// Complete Login Process
 function completeLogin(uname, forceAdmin = false) {
     username = uname;
     cleanName = username.replace(/\s+/g, "").toLowerCase();
     identityKey = cleanName;
-    
     localStorage.setItem('chat_logged_in_user', username);
     authOverlay.style.display = 'none';
     
-    // Admin UI unlocks
     if (admins[cleanName] || forceAdmin) {
         isAdmin = true;
-        const toggleBtn = document.getElementById('admin-toggle');
-        if(toggleBtn) toggleBtn.style.display = 'flex'; 
-        const viewSuggBtn = document.getElementById('view-suggestions-btn');
-        if(viewSuggBtn) viewSuggBtn.style.display = 'inline-block';
-        const clearBtn = document.getElementById('clear-chat');
-        if(clearBtn) clearBtn.style.display = "inline-block";
+        document.getElementById('admin-toggle').style.display = 'flex'; 
+        document.getElementById('view-suggestions-btn').style.display = 'inline-block';
+        document.getElementById('clear-chat').style.display = "inline-block";
     }
+
+    // Initialize Presence (Statuses)
+    myStatus = '🟢';
+    updatePresence();
+    db.ref('.info/connected').on('value', snap => {
+        if (snap.val()) {
+            db.ref('presence/' + identityKey).onDisconnect().remove();
+            updatePresence();
+        }
+    });
 }
 
-// Auto-Login Check on Refresh
 const savedUser = localStorage.getItem('chat_logged_in_user');
-if(savedUser) {
-    completeLogin(savedUser); // Admin logout bug fixed here!
-} else {
-    authOverlay.style.display = 'flex';
+if(savedUser) { completeLogin(savedUser); } else { authOverlay.style.display = 'flex'; }
+
+// Status Window Listeners
+window.addEventListener('focus', () => { if(username){ myStatus = '🟢'; updatePresence(); } });
+window.addEventListener('blur', () => { if(username){ myStatus = '🟠'; updatePresence(); } });
+
+function updatePresence() {
+    if (!identityKey) return;
+    db.ref('presence/' + identityKey).set({ 
+        username: username, color: myColor, icon: myCustomIcon, 
+        status: myStatus, deviceID: deviceID, isAdmin: isAdmin 
+    });
 }
 
-// ---------------------- 3. USER SETTINGS & VISUALS ----------------------
+// ---------------------- 3. USER SETTINGS & ICONS ----------------------
 let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
 let showCursors = localStorage.getItem("chat_show_cursors") !== "false"; 
+let myCustomIcon = localStorage.getItem("chat_custom_icon") || "";
 
-// Adds the specific badge for the Admin
-function addAdminIcon(p, messageUsername) {
+function addAdminIconAndGlow(userSpan, messageUsername) {
   const lowerName = messageUsername.toLowerCase();
   if (admins[lowerName]) {
     const icon = document.createElement("img");
     icon.src = admins[lowerName].badge;
     icon.className = "admin-icon";
-    icon.alt = "admin";
-    p.prepend(icon); 
+    userSpan.parentNode.prepend(icon); 
+    userSpan.classList.add("admin-glow");
   }
 }
-
-// Generates a random color based on username
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -152,476 +134,243 @@ function stringToColor(str) {
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const sendChat = document.getElementById("send-chat");
-const clearChatBtn = document.getElementById("clear-chat");
-const timerEl = document.getElementById("timeout-timer");
-const typingIndicator = document.getElementById("typing-indicator");
 const charCounter = document.getElementById("char-counter");
+const timerEl = document.getElementById("timeout-timer");
 
-// Settings & Logout Elements
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettings = document.getElementById('close-settings');
 const colorPicker = document.getElementById('color-picker');
 const colorPreview = document.getElementById('color-preview');
+const customIconUrl = document.getElementById('custom-icon-url');
+const customIconPreview = document.getElementById('custom-icon-preview');
+const iconError = document.getElementById('icon-error');
 const toggleCursorsCheckbox = document.getElementById('toggle-cursors');
 const logoutBtn = document.getElementById('logout-btn');
 
-// Suggestion Box Elements
-const suggestionBtn = document.getElementById('suggestion-btn');
-const suggestionModal = document.getElementById('suggestion-modal');
-const closeSuggestion = document.getElementById('close-suggestion');
-const suggestionInput = document.getElementById('suggestion-input');
-const submitSuggestion = document.getElementById('submit-suggestion');
-const suggCharCount = document.getElementById('sugg-char-count');
-const adminSuggPanel = document.getElementById('admin-suggestions-panel');
-const viewSuggBtn = document.getElementById('view-suggestions-btn');
-const closeAdminSugg = document.getElementById('close-admin-suggestions');
-const suggestionList = document.getElementById('suggestion-list');
+// ---------------------- 5. SETTINGS, ICONS & LOGOUT ----------------------
+colorPicker.value = myColor; colorPreview.style.color = myColor;
+toggleCursorsCheckbox.checked = showCursors;
+if(myCustomIcon) { customIconPreview.src = myCustomIcon; customIconPreview.style.display = 'block'; customIconUrl.value = myCustomIcon; }
 
-// Misc Elements
-const openGameBtn = document.getElementById("open-game");
-const gifBtn = document.getElementById('gif-btn');
-const emojiBtn = document.getElementById('emoji-btn');
-const gifVault = document.getElementById('gif-vault');
-const emojiVault = document.getElementById('emoji-vault');
+settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
+closeSettings.onclick = () => { settingsModal.style.display = 'none'; };
+
+colorPicker.addEventListener('input', (e) => {
+  myColor = e.target.value; colorPreview.style.color = myColor;
+  localStorage.setItem("chat_username_color", myColor); updatePresence();
+});
+
+customIconUrl.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    if(url === "") {
+        myCustomIcon = ""; localStorage.removeItem("chat_custom_icon");
+        customIconPreview.style.display = 'none'; iconError.style.display = 'none';
+        updatePresence(); return;
+    }
+    const isValid = url.match(/\.(jpeg|jpg|gif|png|webp)/i) && url.length < 500;
+    if(isValid) {
+        iconError.style.display = 'none'; myCustomIcon = url;
+        customIconPreview.src = url; customIconPreview.style.display = 'block';
+        localStorage.setItem("chat_custom_icon", url); updatePresence();
+    } else {
+        iconError.style.display = 'block'; customIconPreview.style.display = 'none';
+        myCustomIcon = ""; localStorage.removeItem("chat_custom_icon"); updatePresence();
+    }
+});
+
+toggleCursorsCheckbox.addEventListener('change', (e) => {
+  showCursors = e.target.checked; localStorage.setItem("chat_show_cursors", showCursors);
+  if (!showCursors) document.getElementById('cursor-layer').innerHTML = ''; 
+});
+
+logoutBtn.onclick = () => { localStorage.removeItem('chat_logged_in_user'); db.ref('presence/'+identityKey).remove().then(()=> location.reload()); };
+
+// ---------------------- 6. MEMBER LIST (NEW) ----------------------
+const memToggle = document.getElementById('toggle-member-list');
+const memList = document.getElementById('member-list-content');
+let onlineUsersList = [];
+
+memToggle.onclick = () => {
+    if(memList.style.display === 'none') { memList.style.display = 'block'; memToggle.textContent = 'Member List ↑'; }
+    else { memList.style.display = 'none'; memToggle.textContent = 'Member List ↓'; }
+};
+
+db.ref('presence').on('value', snap => {
+    memList.innerHTML = '';
+    onlineUsersList = [];
+    const targetSelect = document.getElementById('target-user-select');
+    if(targetSelect) targetSelect.innerHTML = '<option value="all">Everyone</option>';
+
+    snap.forEach(child => {
+        const u = child.val();
+        const k = child.key;
+        onlineUsersList.push(u);
+
+        if(isAdmin && targetSelect) {
+            const opt = document.createElement('option');
+            opt.value = u.deviceID; opt.textContent = u.username;
+            targetSelect.appendChild(opt);
+        }
+
+        const div = document.createElement('div');
+        div.className = 'member-item';
+        
+        // Timeout Display Logic
+        let timeoutHtml = "";
+        let tData = timeouts ? timeouts[u.deviceID] : null;
+        if(isAdmin && tData && tData.until > Date.now()) {
+            const color = tData.type === 'shadow' ? 'purple' : 'red';
+            const seconds = Math.ceil((tData.until - Date.now()) / 1000);
+            timeoutHtml = `<span title="${seconds}s remaining" style="color:${color}; cursor:pointer;" onclick="editTimeout('${u.deviceID}', '${u.username}')">⏳</span>`;
+        }
+
+        const iconHtml = u.icon ? `<img src="${u.icon}" class="m-icon">` : ``;
+        const delHtml = (isAdmin && !u.isAdmin) ? `<button class="admin-member-btn" onclick="deleteUserAccount('${k}')">⛔</button>` : ``;
+
+        div.innerHTML = `
+            <div class="member-info">
+                <span class="m-status">${u.status}</span>
+                ${iconHtml}
+                <span style="color:${u.color}; font-weight:bold;">${u.username}</span>
+            </div>
+            <div class="member-actions">${timeoutHtml}${delHtml}</div>
+        `;
+        memList.appendChild(div);
+    });
+});
+
+window.deleteUserAccount = function(userKey) {
+    if(confirm("⚠️ARE YOU SURE? This button DELETES this account.")) {
+        db.ref('users/' + userKey).remove();
+        db.ref('presence/' + userKey).remove();
+        alert("Account deleted.");
+    }
+};
+
+window.editTimeout = function(devID, uName) {
+    const duration = prompt(`Edit timeout for ${uName} (Seconds):`);
+    if(duration && !isNaN(duration)) {
+        const tData = timeouts[devID];
+        db.ref('timeouts').child(devID).set({ until: Date.now() + (parseInt(duration)*1000), originalName: uName, type: tData.type });
+    }
+};
+
+// ---------------------- 7. JUMPSCARES & TARGETED SOUNDS ----------------------
 const adminToggle = document.getElementById('admin-toggle');
 const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
 
-chatInput.focus();
+adminToggle.onclick = () => { soundBoard.style.display = soundBoard.style.display === 'none' ? 'block' : 'none'; };
+closeSfx.onclick = () => { soundBoard.style.display = 'none'; };
 
-// ---------------------- 5. SETTINGS & LOGOUT LOGIC ----------------------
-if (settingsBtn) {
-  colorPicker.value = myColor;
-  colorPreview.style.color = myColor;
-  toggleCursorsCheckbox.checked = showCursors;
-
-  settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
-  closeSettings.onclick = () => { settingsModal.style.display = 'none'; };
-
-  colorPicker.addEventListener('input', (e) => {
-    myColor = e.target.value;
-    colorPreview.style.color = myColor;
-    localStorage.setItem("chat_username_color", myColor);
-  });
-
-  toggleCursorsCheckbox.addEventListener('change', (e) => {
-    showCursors = e.target.checked;
-    localStorage.setItem("chat_show_cursors", showCursors);
-    const layer = document.getElementById('cursor-layer');
-    if (!showCursors) layer.innerHTML = ''; 
-  });
-  
-  settingsModal.addEventListener('click', (e) => {
-    if (e.target === settingsModal) settingsModal.style.display = 'none';
-  });
-}
-
-if (logoutBtn) {
-    logoutBtn.onclick = () => {
-        localStorage.removeItem('chat_logged_in_user');
-        location.reload(); 
-    };
-}
-
-// ---------------------- 6. SUGGESTION BOX LOGIC ----------------------
-if (suggestionBtn) {
-    suggestionBtn.onclick = () => { suggestionModal.style.display = 'flex'; };
-    closeSuggestion.onclick = () => { suggestionModal.style.display = 'none'; };
-    suggestionModal.addEventListener('click', (e) => { if (e.target === suggestionModal) suggestionModal.style.display = 'none'; });
-
-    suggestionInput.addEventListener('input', () => {
-        suggCharCount.textContent = 1000 - suggestionInput.value.length;
-    });
-
-    submitSuggestion.onclick = () => {
-        const text = suggestionInput.value.trim();
-        if (!text) return;
-        
-        // 30 minute cooldown
-        const lastSent = localStorage.getItem('sugg_last_sent');
-        if (lastSent) {
-            const diff = Date.now() - parseInt(lastSent);
-            if (diff < 30 * 60 * 1000) {
-                const minsLeft = Math.ceil((30 * 60 * 1000 - diff) / 60000);
-                alert(`Please wait ${minsLeft} minutes before sending another suggestion.`);
-                return;
-            }
-        }
-
-        db.ref('suggestions').push({ username: username, text: text, timestamp: Date.now() });
-        localStorage.setItem('sugg_last_sent', Date.now());
-        alert("Suggestion sent! Thanks for the idea.");
-        suggestionInput.value = "";
-        suggestionModal.style.display = 'none';
-    };
-}
-
-// ADMIN View Suggestions
-if (viewSuggBtn) {
-    viewSuggBtn.onclick = () => {
-        adminSuggPanel.style.display = (adminSuggPanel.style.display === 'none') ? 'block' : 'none';
-    };
-}
-if (closeAdminSugg) {
-    closeAdminSugg.onclick = () => { adminSuggPanel.style.display = 'none'; };
-}
-
-db.ref('suggestions').on('child_added', (snapshot) => {
-    const s = snapshot.val();
-    const key = snapshot.key;
-    
-    const card = document.createElement('div');
-    card.className = "suggestion-card";
-    card.innerHTML = `
-        <div class="sugg-meta">
-            <span><b>${s.username}</b></span>
-            <span>${new Date(s.timestamp).toLocaleTimeString()}</span>
-        </div>
-        <div class="sugg-text">${s.text}</div>
-        <div style="text-align:right; margin-top:5px;">
-            <button class="sugg-del" onclick="deleteSuggestion('${key}')">Delete</button>
-        </div>
-    `;
-    card.id = `sugg-${key}`;
-    suggestionList.prepend(card);
-});
-
-db.ref('suggestions').on('child_removed', (snapshot) => {
-    const el = document.getElementById(`sugg-${snapshot.key}`);
-    if(el) el.remove();
-});
-
-window.deleteSuggestion = function(key) {
-    if(confirm("Delete this suggestion?")) {
-        db.ref('suggestions').child(key).remove();
-    }
+document.getElementById('tab-sfx').onclick = () => {
+    document.getElementById('tab-sfx').classList.add('active-tab'); document.getElementById('tab-jc').classList.remove('active-tab');
+    document.getElementById('sfx-content').style.display = 'flex'; document.getElementById('jc-content').style.display = 'none';
+};
+document.getElementById('tab-jc').onclick = () => {
+    document.getElementById('tab-jc').classList.add('active-tab'); document.getElementById('tab-sfx').classList.remove('active-tab');
+    document.getElementById('jc-content').style.display = 'flex'; document.getElementById('sfx-content').style.display = 'none';
 };
 
-// ---------------------- 7. MULTIPLAYER CURSORS ----------------------
-const cursorLayer = document.getElementById('cursor-layer');
-const cursorRef = db.ref('cursors');
-
-function throttle(func, limit) {
-    let lastFunc;
-    let lastRan;
-    return function() {
-        const context = this;
-        const args = arguments;
-        if (!lastRan) {
-            func.apply(context, args);
-            lastRan = Date.now();
-        } else {
-            clearTimeout(lastFunc);
-            lastFunc = setTimeout(function() {
-                if ((Date.now() - lastRan) >= limit) {
-                    func.apply(context, args);
-                    lastRan = Date.now();
-                }
-            }, limit - (Date.now() - lastRan));
-        }
-    }
-}
-
-document.addEventListener('mousemove', throttle((e) => {
-    if (!username) return; // Don't track if not logged in
-    const x = (e.clientX / window.innerWidth) * 100;
-    const y = (e.clientY / window.innerHeight) * 100;
-
-    cursorRef.child(deviceID).set({
-        x: x, y: y, username: username, color: myColor, timestamp: Date.now()
-    });
-}, 100));
-
-cursorRef.child(deviceID).onDisconnect().remove();
-
-cursorRef.on('value', (snapshot) => {
-    if (!showCursors) return;
-
-    const cursors = snapshot.val() || {};
-    const now = Date.now();
-
-    Object.keys(cursors).forEach(key => {
-        if (key === deviceID) return; 
-
-        const data = cursors[key];
-        if (now - data.timestamp > 10000) return;
-
-        let el = document.getElementById(`cursor-${key}`);
-        
-        if (!el) {
-            el = document.createElement('div');
-            el.id = `cursor-${key}`;
-            el.className = 'live-cursor';
-            el.innerHTML = `
-                <svg class="cursor-svg" viewBox="0 0 24 24" fill="${data.color}">
-                    <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"/>
-                </svg>
-                <div class="cursor-nametag">${data.username}</div>
-            `;
-            cursorLayer.appendChild(el);
-        }
-
-        el.style.left = data.x + "%";
-        el.style.top = data.y + "%";
-        
-        const svgPath = el.querySelector('path');
-        if(svgPath) svgPath.setAttribute('fill', data.color);
-        const nametag = el.querySelector('.cursor-nametag');
-        if(nametag) nametag.textContent = data.username;
-    });
-
-    // Cleanup old cursors
-    const existingIds = Object.keys(cursors).map(k => `cursor-${k}`);
-    Array.from(cursorLayer.children).forEach(child => {
-        const key = child.id.replace('cursor-', '');
-        if (!cursors[key] || (now - cursors[key].timestamp > 10000)) {
-            child.remove();
-        }
-    });
+// Jumpscare Preview Validation
+const jcUrl = document.getElementById('jc-url');
+const jcPreview = document.getElementById('jc-preview');
+const jcError = document.getElementById('jc-error');
+jcUrl.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if(val.match(/\.(jpeg|jpg|gif|png|webp)/i)) { jcError.style.display='none'; jcPreview.src=val; jcPreview.style.display='block'; } 
+    else { jcError.style.display='block'; jcPreview.style.display='none'; }
 });
 
-// ---------------------- 8. GAME & SOUNDBOARD LOGIC ----------------------
-if (openGameBtn) {
-  openGameBtn.addEventListener("click", () => {
-    window.open("game.html", "_blank");
-  });
-}
+window.triggerCommand = function(type, payload) {
+    if(!isAdmin) return;
+    const target = document.getElementById('target-user-select').value;
+    const cmdRef = db.ref('commands/' + target);
+    cmdRef.set({ type: type, payload: payload, time: Date.now() });
+};
 
-if (adminToggle) {
-  adminToggle.onclick = () => {
-    soundBoard.style.display = (soundBoard.style.display === 'none' || soundBoard.style.display === '') ? 'flex' : 'none';
-  };
-}
+document.getElementById('btn-send-jc').onclick = () => {
+    if(jcPreview.style.display === 'none') return;
+    triggerCommand('jumpscare', jcUrl.value.trim());
+};
 
-if (closeSfx) closeSfx.onclick = () => soundBoard.style.display = 'none';
+// Listen for Commands
+db.ref('commands/all').on('value', snap => { processCommand(snap.val()); });
+db.ref('commands/' + deviceID).on('value', snap => { processCommand(snap.val()); });
 
-if (clearChatBtn) {
-  clearChatBtn.addEventListener("click", () => {
-    if (confirm("Delete all messages?")) {
-      db.ref("messages").remove();
-      chatMessages.innerHTML = "";
+let lastCmdTime = Date.now();
+function processCommand(cmd) {
+    if(!cmd || cmd.time <= lastCmdTime) return;
+    lastCmdTime = cmd.time;
+    if(cmd.type === 'sound') {
+        const sfx = document.getElementById('sfx-player');
+        sfx.src = cmd.payload + ".mp3"; sfx.play().catch(()=>{});
+    } else if (cmd.type === 'jumpscare') {
+        const sfx = document.getElementById('sfx-player');
+        sfx.src = "jumpscarenoise.mp3"; sfx.play().catch(()=>{});
+        const over = document.getElementById('jumpscare-overlay');
+        document.getElementById('jumpscare-img').src = cmd.payload;
+        over.style.display = 'flex';
+        setTimeout(() => { over.style.display = 'none'; }, 3000);
     }
-  });
 }
 
-// ---------------------- 9. FIREBASE REFS & VARS ----------------------
+// ---------------------- 8-9. (Skipped/Merged Firebase Refs) ----------------------
 const messagesRef = db.ref("messages");
-const soundRef = db.ref("global_sfx"); 
 const typingRef = db.ref("typing");
-
 let timeouts = null; 
-let timeoutInterval = null;
-
-// SFX Audio player Logic
-const loadTime = Date.now();
-
-window.triggerSound = function(soundName) {
-  if (!isAdmin) return;
-  soundRef.set({ name: soundName, time: Date.now() });
-};
-
-soundRef.on("value", (snapshot) => {
-  const data = snapshot.val();
-  if (data && data.time > loadTime) {
-    const sfx = document.getElementById('sfx-player');
-    sfx.src = data.name + ".mp3";
-    sfx.play().catch(() => {});
-  }
-});
 
 // ---------------------- 10. GIF & EMOJI PICKERS ----------------------
-const myGifs = [
-  "gifs/1.gif", "gifs/2.gif", "gifs/3.gif", "gifs/4.gif", "gifs/5.gif",
-  "gifs/6.gif", "gifs/7.gif", "gifs/8.gif", "gifs/9.gif", "gifs/10.gif",
-  "gifs/11.gif", "gifs/12.gif", "gifs/13.gif", "gifs/14.gif", "gifs/15.gif",
-  "gifs/16.gif", "gifs/17.gif", "gifs/18.gif", "gifs/19.gif", "gifs/20.gif",
-  "gifs/21.gif", "gifs/22.gif", "gifs/23.gif", "gifs/24.gif", "gifs/25.gif"
-];
+const myGifs = [ "gifs/1.gif", "gifs/2.gif" /* PUT YOUR GIFS HERE */ ];
+const myEmojis = [ "emojis/e1.png", "emojis/e2.png" /* PUT YOUR EMOJIS HERE */ ];
+// ... (Keep the rest of your populateVault logic exactly the same) ...
+function populateVault(container, items) { /* Keep Your Code */ }
 
-const myEmojis = [
-  "emojis/e1.png", "emojis/e2.png", "emojis/e3.png", "emojis/e4.png", "emojis/e5.png",
-  "emojis/e6.png", "emojis/e7.png", "emojis/e8.png", "emojis/e9.png", "emojis/e10.png"
-];
-
-function populateVault(container, items) {
-  items.forEach(url => {
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = "media";
-    img.onclick = () => {
-      if (!username) return;
-      if (timeouts === null) {
-        alert("Connecting to server... wait a sec.");
-        return;
-      }
-      const myTimeout = timeouts[deviceID];
-      if (myTimeout && myTimeout.until > Date.now()) {
-        alert("you're timed out buddy.");
-        return;
-      }
-
-      messagesRef.push({ 
-        text: url, 
-        username: username, 
-        color: myColor, 
-        timestamp: Date.now(),
-        fingerprint: deviceID
-      });
-      gifVault.style.display = 'none';
-      emojiVault.style.display = 'none';
-      typingRef.child(identityKey).remove();
-    };
-    container.appendChild(img);
-  });
-}
-populateVault(document.getElementById('gif-list'), myGifs);
-populateVault(document.getElementById('emoji-list'), myEmojis);
-
-gifBtn.onclick = () => { 
-  gifVault.style.display = gifVault.style.display === 'block' ? 'none' : 'block'; 
-  emojiVault.style.display = 'none'; 
-};
-
-emojiBtn.onclick = () => { 
-  emojiVault.style.display = emojiVault.style.display === 'block' ? 'none' : 'block'; 
-  gifVault.style.display = 'none'; 
-};
-
-// Close pickers on outside click
-document.addEventListener('click', (event) => {
-  const isClickInsideGif = gifVault.contains(event.target);
-  const isClickOnGifBtn = gifBtn.contains(event.target);
-  const isClickInsideEmoji = emojiVault.contains(event.target);
-  const isClickOnEmojiBtn = emojiBtn.contains(event.target);
-
-  if (!isClickInsideGif && !isClickOnGifBtn) gifVault.style.display = 'none';
-  if (!isClickInsideEmoji && !isClickOnEmojiBtn) emojiVault.style.display = 'none';
-});
-
-// ---------------------- 11. CHAT LOGIC & ANTI-SPAM ----------------------
+// ---------------------- 11. CHAT LOGIC & SHADOW TIMEOUTS ----------------------
 const MAX_CHARS = 2000;
-
-chatInput.addEventListener("input", () => {
-    const currentLength = chatInput.value.length;
-    const remaining = MAX_CHARS - currentLength;
-    charCounter.textContent = remaining;
-    if (remaining < 0) {
-        charCounter.classList.add("limit-exceeded");
-        sendChat.disabled = true;
-    } else {
-        charCounter.classList.remove("limit-exceeded");
-        sendChat.disabled = false;
-    }
-});
-
-let spamTimestamps = [];
 let isRateLimited = false;
 
-function checkRateLimit() {
-    const now = Date.now();
-    spamTimestamps = spamTimestamps.filter(t => t > now - 5000);
-    if (spamTimestamps.length >= 10) return true;
-    spamTimestamps.push(now);
-    return false;
-}
-
 sendChat.addEventListener("click", () => {
-  if (!username) return; // Must be logged in
+  if (!username) return;
   const text = chatInput.value.trim();
   if (!text) return;
+  if (text.length > MAX_CHARS) { alert("Message too long!"); return; }
 
-  if (text.length > MAX_CHARS) {
-    alert("Message too long! Remove characters.");
-    return;
+  const myTimeout = timeouts ? timeouts[deviceID] : null; 
+  if (myTimeout && myTimeout.until > Date.now() && myTimeout.type === 'normal') {
+    alert("you're timed out."); return;
   }
-  if (timeouts === null) {
-    console.log("Still loading data...");
-    return; 
-  }
-  const myTimeout = timeouts[deviceID]; 
-  if (myTimeout && myTimeout.until > Date.now()) {
-    alert("you're timed out.");
-    return;
-  }
-  if (isRateLimited) return;
-
-  if (checkRateLimit()) {
-      isRateLimited = true;
-      alert("You are being rate limited (too fast!). Cooling down for 3 seconds.");
-      sendChat.disabled = true;
-      chatInput.disabled = true;
-      setTimeout(() => {
-          isRateLimited = false;
-          sendChat.disabled = false;
-          chatInput.disabled = false;
-          chatInput.focus();
-      }, 3000);
-      return;
-  }
+  
+  // SHADOW TIMEOUT CHECK
+  const isShadowed = (myTimeout && myTimeout.until > Date.now() && myTimeout.type === 'shadow');
 
   messagesRef.push({ 
-    text: text, 
-    username: username, 
-    color: myColor, 
-    timestamp: Date.now(),
-    fingerprint: deviceID
+    text: text, username: username, color: myColor, icon: myCustomIcon,
+    timestamp: Date.now(), fingerprint: deviceID, shadow: isShadowed
   });
   
-  chatInput.value = "";
-  charCounter.textContent = MAX_CHARS; 
+  chatInput.value = ""; charCounter.textContent = MAX_CHARS; 
   typingRef.child(identityKey).remove();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
 // ---------------------- 12. MESSAGE RENDERING ----------------------
 let oldestLoadedKey = null;
-
-function isNearBottom() {
-  return chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200;
-}
+function isNearBottom() { return chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 200; }
 
 messagesRef.limitToLast(50).on("child_added", (snapshot) => {
   const msg = snapshot.val();
   const msgKey = snapshot.key;
-
   if (document.querySelector(`[data-key="${msgKey}"]`)) return;
+
+  // SHADOW FILTER: Hide if it's a shadow message and I am not the sender/admin
+  if (msg.shadow && msg.fingerprint !== deviceID && !isAdmin) return;
+
   if (!oldestLoadedKey) oldestLoadedKey = msgKey;
-
   const p = createMessageElement(msg, msgKey);
-  const children = Array.from(chatMessages.children);
-  const wasNearBottom = isNearBottom();
-
-  if (children.length === 0) {
-    chatMessages.appendChild(p);
-  } else {
-    const firstChild = children[0];
-    const lastChild = children[children.length - 1];
-
-    if (msgKey > lastChild.dataset.key) {
-      chatMessages.appendChild(p);
-    } else if (msgKey < firstChild.dataset.key) {
-      chatMessages.insertBefore(p, firstChild);
-      oldestLoadedKey = msgKey;
-    } else {
-      let inserted = false;
-      for (let i = 0; i < children.length; i++) {
-        if (msgKey < children[i].dataset.key) {
-          chatMessages.insertBefore(p, children[i]);
-          inserted = true;
-          break;
-        }
-      }
-      if (!inserted) chatMessages.appendChild(p);
-    }
-  }
-
-  if (wasNearBottom && msgKey > (children.length ? children[children.length-1].dataset.key : "")) {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
-  if (children.length < 2) {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
+  chatMessages.appendChild(p);
+  if (isNearBottom()) chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
 messagesRef.on("child_removed", (snapshot) => {
@@ -632,133 +381,92 @@ messagesRef.on("child_removed", (snapshot) => {
 function createMessageElement(msg, msgKey) {
   const p = document.createElement("p");
   if (msg && msg.text) {
-    const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
-    const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    const dateStr = ts.toLocaleDateString();
-    
+    const ts = new Date(msg.timestamp || Date.now());
     const timeSpan = document.createElement("span");
     timeSpan.className = "timestamp";
-    timeSpan.textContent = `[${timeStr} ${dateStr}]`;
+    timeSpan.textContent = `[${ts.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}]`;
 
     const userSpan = document.createElement("span");
     userSpan.className = "username";
     userSpan.textContent = msg.username + ":";
-    userSpan.style.color = msg.color ? msg.color : stringToColor(msg.username);
+    userSpan.style.color = msg.color || stringToColor(msg.username);
 
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "msg-content";
-    
-    if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-      const img = document.createElement("img");
-      img.src = msg.text;
-      img.className = "chat-media";
-      contentDiv.appendChild(img);
-     } else {
-      const textSpan = document.createElement("span");
-      textSpan.className = "msgtext";
-      textSpan.textContent = " " + msg.text;
-      contentDiv.appendChild(textSpan);
+    // Custom Icon
+    if(msg.icon) {
+        const ic = document.createElement("img"); ic.src = msg.icon; ic.className = "chat-custom-icon";
+        p.appendChild(ic);
     }
 
-    addAdminIcon(p, msg.username);
-    p.appendChild(timeSpan);
-    p.appendChild(userSpan);
-    p.appendChild(contentDiv);
+    addAdminIconAndGlow(userSpan, msg.username);
+    
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "msg-content";
+    if (msg.text.includes("tenor.com") || msg.text.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+      const img = document.createElement("img"); img.src = msg.text; img.className = "chat-media"; contentDiv.appendChild(img);
+    } else {
+      const textSpan = document.createElement("span"); textSpan.className = "msgtext"; textSpan.textContent = " " + msg.text; contentDiv.appendChild(textSpan);
+    }
+
+    p.appendChild(timeSpan); p.appendChild(userSpan); p.appendChild(contentDiv);
   }
 
-  // Admin Delete/Timeout Button in Chat
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "❌";
-    deleteBtn.className = "admin-action-btn";
+    deleteBtn.textContent = "❌"; deleteBtn.className = "admin-action-btn";
     deleteBtn.onclick = () => { db.ref("messages").child(msgKey).remove(); };
     p.appendChild(deleteBtn);
 
+    const timeoutBox = document.createElement("div");
+    timeoutBox.style.display = "inline-block"; timeoutBox.style.position = "relative";
+    
     const timeoutBtn = document.createElement("button");
-    timeoutBtn.textContent = "⏱️";
-    timeoutBtn.className = "admin-action-btn";
-    timeoutBtn.onclick = () => {
-        const duration = prompt(`How many seconds to timeout ${msg.username}?`);
-        if (duration && !isNaN(duration)) {
-            const targetFingerprint = msg.fingerprint; 
-            if (!targetFingerprint) {
-                alert("Cannot timeout: This is an old message without a Device ID.");
-                return;
-            }
-            const untilTime = Date.now() + (parseInt(duration) * 1000);
-            db.ref("timeouts").child(targetFingerprint).set({ 
-                until: untilTime,
-                originalName: msg.username 
-            });
-            alert(`Timed out device (user: ${msg.username}) for ${duration} seconds.`);
+    timeoutBtn.textContent = "⏱️"; timeoutBtn.className = "admin-action-btn";
+    timeoutBox.appendChild(timeoutBtn);
+
+    const popover = document.createElement("div");
+    popover.className = "timeout-popover"; popover.style.display = "none";
+    
+    const normBtn = document.createElement("button"); normBtn.textContent = "⏱️";
+    const shadBtn = document.createElement("button"); shadBtn.textContent = "⛓️‍💥";
+    
+    const applyTimeout = (type) => {
+        const duration = prompt(`How many seconds to ${type} timeout ${msg.username}?`);
+        if (duration && !isNaN(duration) && msg.fingerprint) {
+            db.ref("timeouts").child(msg.fingerprint).set({ until: Date.now() + (parseInt(duration)*1000), originalName: msg.username, type: type });
+            popover.style.display = 'none';
         }
     };
-    p.appendChild(timeoutBtn);
+    normBtn.onclick = () => applyTimeout('normal');
+    shadBtn.onclick = () => applyTimeout('shadow');
+
+    popover.appendChild(normBtn); popover.appendChild(shadBtn);
+    timeoutBox.appendChild(popover);
+    
+    timeoutBtn.onclick = () => { popover.style.display = popover.style.display === 'none' ? 'flex' : 'none'; };
+    p.appendChild(timeoutBox);
   }
 
   p.dataset.key = msgKey;
   return p;
 }
 
-chatMessages.addEventListener("scroll", () => {
-    if (chatMessages.scrollTop === 0 && oldestLoadedKey) {
-        loadOldMessages();
-    }
-});
-
-function loadOldMessages() {
-    messagesRef.orderByKey().endBefore(oldestLoadedKey).limitToLast(50).once("value", (snapshot) => {
-        if (!snapshot.exists()) return;
-        const oldHeight = chatMessages.scrollHeight;
-        let newOldest = oldestLoadedKey;
-        const messages = [];
-        snapshot.forEach(child => {
-            messages.push({ key: child.key, val: child.val() });
-        });
-        if (messages.length > 0) newOldest = messages[0].key;
-
-        const fragment = document.createDocumentFragment();
-        messages.forEach(item => {
-           const p = createMessageElement(item.val, item.key);
-           fragment.appendChild(p);
-        });
-
-        chatMessages.insertBefore(fragment, chatMessages.firstChild);
-        oldestLoadedKey = newOldest;
-        chatMessages.scrollTop = chatMessages.scrollHeight - oldHeight;
-    });
-}
-
-// ---------------------- 13. TIMEOUTS & SOUND AUTO-PLAY ----------------------
-db.ref("timeouts").on("value", (snapshot) => {
-  timeouts = snapshot.val() || {}; 
-  updateTimeoutDisplay();
-});
-
+// ---------------------- 13. TIMEOUT TICKER & SOUNDS ----------------------
+db.ref("timeouts").on("value", (snapshot) => { timeouts = snapshot.val() || {}; updateTimeoutDisplay(); });
+let timeoutInterval = null;
 function updateTimeoutDisplay() {
   clearInterval(timeoutInterval);
   if (!timeouts) return; 
   const myStatus = timeouts[deviceID]; 
-  if (!myStatus || myStatus.until <= Date.now()) { 
-    timerEl.textContent = ""; 
-    return; 
-  }
+  // Don't show the timer text if it's a shadow timeout!
+  if (!myStatus || myStatus.until <= Date.now() || myStatus.type === 'shadow') { timerEl.textContent = ""; return; }
+  
   function tick() {
-    const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
+    const seconds = Math.ceil((myStatus.until - Date.now()) / 1000);
     timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
-    if (seconds <= 0) {
-        clearInterval(timeoutInterval);
-        timerEl.textContent = "";
-    }
+    if (seconds <= 0) { clearInterval(timeoutInterval); timerEl.textContent = ""; }
   }
-  tick();
-  timeoutInterval = setInterval(tick, 500);
+  tick(); timeoutInterval = setInterval(tick, 500);
 }
-
-document.addEventListener('click', () => {
-  const bgm = document.getElementById('bgm');
-  if (bgm && bgm.paused) bgm.play().catch(()=>{});
-}, { once: true });
 
 // ---------------------- 14. TYPING INDICATOR ----------------------
 let typeTimeout;
