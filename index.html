@@ -59,22 +59,51 @@
     </div>
   </header>
 
+  <div id="member-list-container">
+    <button id="toggle-member-list">Member List ↓</button>
+    <div id="member-list-content" style="display:none;"></div>
+  </div>
+
+  <div id="jumpscare-overlay">
+    <img id="jumpscare-img" src="" alt="Jumpscare">
+  </div>
+  
   <div class="container">
     <div id="admin-soundboard" class="soundboard" style="display:none;">
       <div class="sb-header">
-        <h3>Admin SFX</h3>
+        <h3>Admin Panel</h3>
         <button id="close-sfx">✕</button>
       </div>
-      <button onclick="triggerSound('s1')">huh?</button>
-      <button onclick="triggerSound('s2')">ayogama hahaha</button>
-      <button onclick="triggerSound('s3')">metal bar drop</button>
-      <button onclick="triggerSound('s4')">helo hru im under the water</button>
-      <button onclick="triggerSound('s5')">ishowspeed bark</button>
-      <button onclick="triggerSound('s6')">kinda low pitch screaming</button>
-      <button onclick="triggerSound('s7')">alarm 🚨</button>
-      <button onclick="triggerSound('s8')">whistle notification</button>
-      <button onclick="triggerSound('s9')">glass breaking</button>
-      <button onclick="triggerSound('s10')">one second train horn</button>
+      
+      <div style="display:flex; gap:5px; margin-bottom:10px;">
+        <button id="tab-sfx" class="admin-tab active-tab">Sounds</button>
+        <button id="tab-jc" class="admin-tab">Jumpscares</button>
+      </div>
+      
+      <label style="font-size:12px; color:#aaa;">Target User:</label>
+      <select id="target-user-select" style="margin-bottom:10px; background:#202225; color:#fff; border:1px solid #4f545c; padding:4px; border-radius:4px;">
+        <option value="all">Everyone</option>
+      </select>
+
+      <div id="sfx-content" style="display:flex; flex-direction:column; gap:8px;">
+        <button onclick="triggerCommand('sound', 's1')">huh?</button>
+        <button onclick="triggerCommand('sound', 's2')">ayogama hahaha</button>
+        <button onclick="triggerCommand('sound', 's3')">metal bar drop</button>
+        <button onclick="triggerCommand('sound', 's4')">helo hru im under the water</button>
+        <button onclick="triggerCommand('sound', 's5')">ishowspeed bark</button>
+        <button onclick="triggerCommand('sound', 's6')">kinda low pitch screaming</button>
+        <button onclick="triggerCommand('sound', 's7')">alarm 🚨</button>
+        <button onclick="triggerCommand('sound', 's8')">whistle notification</button>
+        <button onclick="triggerCommand('sound', 's9')">glass breaking</button>
+        <button onclick="triggerCommand('sound', 's10')">one second train horn</button>
+      </div>
+
+      <div id="jc-content" style="display:none; flex-direction:column; gap:8px;">
+        <input type="text" id="jc-url" class="auth-input" placeholder="Jumpscare Image URL" style="margin-bottom:0;">
+        <p id="jc-error" style="color:#ed4245; font-size:12px; display:none; margin:0;">link doesn't work</p>
+        <img id="jc-preview" style="width:100%; height:80px; object-fit:cover; display:none; border-radius:4px;">
+        <button id="btn-send-jc" style="background:#ed4245; color:#fff; padding:8px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Send Jumpscare</button>
+      </div>
     </div>
 
     <div id="admin-suggestions-panel" class="media-popup" style="display:none; bottom: auto; top: 60px; right: 20px; left: auto; width: 300px; max-height: 400px;">
@@ -132,11 +161,15 @@
           <span id="color-preview">Your Name</span>
         </div>
         <br>
+        <label>Custom Icon URL (.png, .jpg, .gif):</label>
+        <input type="text" id="custom-icon-url" class="auth-input" placeholder="Paste image link here" style="margin-bottom:5px;">
+        <p id="icon-error" style="color:#ed4245; font-size:12px; display:none; margin-top:0;">link cant be accepted or doesnt work</p>
+        <img id="custom-icon-preview" style="width:40px; height:40px; border-radius:50%; object-fit:cover; display:none;">
+        <br><br>
         <label>Visuals:</label>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
             <input type="checkbox" id="toggle-cursors" checked>
             <span style="color:#fff; font-size:14px;">Show Other Cursors</span>
-        </div>
         </div>
         <p class="note">Customize your experience.</p>
         <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
