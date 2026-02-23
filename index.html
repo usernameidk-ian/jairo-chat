@@ -62,19 +62,32 @@
   <div class="container">
     <div id="admin-soundboard" class="soundboard" style="display:none;">
       <div class="sb-header">
-        <h3>Admin SFX</h3>
+        <h3>Admin Tools</h3>
         <button id="close-sfx">✕</button>
       </div>
-      <button onclick="triggerSound('s1')">huh?</button>
-      <button onclick="triggerSound('s2')">ayogama hahaha</button>
-      <button onclick="triggerSound('s3')">metal bar drop</button>
-      <button onclick="triggerSound('s4')">helo hru im under the water</button>
-      <button onclick="triggerSound('s5')">ishowspeed bark</button>
-      <button onclick="triggerSound('s6')">kinda low pitch screaming</button>
-      <button onclick="triggerSound('s7')">alarm 🚨</button>
-      <button onclick="triggerSound('s8')">whistle notification</button>
-      <button onclick="triggerSound('s9')">glass breaking</button>
-      <button onclick="triggerSound('s10')">one second train horn</button>
+      <div class="sound-tabs">
+        <button id="tab-sounds" class="tab active">🔊 Sounds</button>
+        <button id="tab-jumps" class="tab">👻 Jumpscares</button>
+      </div>
+      <div id="sounds-content" class="tab-content">
+        <button onclick="targetedTriggerSound('s1')">huh?</button>
+        <button onclick="targetedTriggerSound('s2')">ayogama hahaha</button>
+        <button onclick="targetedTriggerSound('s3')">metal bar drop</button>
+        <button onclick="targetedTriggerSound('s4')">helo hru im under the water</button>
+        <button onclick="targetedTriggerSound('s5')">ishowspeed bark</button>
+        <button onclick="targetedTriggerSound('s6')">kinda low pitch screaming</button>
+        <button onclick="targetedTriggerSound('s7')">alarm 🚨</button>
+        <button onclick="targetedTriggerSound('s8')">whistle notification</button>
+        <button onclick="targetedTriggerSound('s9')">glass breaking</button>
+        <button onclick="targetedTriggerSound('s10')">one second train horn</button>
+      </div>
+      <div id="jumps-content" class="tab-content" style="display:none;">
+        <label style="color:#fff;display:block;margin:8px 0 4px 0;">Jumpscare Image URL:</label>
+        <input id="jumps-image" type="text" placeholder="https://... .png/.jpg/.gif" style="width:100%;padding:8px;background:#1e1e1e;color:#fff;border:none;border-radius:6px;">
+        <div id="jumps-preview" style="text-align:center;min-height:110px;margin:10px 0;"></div>
+        <p id="jumps-error" style="color:#ed4245;font-size:13px;margin:0;"></p>
+        <button id="send-jumpscare" style="width:100%;padding:12px;background:#ed4245;color:white;border:none;border-radius:6px;margin-top:8px;cursor:pointer;">Send Jumpscare</button>
+      </div>
     </div>
 
     <div id="admin-suggestions-panel" class="media-popup" style="display:none; bottom: auto; top: 60px; right: 20px; left: auto; width: 300px; max-height: 400px;">
@@ -95,11 +108,18 @@
       </div>
 
       <div class="chat-header">
-        <h2>Chat</h2>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <h2>Chat</h2>
+          <button id="member-list-btn" class="member-btn">Member List <span id="member-arrow">↓</span></button>
+        </div>
         <div style="display:flex; gap:5px;">
            <button id="view-suggestions-btn" style="display:none; background:#ffcc00; color:black; border:none; padding:5px; border-radius:4px; cursor:pointer;">📩 View Inbox</button>
            <button id="clear-chat" style="display:none;">🗑 Clear</button>
         </div>
+      </div>
+
+      <div id="member-list-panel" class="member-list-panel" style="display:none;">
+        <div id="members-list"></div>
       </div>
 
       <div id="chat-messages" class="chat-messages"></div>
@@ -137,7 +157,13 @@
             <input type="checkbox" id="toggle-cursors" checked>
             <span style="color:#fff; font-size:14px;">Show Other Cursors</span>
         </div>
-        </div>
+
+        <label>Custom Icon (direct image link):</label>
+        <input type="text" id="icon-input" placeholder="https://... .png / .jpg / .gif" style="width:100%;padding:10px;background:#1e1e1e;color:#fff;border:none;border-radius:6px;margin-bottom:8px;">
+        <div id="icon-preview" style="text-align:center;min-height:80px;margin:8px 0;"></div>
+        <p id="icon-error" class="auth-error" style="margin:0 0 8px 0;"></p>
+        <button id="save-icon-btn" style="width:100%;padding:10px;background:#5865F2;color:white;border:none;border-radius:6px;cursor:pointer;">Save Icon</button>
+
         <p class="note">Customize your experience.</p>
         <hr style="border-top: 1px solid #4f545c; border-bottom: none; margin: 20px 0;">
         <button id="logout-btn" style="width:100%; padding:10px; background:#ed4245; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size: 14px;">Log Out</button>
@@ -162,6 +188,7 @@
 
   <audio id="bgm" loop><source src="nothingyet.mp3" type="audio/mpeg" /></audio>
   <audio id="sfx-player"></audio>
+  <audio id="jumpscare-audio" src="jumpscarenoise.mp3"></audio>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
