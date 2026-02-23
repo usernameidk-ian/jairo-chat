@@ -112,8 +112,7 @@ function completeLogin(uname, forceAdmin = false) {
         if(viewSuggBtn) viewSuggBtn.style.display = 'inline-block';
         const clearBtn = document.getElementById('clear-chat');
         if(clearBtn) clearBtn.style.display = "inline-block";
-}
-setPresence("online");
+    }
 }
 
 // Auto-Login Check on Refresh
@@ -123,22 +122,6 @@ if(savedUser) {
 } else {
     authOverlay.style.display = 'flex';
 }
-
-// ---------------------- PRESENCE SYSTEM ----------------------
-function setPresence(status) {
-    if (!identityKey) return;
-    presenceRef.child(identityKey).set({
-        name: username,
-        status: status,
-        lastSeen: Date.now()
-    });
-}
-
-window.addEventListener("focus", () => setPresence("online"));
-window.addEventListener("blur", () => setPresence("idle"));
-window.addEventListener("beforeunload", () => {
-    if (identityKey) presenceRef.child(identityKey).remove();
-});
 
 // ---------------------- 3. USER SETTINGS & VISUALS ----------------------
 let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
@@ -426,11 +409,6 @@ if (clearChatBtn) {
 const messagesRef = db.ref("messages");
 const soundRef = db.ref("global_sfx"); 
 const typingRef = db.ref("typing");
-const presenceRef = db.ref("presence");
-const shadowTimeoutRef = db.ref("shadowTimeouts");
-
-let presenceData = {};
-let shadowTimeouts = {};
 
 let timeouts = null; 
 let timeoutInterval = null;
@@ -442,80 +420,6 @@ window.triggerSound = function(soundName) {
   if (!isAdmin) return;
   soundRef.set({ name: soundName, time: Date.now() });
 };
-
-// ---------------------- MEMBER LIST RENDER ----------------------
-function renderMemberList() {
-    const list = document.getElementById("member-list");
-    if (!list) return;
-    list.innerHTML = "";
-
-    Object.keys(presenceData).forEach(key => {
-        const user = presenceData[key];
-
-        const div = document.createElement("div");
-        div.className = "member-item";
-
-        const left = document.createElement("div");
-        left.className = "member-left";
-
-        const dot = document.createElement("span");
-        dot.className = "presence-dot";
-        dot.textContent =
-            user.status === "online" ? "🟢" :
-            user.status === "idle" ? "🟠" : "⚫";
-
-        const name = document.createElement("span");
-        name.textContent = user.name;
-
-        if (admins[user.name.toLowerCase()]) {
-            name.classList.add("admin-glow");
-        }
-
-        left.appendChild(dot);
-        left.appendChild(name);
-        div.appendChild(left);
-
-        if (isAdmin) {
-            const shadow = shadowTimeouts[key];
-            const normal = timeouts && timeouts[key];
-
-            if (normal && normal.until > Date.now()) {
-                const t = document.createElement("span");
-                t.textContent = "⏳";
-                t.className = "timeout-normal";
-                div.appendChild(t);
-            }
-
-            if (shadow && shadow.until > Date.now()) {
-                const s = document.createElement("span");
-                s.textContent = "⏳";
-                s.className = "timeout-shadow";
-                div.appendChild(s);
-            }
-
-            div.onclick = () => {
-                const sec = prompt("Shadow timeout seconds for " + user.name);
-                if (!sec || isNaN(sec)) return;
-                shadowTimeoutRef.child(key).set({
-                    until: Date.now() + (parseInt(sec) * 1000)
-                });
-            };
-        }
-
-        list.appendChild(div);
-    });
-}
-
-// ---------------------- PRESENCE + SHADOW LISTENERS ----------------------
-presenceRef.on("value", (snapshot) => {
-    presenceData = snapshot.val() || {};
-    renderMemberList();
-});
-
-shadowTimeoutRef.on("value", (snapshot) => {
-    shadowTimeouts = snapshot.val() || {};
-    renderMemberList();
-});
 
 soundRef.on("value", (snapshot) => {
   const data = snapshot.val();
@@ -726,16 +630,6 @@ messagesRef.on("child_removed", (snapshot) => {
 });
 
 function createMessageElement(msg, msgKey) {
-
-  const shadow = shadowTimeouts[msg.fingerprint];
-  if (
-    shadow &&
-    shadow.until > Date.now() &&
-    msg.fingerprint !== deviceID
-  ) {
-    return document.createElement("div");
-  }
-  
   const p = document.createElement("p");
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
