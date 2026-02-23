@@ -1041,14 +1041,45 @@ function updateTypingText() {
 }
 
 // ---------------------- 15. SCHOOL CLOCK ----------------------
-const schedules = { /* your original schedules object - unchanged */ };
+const schedules = {
+  regular: [
+    { n: "ADVISORY", s: "08:00", e: "08:29" },
+    { n: "PERIOD 1", s: "08:33", e: "09:28" },
+    { n: "PERIOD 2", s: "09:32", e: "10:27" },
+    { n: "BREAK", s: "10:27", e: "10:37" },
+    { n: "PERIOD 3", s: "10:41", e: "11:36" },
+    { n: "PERIOD 4", s: "11:40", e: "12:35" },
+    { n: "LUNCH", s: "12:35", e: "13:05" },
+    { n: "PERIOD 5", s: "13:09", e: "14:04" },
+    { n: "PERIOD 6", s: "14:08", e: "15:03" }
+  ],
+  tuesday: [
+    { n: "PERIOD 1", s: "08:00", e: "09:03" },
+    { n: "PERIOD 2", s: "09:07", e: "09:55" },
+    { n: "BREAK", s: "09:55", e: "10:05" },
+    { n: "PERIOD 3", s: "10:09", e: "10:57" },
+    { n: "PERIOD 4", s: "11:01", e: "11:49" },
+    { n: "LUNCH", s: "11:49", e: "12:19" },
+    { n: "PERIOD 5", s: "12:23", e: "13:11" },
+    { n: "PERIOD 6", s: "13:15", e: "14:03" }
+  ],
+  minimum: [
+    { n: "PERIOD 1", s: "08:00", e: "08:52" },
+    { n: "PERIOD 2", s: "08:56", e: "09:33" },
+    { n: "PERIOD 3", s: "09:37", e: "10:14" },
+    { n: "BRUNCH", s: "10:14", e: "10:44" },
+    { n: "PERIOD 4", s: "10:48", e: "11:25" },
+    { n: "PERIOD 5", s: "11:29", e: "12:06" },
+    { n: "PERIOD 6", s: "12:10", e: "12:47" }
+  ]
+};
 
-const minDates = [ /* your original minDates - unchanged */ ];
+const minDates = [
+    "2026-02-18", "2026-02-20", 
+    "2026-03-13", "2026-04-10", "2026-06-05", "2026-06-08", "2026-06-10"
+];
 
 function updateClock() {
-  // Guard: if schedules aren't filled in yet, skip to avoid crashing
-  if (!schedules.regular) return;
-
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
