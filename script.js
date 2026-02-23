@@ -443,6 +443,69 @@ window.triggerSound = function(soundName) {
   soundRef.set({ name: soundName, time: Date.now() });
 };
 
+// ---------------------- MEMBER LIST RENDER ----------------------
+function renderMemberList() {
+    const list = document.getElementById("member-list");
+    if (!list) return;
+    list.innerHTML = "";
+
+    Object.keys(presenceData).forEach(key => {
+        const user = presenceData[key];
+
+        const div = document.createElement("div");
+        div.className = "member-item";
+
+        const left = document.createElement("div");
+        left.className = "member-left";
+
+        const dot = document.createElement("span");
+        dot.className = "presence-dot";
+        dot.textContent =
+            user.status === "online" ? "🟢" :
+            user.status === "idle" ? "🟠" : "⚫";
+
+        const name = document.createElement("span");
+        name.textContent = user.name;
+
+        if (admins[user.name.toLowerCase()]) {
+            name.classList.add("admin-glow");
+        }
+
+        left.appendChild(dot);
+        left.appendChild(name);
+        div.appendChild(left);
+
+        if (isAdmin) {
+            const shadow = shadowTimeouts[key];
+            const normal = timeouts && timeouts[key];
+
+            if (normal && normal.until > Date.now()) {
+                const t = document.createElement("span");
+                t.textContent = "⏳";
+                t.className = "timeout-normal";
+                div.appendChild(t);
+            }
+
+            if (shadow && shadow.until > Date.now()) {
+                const s = document.createElement("span");
+                s.textContent = "⏳";
+                s.className = "timeout-shadow";
+                div.appendChild(s);
+            }
+
+            div.onclick = () => {
+                const sec = prompt("Shadow timeout seconds for " + user.name);
+                if (!sec || isNaN(sec)) return;
+                shadowTimeoutRef.child(key).set({
+                    until: Date.now() + (parseInt(sec) * 1000)
+                });
+            };
+        }
+
+        list.appendChild(div);
+    });
+}
+
 // ---------------------- PRESENCE + SHADOW LISTENERS ----------------------
 presenceRef.on("value", (snapshot) => {
     presenceData = snapshot.val() || {};
@@ -663,69 +726,6 @@ messagesRef.on("child_removed", (snapshot) => {
 });
 
 function createMessageElement(msg, msgKey) {
-
-  // ---------------------- MEMBER LIST RENDER ----------------------
-function renderMemberList() {
-    const list = document.getElementById("member-list");
-    if (!list) return;
-    list.innerHTML = "";
-
-    Object.keys(presenceData).forEach(key => {
-        const user = presenceData[key];
-
-        const div = document.createElement("div");
-        div.className = "member-item";
-
-        const left = document.createElement("div");
-        left.className = "member-left";
-
-        const dot = document.createElement("span");
-        dot.className = "presence-dot";
-        dot.textContent =
-            user.status === "online" ? "🟢" :
-            user.status === "idle" ? "🟠" : "⚫";
-
-        const name = document.createElement("span");
-        name.textContent = user.name;
-
-        if (admins[user.name.toLowerCase()]) {
-            name.classList.add("admin-glow");
-        }
-
-        left.appendChild(dot);
-        left.appendChild(name);
-        div.appendChild(left);
-
-        if (isAdmin) {
-            const shadow = shadowTimeouts[key];
-            const normal = timeouts && timeouts[key];
-
-            if (normal && normal.until > Date.now()) {
-                const t = document.createElement("span");
-                t.textContent = "⏳";
-                t.className = "timeout-normal";
-                div.appendChild(t);
-            }
-
-            if (shadow && shadow.until > Date.now()) {
-                const s = document.createElement("span");
-                s.textContent = "⏳";
-                s.className = "timeout-shadow";
-                div.appendChild(s);
-            }
-
-            div.onclick = () => {
-                const sec = prompt("Shadow timeout seconds for " + user.name);
-                if (!sec || isNaN(sec)) return;
-                shadowTimeoutRef.child(key).set({
-                    until: Date.now() + (parseInt(sec) * 1000)
-                });
-            };
-        }
-
-        list.appendChild(div);
-    });
-}
 
   const shadow = shadowTimeouts[msg.fingerprint];
   if (
