@@ -8,7 +8,16 @@ if (!deviceID) {
   deviceID = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   localStorage.setItem('chat_device_id', deviceID);
 }
-console.log("Your Device ID is:", deviceID); 
+console.log("Your Device ID is:", deviceID);
+
+// ---------------------- FIREBASE REFS (must be at top so auto-login doesn't crash) ----------------------
+const messagesRef = db.ref("messages");
+const soundRef = db.ref("global_sfx");
+const typingRef = db.ref("typing");
+const presenceRef = db.ref('presence');
+const targetedSfxRef = db.ref('targeted_sfx');
+const jumpscaresRef = db.ref('jumpscares');
+const cursorRef = db.ref('cursors');
 
 // ---------------------- 2. AUTH & ACCOUNT LOGIC ----------------------
 let username = "";
@@ -357,7 +366,6 @@ window.deleteSuggestion = function(key) {
 
 // ---------------------- 7. MULTIPLAYER CURSORS ----------------------
 const cursorLayer = document.getElementById('cursor-layer');
-const cursorRef = db.ref('cursors');
 
 function throttle(func, limit) {
     let lastFunc;
@@ -479,14 +487,7 @@ if (tabJumps) {
   };
 }
 
-// ---------------------- 9. FIREBASE REFS & VARS ----------------------
-const messagesRef = db.ref("messages");
-const soundRef = db.ref("global_sfx"); 
-const typingRef = db.ref("typing");
-const presenceRef = db.ref('presence');
-const targetedSfxRef = db.ref('targeted_sfx');
-const jumpscaresRef = db.ref('jumpscares');
-
+// ---------------------- 9. FIREBASE VARS ----------------------
 let timeouts = null; 
 let timeoutInterval = null;
 const loadTime = Date.now();
@@ -1025,6 +1026,9 @@ const schedules = { /* your original schedules object - unchanged */ };
 const minDates = [ /* your original minDates - unchanged */ ];
 
 function updateClock() {
+  // Guard: if schedules aren't filled in yet, skip to avoid crashing
+  if (!schedules.regular) return;
+
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
