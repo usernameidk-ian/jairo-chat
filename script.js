@@ -113,18 +113,36 @@ function completeLogin(uname, forceAdmin = false) {
         const clearBtn = document.getElementById('clear-chat');
         if(clearBtn) clearBtn.style.display = "inline-block";
     }
+    
+    // Load user profile (color + icon)
+    db.ref('users/' + cleanName).once('value', snap => {
+        const data = snap.val() || {};
+        if (data.color) {
+            myColor = data.color;
+            colorPicker.value = myColor;
+            colorPreview.style.color = myColor;
+        }
+        if (data.icon) {
+            myIcon = data.icon;
+            iconInput.value = myIcon;
+            validateIconPreview();
+        }
+    });
+    
+    setupPresence();
 }
 
 // Auto-Login Check on Refresh
 const savedUser = localStorage.getItem('chat_logged_in_user');
 if(savedUser) {
-    completeLogin(savedUser); // Admin logout bug fixed here!
+    completeLogin(savedUser);
 } else {
     authOverlay.style.display = 'flex';
 }
 
 // ---------------------- 3. USER SETTINGS & VISUALS ----------------------
 let myColor = localStorage.getItem("chat_username_color") || "#ffffff";
+let myIcon = null;
 let showCursors = localStorage.getItem("chat_show_cursors") !== "false"; 
 
 // Adds the specific badge for the Admin
@@ -166,6 +184,12 @@ const colorPreview = document.getElementById('color-preview');
 const toggleCursorsCheckbox = document.getElementById('toggle-cursors');
 const logoutBtn = document.getElementById('logout-btn');
 
+// Custom Icon Elements
+const iconInput = document.getElementById('icon-input');
+const iconPreview = document.getElementById('icon-preview');
+const iconError = document.getElementById('icon-error');
+const saveIconBtn = document.getElementById('save-icon-btn');
+
 // Suggestion Box Elements
 const suggestionBtn = document.getElementById('suggestion-btn');
 const suggestionModal = document.getElementById('suggestion-modal');
@@ -178,6 +202,12 @@ const viewSuggBtn = document.getElementById('view-suggestions-btn');
 const closeAdminSugg = document.getElementById('close-admin-suggestions');
 const suggestionList = document.getElementById('suggestion-list');
 
+// Member List Elements
+const memberListBtn = document.getElementById('member-list-btn');
+const memberArrow = document.getElementById('member-arrow');
+const memberPanel = document.getElementById('member-list-panel');
+const membersList = document.getElementById('members-list');
+
 // Misc Elements
 const openGameBtn = document.getElementById("open-game");
 const gifBtn = document.getElementById('gif-btn');
@@ -187,6 +217,17 @@ const emojiVault = document.getElementById('emoji-vault');
 const adminToggle = document.getElementById('admin-toggle');
 const soundBoard = document.getElementById('admin-soundboard');
 const closeSfx = document.getElementById('close-sfx');
+
+// Soundboard Tabs
+const tabSounds = document.getElementById('tab-sounds');
+const tabJumps = document.getElementById('tab-jumps');
+const soundsContent = document.getElementById('sounds-content');
+const jumpsContent = document.getElementById('jumps-content');
+
+const jumpsImage = document.getElementById('jumps-image');
+const jumpsPreview = document.getElementById('jumps-preview');
+const jumpsError = document.getElementById('jumps-error');
+const sendJumpsBtn = document.getElementById('send-jumpscare');
 
 chatInput.focus();
 
@@ -203,6 +244,7 @@ if (settingsBtn) {
     myColor = e.target.value;
     colorPreview.style.color = myColor;
     localStorage.setItem("chat_username_color", myColor);
+    if (cleanName) db.ref('users/' + cleanName).update({ color: myColor });
   });
 
   toggleCursorsCheckbox.addEventListener('change', (e) => {
@@ -215,6 +257,39 @@ if (settingsBtn) {
   settingsModal.addEventListener('click', (e) => {
     if (e.target === settingsModal) settingsModal.style.display = 'none';
   });
+
+  // Custom Icon
+  function validateIconPreview() {
+    const url = iconInput.value.trim();
+    iconError.textContent = ''; 
+    iconPreview.innerHTML = '';
+    if (!url) return;
+    if (url.length > 800) { 
+      iconError.textContent = "Link too long"; 
+      return; 
+    }
+    if (!/\.(png|jpe?g|gif|webp)$/i.test(url)) { 
+      iconError.textContent = "Must end with .png/.jpg/.gif/.webp"; 
+      return; 
+    }
+    const img = new Image();
+    img.onload = () => { iconPreview.innerHTML = `<img src="${url}">`; };
+    img.onerror = () => { iconError.textContent = "Link can't be accepted or doesn't work"; };
+    img.src = url;
+  }
+  iconInput.addEventListener('input', () => { 
+    clearTimeout(window.iconT); 
+    window.iconT = setTimeout(validateIconPreview, 600); 
+  });
+
+  saveIconBtn.onclick = () => {
+    const url = iconInput.value.trim();
+    if (url && !iconError.textContent && cleanName) {
+      db.ref('users/' + cleanName).update({ icon: url });
+      myIcon = url;
+      alert("✅ Custom icon saved!");
+    }
+  };
 }
 
 if (logoutBtn) {
@@ -238,7 +313,6 @@ if (suggestionBtn) {
         const text = suggestionInput.value.trim();
         if (!text) return;
         
-        // 30 minute cooldown
         const lastSent = localStorage.getItem('sugg_last_sent');
         if (lastSent) {
             const diff = Date.now() - parseInt(lastSent);
@@ -324,7 +398,7 @@ function throttle(func, limit) {
 }
 
 document.addEventListener('mousemove', throttle((e) => {
-    if (!username) return; // Don't track if not logged in
+    if (!username) return;
     const x = (e.clientX / window.innerWidth) * 100;
     const y = (e.clientY / window.innerHeight) * 100;
 
@@ -371,7 +445,6 @@ cursorRef.on('value', (snapshot) => {
         if(nametag) nametag.textContent = data.username;
     });
 
-    // Cleanup old cursors
     const existingIds = Object.keys(cursors).map(k => `cursor-${k}`);
     Array.from(cursorLayer.children).forEach(child => {
         const key = child.id.replace('cursor-', '');
@@ -405,10 +478,31 @@ if (clearChatBtn) {
   });
 }
 
+// Soundboard Tabs
+if (tabSounds) {
+  tabSounds.onclick = () => {
+    tabSounds.classList.add('active');
+    tabJumps.classList.remove('active');
+    soundsContent.style.display = 'flex';
+    jumpsContent.style.display = 'none';
+  };
+}
+if (tabJumps) {
+  tabJumps.onclick = () => {
+    tabJumps.classList.add('active');
+    tabSounds.classList.remove('active');
+    soundsContent.style.display = 'none';
+    jumpsContent.style.display = 'flex';
+  };
+}
+
 // ---------------------- 9. FIREBASE REFS & VARS ----------------------
 const messagesRef = db.ref("messages");
 const soundRef = db.ref("global_sfx"); 
 const typingRef = db.ref("typing");
+const presenceRef = db.ref('presence');
+const targetedSfxRef = db.ref('targeted_sfx');
+const jumpscaresRef = db.ref('jumpscares');
 
 let timeouts = null; 
 let timeoutInterval = null;
@@ -427,6 +521,137 @@ soundRef.on("value", (snapshot) => {
     const sfx = document.getElementById('sfx-player');
     sfx.src = data.name + ".mp3";
     sfx.play().catch(() => {});
+  }
+});
+
+// ---------------------- NEW: PRESENCE & MEMBER LIST ----------------------
+let allUsers = {};
+let allPresence = {};
+
+db.ref('users').on('value', snap => { 
+  allUsers = snap.val() || {}; 
+  updateMemberList(); 
+});
+
+db.ref('presence').on('value', snap => { 
+  allPresence = snap.val() || {}; 
+  updateMemberList(); 
+});
+
+function setupPresence() {
+  if (!cleanName) return;
+  presenceRef.child(cleanName).set({
+    username: username,
+    lastSeen: Date.now(),
+    status: 'active',
+    deviceID: deviceID
+  });
+  presenceRef.child(cleanName).onDisconnect().remove();
+}
+
+function updatePresence() {
+  if (!cleanName) return;
+  presenceRef.child(cleanName).update({ lastSeen: Date.now(), status: 'active' });
+}
+
+const activityThrottle = throttle(() => {
+  updatePresence();
+  startIdleTimer();
+}, 3000);
+
+document.addEventListener('mousemove', activityThrottle);
+document.addEventListener('keydown', activityThrottle);
+document.addEventListener('click', activityThrottle);
+
+let idleTimer = null;
+function startIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (cleanName) presenceRef.child(cleanName).update({ status: 'idle' });
+  }, 300000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    updatePresence();
+    startIdleTimer();
+  } else if (cleanName) {
+    presenceRef.child(cleanName).update({ status: 'idle' });
+  }
+});
+
+// Member List
+if (memberListBtn) {
+  memberListBtn.onclick = () => {
+    const show = memberPanel.style.display === 'none';
+    memberPanel.style.display = show ? 'block' : 'none';
+    memberArrow.textContent = show ? '↑' : '↓';
+  };
+}
+
+function updateMemberList() {
+  membersList.innerHTML = '';
+  Object.keys(allUsers).sort((a,b) => (allUsers[a].originalName||a).localeCompare(allUsers[b].originalName||b)).forEach(cKey => {
+    const u = allUsers[cKey];
+    const dispName = u.originalName || cKey;
+    const uColor = u.color || stringToColor(dispName);
+    const uIcon = u.icon;
+
+    const pres = allPresence[cKey];
+    let stat = '⚫';
+    if (pres) {
+      const age = Date.now() - pres.lastSeen;
+      if (age < 90000) stat = pres.status === 'active' ? '🟢' : '🟠';
+      else if (age < 600000) stat = '🟠';
+    }
+
+    let hasT = false, tType = 'normal', tRem = 0;
+    Object.keys(timeouts || {}).forEach(d => {
+      const t = timeouts[d];
+      if (t && t.originalName && t.originalName.toLowerCase() === cKey && t.until > Date.now()) {
+        hasT = true; 
+        tType = t.type || 'normal'; 
+        tRem = Math.ceil((t.until - Date.now())/1000);
+      }
+    });
+
+    const item = document.createElement('div');
+    item.className = 'member-item';
+    item.dataset.cname = cKey;
+    item.innerHTML = `
+      <span class="member-status">${stat}</span>
+      \( {uIcon ? `<img src=" \){uIcon}" class="member-icon">` : ''}
+      <span class="member-name" style="color:\( {uColor}; \){(admins[cKey.toLowerCase()])?'text-shadow:0 0 8px '+uColor+';':''}">${dispName}</span>
+      \( {hasT ? `<span class="timeout-emoji" style="color: \){tType==='shadow'?'#c724c7':'#ff4444'}" title="\( {tRem}s left ( \){tType})">⏳</span>` : ''}
+      \( {isAdmin ? `<button class="delete-user-btn" data-cname=" \){cKey}" title="Delete account">⛔</button>` : ''}
+    `;
+    membersList.appendChild(item);
+  });
+}
+
+membersList.addEventListener('click', e => {
+  if (e.target.classList.contains('delete-user-btn')) {
+    const cname = e.target.dataset.cname;
+    const name = allUsers[cname] ? allUsers[cname].originalName : cname;
+    if (confirm(`⚠️ ARE YOU SURE? This permanently DELETES "${name}"!`)) {
+      db.ref('users/' + cname).remove();
+      db.ref('presence/' + cname).remove();
+    }
+  }
+  const emoji = e.target.closest('.timeout-emoji');
+  if (emoji) {
+    const item = emoji.closest('.member-item');
+    const cKey = item.dataset.cname;
+    const dur = prompt(`New timeout seconds for ${allUsers[cKey].originalName} (0 = remove):`, '60');
+    if (dur !== null) {
+      const ns = parseInt(dur);
+      Object.keys(timeouts || {}).forEach(did => {
+        if (timeouts[did].originalName && timeouts[did].originalName.toLowerCase() === cKey) {
+          if (ns <= 0) db.ref('timeouts/' + did).remove();
+          else db.ref('timeouts/' + did).update({until: Date.now() + ns*1000});
+        }
+      });
+    }
   }
 });
 
@@ -456,7 +681,7 @@ function populateVault(container, items) {
         return;
       }
       const myTimeout = timeouts[deviceID];
-      if (myTimeout && myTimeout.until > Date.now()) {
+      if (myTimeout && myTimeout.until > Date.now() && myTimeout.type !== 'shadow') {
         alert("you're timed out buddy.");
         return;
       }
@@ -465,6 +690,7 @@ function populateVault(container, items) {
         text: url, 
         username: username, 
         color: myColor, 
+        icon: myIcon,
         timestamp: Date.now(),
         fingerprint: deviceID
       });
@@ -527,7 +753,7 @@ function checkRateLimit() {
 }
 
 sendChat.addEventListener("click", () => {
-  if (!username) return; // Must be logged in
+  if (!username) return;
   const text = chatInput.value.trim();
   if (!text) return;
 
@@ -540,7 +766,7 @@ sendChat.addEventListener("click", () => {
     return; 
   }
   const myTimeout = timeouts[deviceID]; 
-  if (myTimeout && myTimeout.until > Date.now()) {
+  if (myTimeout && myTimeout.until > Date.now() && myTimeout.type !== 'shadow') {
     alert("you're timed out.");
     return;
   }
@@ -564,6 +790,7 @@ sendChat.addEventListener("click", () => {
     text: text, 
     username: username, 
     color: myColor, 
+    icon: myIcon,
     timestamp: Date.now(),
     fingerprint: deviceID
   });
@@ -630,6 +857,14 @@ messagesRef.on("child_removed", (snapshot) => {
 });
 
 function createMessageElement(msg, msgKey) {
+  // Shadow timeout hide for non-admins
+  if (!isAdmin && msg.fingerprint && timeouts && timeouts[msg.fingerprint] && 
+      timeouts[msg.fingerprint].until > Date.now() && 
+      timeouts[msg.fingerprint].type === 'shadow' && 
+      msg.fingerprint !== deviceID) {
+    return document.createElement('div'); // invisible
+  }
+
   const p = document.createElement("p");
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
@@ -661,12 +896,21 @@ function createMessageElement(msg, msgKey) {
     }
 
     addAdminIcon(p, msg.username);
+
+    // Custom user icon
+    if (msg.icon) {
+      const iconEl = document.createElement("img");
+      iconEl.src = msg.icon;
+      iconEl.style.cssText = "width:18px;height:18px;border-radius:50%;margin-right:6px;vertical-align:middle;";
+      p.appendChild(iconEl);
+    }
+
     p.appendChild(timeSpan);
     p.appendChild(userSpan);
     p.appendChild(contentDiv);
   }
 
-  // Admin Delete/Timeout Button in Chat
+  // Admin buttons
   if (isAdmin) {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "❌";
@@ -678,22 +922,33 @@ function createMessageElement(msg, msgKey) {
     timeoutBtn.textContent = "⏱️";
     timeoutBtn.className = "admin-action-btn";
     timeoutBtn.onclick = () => {
-        const duration = prompt(`How many seconds to timeout ${msg.username}?`);
+        const duration = prompt(`Normal timeout ${msg.username} for how many seconds?`);
         if (duration && !isNaN(duration)) {
-            const targetFingerprint = msg.fingerprint; 
-            if (!targetFingerprint) {
-                alert("Cannot timeout: This is an old message without a Device ID.");
-                return;
-            }
             const untilTime = Date.now() + (parseInt(duration) * 1000);
-            db.ref("timeouts").child(targetFingerprint).set({ 
+            db.ref("timeouts").child(msg.fingerprint).set({ 
                 until: untilTime,
+                type: "normal",
                 originalName: msg.username 
             });
-            alert(`Timed out device (user: ${msg.username}) for ${duration} seconds.`);
         }
     };
     p.appendChild(timeoutBtn);
+
+    const shadowBtn = document.createElement("button");
+    shadowBtn.textContent = "🕶️";
+    shadowBtn.className = "admin-action-btn";
+    shadowBtn.onclick = () => {
+        const duration = prompt(`Shadow timeout ${msg.username} for how many seconds?`);
+        if (duration && !isNaN(duration)) {
+            const untilTime = Date.now() + (parseInt(duration) * 1000);
+            db.ref("timeouts").child(msg.fingerprint).set({ 
+                until: untilTime,
+                type: "shadow",
+                originalName: msg.username 
+            });
+        }
+    };
+    p.appendChild(shadowBtn);
   }
 
   p.dataset.key = msgKey;
@@ -733,6 +988,7 @@ function loadOldMessages() {
 db.ref("timeouts").on("value", (snapshot) => {
   timeouts = snapshot.val() || {}; 
   updateTimeoutDisplay();
+  updateMemberList();
 });
 
 function updateTimeoutDisplay() {
@@ -745,7 +1001,11 @@ function updateTimeoutDisplay() {
   }
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
-    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
+    const isShadow = myStatus.type === 'shadow';
+    timerEl.textContent = seconds > 0 
+      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
+      : "";
+    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -765,7 +1025,7 @@ let typeTimeout;
 
 chatInput.addEventListener('input', () => {
   if (!username) return;
-  if (timeouts && timeouts[deviceID] && timeouts[deviceID].until > Date.now()) return;
+  if (timeouts && timeouts[deviceID] && timeouts[deviceID].until > Date.now() && timeouts[deviceID].type !== 'shadow') return;
 
   typingRef.child(identityKey).set({ name: username, time: Date.now() });
   typingRef.child(identityKey).onDisconnect().remove();
@@ -804,9 +1064,9 @@ function updateTypingText() {
   const dotStr = ".".repeat(dots);
   
   if (currentTypers.length === 1) {
-    typingIndicator.textContent = `${currentTypers[0]} is typing${dotStr}`;
+    typingIndicator.textContent = `\( {currentTypers[0]} is typing \){dotStr}`;
   } else if (currentTypers.length === 2) {
-    typingIndicator.textContent = `${currentTypers[0]} and ${currentTypers[1]} are typing${dotStr}`;
+    typingIndicator.textContent = `${currentTypers[0]} and \( {currentTypers[1]} are typing \){dotStr}`;
   } else {
     typingIndicator.textContent = `more than 3 people are typing${dotStr}`;
   }
@@ -856,7 +1116,7 @@ function updateClock() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${d}`;
+  const dateStr = `\( {year}- \){month}-${d}`;
   
   const time = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
   const day = now.getDay();
@@ -910,3 +1170,87 @@ function formatTimer(s) { return Math.floor(s/60) + ":" + (s%60).toString().padS
 
 setInterval(updateClock, 1000);
 updateClock();
+
+// ---------------------- NEW: TARGETED SOUNDS & JUMPSCARES ----------------------
+function showTargetSelector(callback) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '4000';
+  modal.innerHTML = `
+    <div class="modal-content" style="width:340px;">
+      <div class="modal-header"><h3>Choose online user</h3><button style="background:none;border:none;color:#ed4245;font-size:22px;" id="close-t">✕</button></div>
+      <div id="target-list" style="max-height:360px;overflow:auto;padding:10px;"></div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const list = modal.querySelector('#target-list');
+  const online = Object.keys(allPresence).filter(k => Date.now() - allPresence[k].lastSeen < 180000);
+  online.forEach(k => {
+    const p = allPresence[k];
+    const b = document.createElement('button');
+    b.style = 'width:100%;padding:12px;margin:5px 0;background:#36393f;border:1px solid #4f545c;border-radius:6px;color:#fff;cursor:pointer;';
+    b.textContent = p.username + (admins[k.toLowerCase()] ? ' 👑' : '');
+    b.onclick = () => { modal.remove(); callback(p.username); };
+    list.appendChild(b);
+  });
+  if (!online.length) list.innerHTML = '<p style="text-align:center;padding:30px;color:#aaa;">No one online right now</p>';
+
+  modal.querySelector('#close-t').onclick = () => { modal.remove(); callback(null); };
+  modal.onclick = e => { if (e.target === modal) { modal.remove(); callback(null); }};
+}
+
+window.targetedTriggerSound = function(name) {
+  showTargetSelector(user => {
+    if (user) db.ref('targeted_sfx').push({ target: user, name: name, time: Date.now() });
+  });
+};
+
+jumpsImage.addEventListener('input', () => {
+  clearTimeout(window.jTimer);
+  window.jTimer = setTimeout(() => {
+    const u = jumpsImage.value.trim();
+    jumpsError.textContent = ''; jumpsPreview.innerHTML = '';
+    if (!u || u.length > 800 || !/\.(png|jpe?g|gif|webp)$/i.test(u)) return;
+    const img = new Image();
+    img.onload = () => jumpsPreview.innerHTML = `<img src="${u}">`;
+    img.onerror = () => jumpsError.textContent = "Link doesn't work";
+    img.src = u;
+  }, 500);
+});
+
+sendJumpsBtn.onclick = () => {
+  const url = jumpsImage.value.trim();
+  if (!url || jumpsError.textContent) return alert('Fix image link first');
+  showTargetSelector(user => {
+    if (user) db.ref('jumpscares').push({ target: user, image: url, time: Date.now() });
+  });
+};
+
+jumpscaresRef.on('child_added', snap => {
+  const d = snap.val();
+  if (d.target === username && d.time > loadTime) triggerJumpscare(d.image);
+});
+
+function triggerJumpscare(url) {
+  const ov = document.createElement('div');
+  ov.style = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .4s;';
+  const i = document.createElement('img');
+  i.src = url;
+  i.style = 'max-width:92vw;max-height:92vh;object-fit:contain;box-shadow:0 0 80px #ff0000;';
+  ov.appendChild(i);
+  document.body.appendChild(ov);
+
+  const ja = document.getElementById('jumpscare-audio');
+  if (ja) { ja.currentTime = 0; ja.play().catch(()=>{}); }
+
+  setTimeout(() => { ov.style.opacity = '0'; setTimeout(()=>ov.remove(), 600); }, 1800);
+};
+
+targetedSfxRef.on('child_added', snap => {
+  const d = snap.val();
+  if (d.target === username && d.time > loadTime) {
+    const s = document.getElementById('sfx-player');
+    s.src = d.name + '.mp3';
+    s.play().catch(()=>{});
+  }
+});
