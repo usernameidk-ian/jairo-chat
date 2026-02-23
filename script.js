@@ -813,14 +813,28 @@ messagesRef.on("child_removed", (snapshot) => {
 });
 
 function createMessageElement(msg, msgKey) {
-  if (!isAdmin && msg.fingerprint && timeouts && timeouts[msg.fingerprint] && 
-      timeouts[msg.fingerprint].until > Date.now() && 
-      timeouts[msg.fingerprint].type === 'shadow' && 
-      msg.fingerprint !== deviceID) {
+  // Check if this message is from someone under a shadow timeout
+  const isShadowed = msg.fingerprint && timeouts && timeouts[msg.fingerprint] &&
+      timeouts[msg.fingerprint].until > Date.now() &&
+      timeouts[msg.fingerprint].type === 'shadow';
+
+  const isMine = msg.fingerprint === deviceID;
+
+  // Regular users (non-admin, not the sender): completely hide shadow messages
+  if (!isAdmin && !isMine && isShadowed) {
     return document.createElement('div');
   }
 
   const p = document.createElement("p");
+
+  // Admins see shadow messages dimmed/grey so they know it's a ghost message.
+  // The sender themselves sees it fully normally (no hint anything is wrong).
+  if (isShadowed && isAdmin) {
+    p.style.opacity = '0.45';
+    p.style.filter = 'grayscale(60%)';
+    p.title = '🕶️ Shadow timed-out message (only you and the sender can see this)';
+  }
+
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -952,13 +966,19 @@ function updateTimeoutDisplay() {
     timerEl.textContent = ""; 
     return; 
   }
+
+  // SHADOW TIMEOUT: the person must never know they are shadow timed out.
+  // Show nothing at all to them — they think everything is normal.
+  if (myStatus.type === 'shadow') {
+    timerEl.textContent = "";
+    return;
+  }
+
+  // NORMAL TIMEOUT: show the countdown timer as usual.
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
-    const isShadow = myStatus.type === 'shadow';
-    timerEl.textContent = seconds > 0 
-      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
-      : "";
-    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
+    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
+    timerEl.style.color = '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
