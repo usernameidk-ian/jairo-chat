@@ -547,6 +547,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// Inject a ✕ close button directly inside the panel so it's always reachable
+// even when the school clock is covering the Member List toggle button
+const memberPanelCloseBtn = document.createElement('button');
+memberPanelCloseBtn.textContent = '✕';
+memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
+memberPanelCloseBtn.title = 'Close';
+memberPanelCloseBtn.onclick = (e) => {
+  e.stopPropagation();
+  memberPanel.style.display = 'none';
+  memberArrow.textContent = '↓';
+};
+memberPanel.prepend(memberPanelCloseBtn);
+
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -554,6 +567,16 @@ if (memberListBtn) {
     memberArrow.textContent = show ? '↑' : '↓';
   };
 }
+
+// Close member panel when clicking anywhere outside it
+document.addEventListener('click', (e) => {
+  if (memberPanel.style.display !== 'none' &&
+      !memberPanel.contains(e.target) &&
+      !memberListBtn.contains(e.target)) {
+    memberPanel.style.display = 'none';
+    memberArrow.textContent = '↓';
+  }
+}, true);
 
 function updateMemberList() {
   membersList.innerHTML = '';
@@ -622,6 +645,18 @@ membersList.addEventListener('click', e => {
 });
 
 // ---------------------- 10. GIF & EMOJI PICKERS ----------------------
+// 2-second send cooldown — shared across text, gif, and emoji sends
+let sendCooldown = false;
+function applySendCooldown() {
+  sendCooldown = true;
+  sendChat.disabled = true;
+  chatInput.disabled = true;
+  setTimeout(() => {
+    sendCooldown = false;
+    sendChat.disabled = false;
+    chatInput.disabled = false;
+  }, 2000);
+}
 const myGifs = ["gifs/1.gif","gifs/2.gif","gifs/3.gif","gifs/4.gif","gifs/5.gif","gifs/6.gif","gifs/7.gif","gifs/8.gif","gifs/9.gif","gifs/10.gif","gifs/11.gif","gifs/12.gif","gifs/13.gif","gifs/14.gif","gifs/15.gif","gifs/16.gif","gifs/17.gif","gifs/18.gif","gifs/19.gif","gifs/20.gif","gifs/21.gif","gifs/22.gif","gifs/23.gif","gifs/24.gif","gifs/25.gif"];
 
 const myEmojis = ["emojis/e1.png","emojis/e2.png","emojis/e3.png","emojis/e4.png","emojis/e5.png","emojis/e6.png","emojis/e7.png","emojis/e8.png","emojis/e9.png","emojis/e10.png"];
@@ -633,6 +668,7 @@ function populateVault(container, items) {
     img.alt = "media";
     img.onclick = () => {
       if (!username) return;
+      if (sendCooldown) return;
       if (timeouts === null) {
         alert("Connecting to server... wait a sec.");
         return;
@@ -654,6 +690,7 @@ function populateVault(container, items) {
       gifVault.style.display = 'none';
       emojiVault.style.display = 'none';
       typingRef.child(identityKey).remove();
+      applySendCooldown();
     };
     container.appendChild(img);
   });
@@ -710,6 +747,7 @@ function checkRateLimit() {
 
 sendChat.addEventListener("click", () => {
   if (!username) return;
+  if (sendCooldown) return;
   const text = chatInput.value.trim();
   if (!text) return;
 
@@ -754,6 +792,7 @@ sendChat.addEventListener("click", () => {
   chatInput.value = "";
   charCounter.textContent = MAX_CHARS; 
   typingRef.child(identityKey).remove();
+  applySendCooldown();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
@@ -813,28 +852,14 @@ messagesRef.on("child_removed", (snapshot) => {
 });
 
 function createMessageElement(msg, msgKey) {
-  // Check if this message is from someone under a shadow timeout
-  const isShadowed = msg.fingerprint && timeouts && timeouts[msg.fingerprint] &&
-      timeouts[msg.fingerprint].until > Date.now() &&
-      timeouts[msg.fingerprint].type === 'shadow';
-
-  const isMine = msg.fingerprint === deviceID;
-
-  // Regular users (non-admin, not the sender): completely hide shadow messages
-  if (!isAdmin && !isMine && isShadowed) {
+  if (!isAdmin && msg.fingerprint && timeouts && timeouts[msg.fingerprint] && 
+      timeouts[msg.fingerprint].until > Date.now() && 
+      timeouts[msg.fingerprint].type === 'shadow' && 
+      msg.fingerprint !== deviceID) {
     return document.createElement('div');
   }
 
   const p = document.createElement("p");
-
-  // Admins see shadow messages dimmed/grey so they know it's a ghost message.
-  // The sender themselves sees it fully normally (no hint anything is wrong).
-  if (isShadowed && isAdmin) {
-    p.style.opacity = '0.45';
-    p.style.filter = 'grayscale(60%)';
-    p.title = '🕶️ Shadow timed-out message (only you and the sender can see this)';
-  }
-
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -966,19 +991,13 @@ function updateTimeoutDisplay() {
     timerEl.textContent = ""; 
     return; 
   }
-
-  // SHADOW TIMEOUT: the person must never know they are shadow timed out.
-  // Show nothing at all to them — they think everything is normal.
-  if (myStatus.type === 'shadow') {
-    timerEl.textContent = "";
-    return;
-  }
-
-  // NORMAL TIMEOUT: show the countdown timer as usual.
   function tick() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
-    timerEl.textContent = seconds > 0 ? `Your device is timed out for ${seconds}s more.` : "";
-    timerEl.style.color = '#ffb4b4';
+    const isShadow = myStatus.type === 'shadow';
+    timerEl.textContent = seconds > 0 
+      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
+      : "";
+    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -1152,7 +1171,11 @@ function showTargetSelector(callback) {
   document.body.appendChild(modal);
 
   const list = modal.querySelector('#target-list');
-  const online = Object.keys(allPresence).filter(k => Date.now() - allPresence[k].lastSeen < 180000);
+  // FIX: filter out entries where username hasn't loaded yet (causes "undefined" buttons)
+  const online = Object.keys(allPresence).filter(k => {
+    const p = allPresence[k];
+    return p && p.username && Date.now() - p.lastSeen < 180000;
+  });
   online.forEach(k => {
     const p = allPresence[k];
     const b = document.createElement('button');
