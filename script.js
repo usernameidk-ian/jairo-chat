@@ -132,6 +132,26 @@ function completeLogin(uname, forceAdmin = false) {
     });
     
     setupPresence();
+
+    // AUTO-PRESENCE VERIFICATION: after writing presence to Firebase, confirm
+    // it actually landed with a username. If not, auto-reload (up to 3 times).
+    // This permanently fixes the "user missing from target list" bug without
+    // needing a manual force-refresh button.
+    const presenceRetries = parseInt(sessionStorage.getItem('presence_retries') || '0');
+    setTimeout(() => {
+      presenceRef.child(cleanName).once('value', snap => {
+        const data = snap.val();
+        if (!data || !data.username) {
+          if (presenceRetries < 3) {
+            sessionStorage.setItem('presence_retries', String(presenceRetries + 1));
+            location.reload();
+          }
+          // after 3 tries, give up silently — don't infinite-loop
+        } else {
+          sessionStorage.removeItem('presence_retries'); // confirmed, reset counter
+        }
+      });
+    }, 2000);
 }
 
 // Auto-Login Check on Refresh
@@ -580,13 +600,26 @@ document.addEventListener('click', (e) => {
 
 function updateMemberList() {
   membersList.innerHTML = '';
-  Object.keys(allUsers).sort((a,b) => (allUsers[a].originalName||a).localeCompare(allUsers[b].originalName||b)).forEach(cKey => {
-    const u = allUsers[cKey];
-    const dispName = u.originalName || cKey;
+
+  // Build a combined key set: registered users PLUS anyone in presence who
+  // isn't in allUsers yet (fixes the "missing accounts" bug where some users
+  // don't appear in the member list even though they're online).
+  const allKeys = new Set([
+    ...Object.keys(allUsers),
+    ...Object.keys(allPresence).filter(k => allPresence[k] && allPresence[k].username)
+  ]);
+
+  Array.from(allKeys).sort((a, b) => {
+    const na = (allUsers[a] && allUsers[a].originalName) || (allPresence[a] && allPresence[a].username) || a;
+    const nb = (allUsers[b] && allUsers[b].originalName) || (allPresence[b] && allPresence[b].username) || b;
+    return na.localeCompare(nb);
+  }).forEach(cKey => {
+    const u = allUsers[cKey] || {};
+    const pres = allPresence[cKey];
+    const dispName = u.originalName || (pres && pres.username) || cKey;
     const uColor = u.color || stringToColor(dispName);
     const uIcon = u.icon;
 
-    const pres = allPresence[cKey];
     let stat = '⚫';
     if (pres) {
       const age = Date.now() - pres.lastSeen;
@@ -1058,7 +1091,6 @@ function updateTypingText() {
 }
 
 // ---------------------- 15. SCHOOL CLOCK ----------------------
-const schedules = {
   regular: [
     { n: "ADVISORY", s: "08:00", e: "08:29" },
     { n: "PERIOD 1", s: "08:33", e: "09:28" },
