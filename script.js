@@ -1091,6 +1091,7 @@ function updateTypingText() {
 }
 
 // ---------------------- 15. SCHOOL CLOCK ----------------------
+const schedules = {
   regular: [
     { n: "ADVISORY", s: "08:00", e: "08:29" },
     { n: "PERIOD 1", s: "08:33", e: "09:28" },
