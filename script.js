@@ -1026,7 +1026,7 @@ function updateTimeoutDisplay() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
     const isShadow = myStatus.type === 'shadow';
     timerEl.textContent = seconds > 0 
-      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
+      ? (isShadow ? `      ` : `Your device is timed out for ${seconds}s more.`)
       : "";
     timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
     if (seconds <= 0) {
