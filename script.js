@@ -486,10 +486,10 @@ if (tabJumps) {
   tabJumps.onclick = () => {
     tabJumps.classList.add('active');
     tabSounds.classList.remove('active');
-    if (tabTools) tabTools.classList.remove('active');
+    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'none';
     jumpsContent.style.display = 'flex';
-    if (toolsContent) toolsContent.style.display = 'none';
+    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
   };
 }
 
@@ -566,6 +566,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// Inject a sticky ✕ close button inside the panel — always reachable
+// even when the school clock is blocking the Member List toggle button
+const memberPanelCloseBtn = document.createElement('button');
+memberPanelCloseBtn.textContent = '✕';
+memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
+memberPanelCloseBtn.title = 'Close';
+memberPanelCloseBtn.onclick = (e) => {
+  e.stopPropagation();
+  memberPanel.style.display = 'none';
+  memberArrow.textContent = '↓';
+};
+memberPanel.prepend(memberPanelCloseBtn);
+
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -573,6 +586,16 @@ if (memberListBtn) {
     memberArrow.textContent = show ? '↑' : '↓';
   };
 }
+
+// Close member panel when clicking anywhere outside it
+document.addEventListener('click', (e) => {
+  if (memberPanel.style.display !== 'none' &&
+      !memberPanel.contains(e.target) &&
+      !memberListBtn.contains(e.target)) {
+    memberPanel.style.display = 'none';
+    memberArrow.textContent = '↓';
+  }
+}, true);
 
 function updateMemberList() {
   membersList.innerHTML = '';
@@ -607,7 +630,7 @@ function updateMemberList() {
       <span class="member-status">${stat}</span>
       ${uIcon ? `<img src="${uIcon}" class="member-icon">` : ''}
       <span class="member-name" style="color:${uColor};${admins[cKey.toLowerCase()] ? 'text-shadow:0 0 8px ' + uColor + ';' : ''}">${dispName}</span>
-      ${isAdmin && hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
+      ${hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
       ${isAdmin ? `<button class="delete-user-btn" data-cname="${cKey}" title="Delete account">⛔</button>` : ''}
     `;
     membersList.appendChild(item);
@@ -624,11 +647,10 @@ membersList.addEventListener('click', e => {
     }
   }
   const emoji = e.target.closest('.timeout-emoji');
-  if (emoji && isAdmin) {
+  if (emoji) {
     const item = emoji.closest('.member-item');
     const cKey = item.dataset.cname;
-    const dispName = (allUsers[cKey] && allUsers[cKey].originalName) || (allPresence[cKey] && allPresence[cKey].username) || cKey;
-    const dur = prompt(`New timeout seconds for ${dispName} (0 = remove):`, '60');
+    const dur = prompt(`New timeout seconds for ${allUsers[cKey].originalName} (0 = remove):`, '60');
     if (dur !== null) {
       const ns = parseInt(dur);
       Object.keys(timeouts || {}).forEach(did => {
@@ -976,9 +998,9 @@ function updateTimeoutDisplay() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
     const isShadow = myStatus.type === 'shadow';
     timerEl.textContent = seconds > 0 
-      ? (isShadow ? `` : `Your device is timed out for ${seconds}s more.`)
+      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
       : "";
-    timerEl.style.color = '#ffb4b4';
+    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -1225,7 +1247,7 @@ targetedSfxRef.on('child_added', snap => {
 
 // ---------------------- FORCE REFRESH (ADMIN TOOL) ----------------------
 // Clients listen for a force_refresh event targeting their username.
-// When received, they silently reload. Admins trigger this from Tools tab.
+// When received, they silently reload. Admins trigger this from the Tools tab.
 forceRefreshRef.on('child_added', snap => {
   const d = snap.val();
   if (d && d.target === username && d.time > loadTime) {
