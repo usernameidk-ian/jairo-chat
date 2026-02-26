@@ -28,7 +28,8 @@ let isAdmin = false;
 // ADMIN CREDENTIALS & BADGES
 const admins = {
   "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
-  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" }
+  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" },
+  "placeholder": { password: "placeholder", badge: "placeholder.png" }
 };
 
 const authOverlay = document.getElementById('auth-overlay');
@@ -492,16 +493,33 @@ if (tabSounds) {
   tabSounds.onclick = () => {
     tabSounds.classList.add('active');
     tabJumps.classList.remove('active');
+    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'flex';
     jumpsContent.style.display = 'none';
+    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
   };
 }
 if (tabJumps) {
   tabJumps.onclick = () => {
     tabJumps.classList.add('active');
     tabSounds.classList.remove('active');
+    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'none';
     jumpsContent.style.display = 'flex';
+    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
+  };
+}
+
+const tabTools = document.getElementById('tab-tools');
+const toolsContent = document.getElementById('tools-content');
+if (tabTools) {
+  tabTools.onclick = () => {
+    tabTools.classList.add('active');
+    tabSounds.classList.remove('active');
+    tabJumps.classList.remove('active');
+    soundsContent.style.display = 'none';
+    jumpsContent.style.display = 'none';
+    toolsContent.style.display = 'flex';
   };
 }
 
@@ -565,6 +583,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// Inject a sticky ✕ close button inside the panel — always reachable
+// even when the school clock is blocking the Member List toggle button
+const memberPanelCloseBtn = document.createElement('button');
+memberPanelCloseBtn.textContent = '✕';
+memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
+memberPanelCloseBtn.title = 'Close';
+memberPanelCloseBtn.onclick = (e) => {
+  e.stopPropagation();
+  memberPanel.style.display = 'none';
+  memberArrow.textContent = '↓';
+};
+memberPanel.prepend(memberPanelCloseBtn);
+
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -572,6 +603,16 @@ if (memberListBtn) {
     memberArrow.textContent = show ? '↑' : '↓';
   };
 }
+
+// Close member panel when clicking anywhere outside it
+document.addEventListener('click', (e) => {
+  if (memberPanel.style.display !== 'none' &&
+      !memberPanel.contains(e.target) &&
+      !memberListBtn.contains(e.target)) {
+    memberPanel.style.display = 'none';
+    memberArrow.textContent = '↓';
+  }
+}, true);
 
 function updateMemberList() {
   membersList.innerHTML = '';
