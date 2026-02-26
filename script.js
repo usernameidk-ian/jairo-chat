@@ -18,6 +18,7 @@ const presenceRef = db.ref('presence');
 const targetedSfxRef = db.ref('targeted_sfx');
 const jumpscaresRef = db.ref('jumpscares');
 const cursorRef = db.ref('cursors');
+const forceRefreshRef = db.ref('force_refresh');
 
 // ---------------------- 2. AUTH & ACCOUNT LOGIC ----------------------
 let username = "";
@@ -28,7 +29,8 @@ let isAdmin = false;
 // ADMIN CREDENTIALS & BADGES
 const admins = {
   "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
-  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" }
+  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" },
+  "placeholder": { password: "placeholder", badge: "placeholder.png" }
 };
 
 const authOverlay = document.getElementById('auth-overlay');
@@ -132,26 +134,6 @@ function completeLogin(uname, forceAdmin = false) {
     });
     
     setupPresence();
-
-    // AUTO-PRESENCE VERIFICATION: after writing presence to Firebase, confirm
-    // it actually landed with a username. If not, auto-reload (up to 3 times).
-    // This permanently fixes the "user missing from target list" bug without
-    // needing a manual force-refresh button.
-    const presenceRetries = parseInt(sessionStorage.getItem('presence_retries') || '0');
-    setTimeout(() => {
-      presenceRef.child(cleanName).once('value', snap => {
-        const data = snap.val();
-        if (!data || !data.username) {
-          if (presenceRetries < 3) {
-            sessionStorage.setItem('presence_retries', String(presenceRetries + 1));
-            location.reload();
-          }
-          // after 3 tries, give up silently — don't infinite-loop
-        } else {
-          sessionStorage.removeItem('presence_retries'); // confirmed, reset counter
-        }
-      });
-    }, 2000);
 }
 
 // Auto-Login Check on Refresh
@@ -494,16 +476,33 @@ if (tabSounds) {
   tabSounds.onclick = () => {
     tabSounds.classList.add('active');
     tabJumps.classList.remove('active');
+    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'flex';
     jumpsContent.style.display = 'none';
+    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
   };
 }
 if (tabJumps) {
   tabJumps.onclick = () => {
     tabJumps.classList.add('active');
     tabSounds.classList.remove('active');
+    if (tabTools) tabTools.classList.remove('active');
     soundsContent.style.display = 'none';
     jumpsContent.style.display = 'flex';
+    if (toolsContent) toolsContent.style.display = 'none';
+  };
+}
+
+const tabTools = document.getElementById('tab-tools');
+const toolsContent = document.getElementById('tools-content');
+if (tabTools) {
+  tabTools.onclick = () => {
+    tabTools.classList.add('active');
+    tabSounds.classList.remove('active');
+    tabJumps.classList.remove('active');
+    soundsContent.style.display = 'none';
+    jumpsContent.style.display = 'none';
+    toolsContent.style.display = 'flex';
   };
 }
 
@@ -567,19 +566,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Inject a ✕ close button directly inside the panel so it's always reachable
-// even when the school clock is covering the Member List toggle button
-const memberPanelCloseBtn = document.createElement('button');
-memberPanelCloseBtn.textContent = '✕';
-memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
-memberPanelCloseBtn.title = 'Close';
-memberPanelCloseBtn.onclick = (e) => {
-  e.stopPropagation();
-  memberPanel.style.display = 'none';
-  memberArrow.textContent = '↓';
-};
-memberPanel.prepend(memberPanelCloseBtn);
-
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -588,38 +574,15 @@ if (memberListBtn) {
   };
 }
 
-// Close member panel when clicking anywhere outside it
-document.addEventListener('click', (e) => {
-  if (memberPanel.style.display !== 'none' &&
-      !memberPanel.contains(e.target) &&
-      !memberListBtn.contains(e.target)) {
-    memberPanel.style.display = 'none';
-    memberArrow.textContent = '↓';
-  }
-}, true);
-
 function updateMemberList() {
   membersList.innerHTML = '';
-
-  // Build a combined key set: registered users PLUS anyone in presence who
-  // isn't in allUsers yet (fixes the "missing accounts" bug where some users
-  // don't appear in the member list even though they're online).
-  const allKeys = new Set([
-    ...Object.keys(allUsers),
-    ...Object.keys(allPresence).filter(k => allPresence[k] && allPresence[k].username)
-  ]);
-
-  Array.from(allKeys).sort((a, b) => {
-    const na = (allUsers[a] && allUsers[a].originalName) || (allPresence[a] && allPresence[a].username) || a;
-    const nb = (allUsers[b] && allUsers[b].originalName) || (allPresence[b] && allPresence[b].username) || b;
-    return na.localeCompare(nb);
-  }).forEach(cKey => {
-    const u = allUsers[cKey] || {};
-    const pres = allPresence[cKey];
-    const dispName = u.originalName || (pres && pres.username) || cKey;
+  Object.keys(allUsers).sort((a,b) => (allUsers[a].originalName||a).localeCompare(allUsers[b].originalName||b)).forEach(cKey => {
+    const u = allUsers[cKey];
+    const dispName = u.originalName || cKey;
     const uColor = u.color || stringToColor(dispName);
     const uIcon = u.icon;
 
+    const pres = allPresence[cKey];
     let stat = '⚫';
     if (pres) {
       const age = Date.now() - pres.lastSeen;
@@ -644,7 +607,7 @@ function updateMemberList() {
       <span class="member-status">${stat}</span>
       ${uIcon ? `<img src="${uIcon}" class="member-icon">` : ''}
       <span class="member-name" style="color:${uColor};${admins[cKey.toLowerCase()] ? 'text-shadow:0 0 8px ' + uColor + ';' : ''}">${dispName}</span>
-      ${hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
+      ${isAdmin && hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
       ${isAdmin ? `<button class="delete-user-btn" data-cname="${cKey}" title="Delete account">⛔</button>` : ''}
     `;
     membersList.appendChild(item);
@@ -661,10 +624,11 @@ membersList.addEventListener('click', e => {
     }
   }
   const emoji = e.target.closest('.timeout-emoji');
-  if (emoji) {
+  if (emoji && isAdmin) {
     const item = emoji.closest('.member-item');
     const cKey = item.dataset.cname;
-    const dur = prompt(`New timeout seconds for ${allUsers[cKey].originalName} (0 = remove):`, '60');
+    const dispName = (allUsers[cKey] && allUsers[cKey].originalName) || (allPresence[cKey] && allPresence[cKey].username) || cKey;
+    const dur = prompt(`New timeout seconds for ${dispName} (0 = remove):`, '60');
     if (dur !== null) {
       const ns = parseInt(dur);
       Object.keys(timeouts || {}).forEach(did => {
@@ -678,16 +642,6 @@ membersList.addEventListener('click', e => {
 });
 
 // ---------------------- 10. GIF & EMOJI PICKERS ----------------------
-// 2-second send cooldown — shared across text, gif, and emoji sends
-let sendCooldown = false;
-function applySendCooldown() {
-  sendCooldown = true;
-  sendChat.disabled = true;
-  setTimeout(() => {
-    sendCooldown = false;
-    sendChat.disabled = false;
-  }, 1000);
-}
 const myGifs = ["gifs/1.gif","gifs/2.gif","gifs/3.gif","gifs/4.gif","gifs/5.gif","gifs/6.gif","gifs/7.gif","gifs/8.gif","gifs/9.gif","gifs/10.gif","gifs/11.gif","gifs/12.gif","gifs/13.gif","gifs/14.gif","gifs/15.gif","gifs/16.gif","gifs/17.gif","gifs/18.gif","gifs/19.gif","gifs/20.gif","gifs/21.gif","gifs/22.gif","gifs/23.gif","gifs/24.gif","gifs/25.gif"];
 
 const myEmojis = ["emojis/e1.png","emojis/e2.png","emojis/e3.png","emojis/e4.png","emojis/e5.png","emojis/e6.png","emojis/e7.png","emojis/e8.png","emojis/e9.png","emojis/e10.png"];
@@ -699,7 +653,6 @@ function populateVault(container, items) {
     img.alt = "media";
     img.onclick = () => {
       if (!username) return;
-      if (sendCooldown) return;
       if (timeouts === null) {
         alert("Connecting to server... wait a sec.");
         return;
@@ -721,7 +674,6 @@ function populateVault(container, items) {
       gifVault.style.display = 'none';
       emojiVault.style.display = 'none';
       typingRef.child(identityKey).remove();
-      applySendCooldown();
     };
     container.appendChild(img);
   });
@@ -778,7 +730,6 @@ function checkRateLimit() {
 
 sendChat.addEventListener("click", () => {
   if (!username) return;
-  if (sendCooldown) return;
   const text = chatInput.value.trim();
   if (!text) return;
 
@@ -823,7 +774,6 @@ sendChat.addEventListener("click", () => {
   chatInput.value = "";
   charCounter.textContent = MAX_CHARS; 
   typingRef.child(identityKey).remove();
-  applySendCooldown();
 });
 chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat.click(); });
 
@@ -1026,9 +976,9 @@ function updateTimeoutDisplay() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
     const isShadow = myStatus.type === 'shadow';
     timerEl.textContent = seconds > 0 
-      ? (isShadow ? `      ` : `Your device is timed out for ${seconds}s more.`)
+      ? (isShadow ? `` : `Your device is timed out for ${seconds}s more.`)
       : "";
-    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
+    timerEl.style.color = '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -1202,11 +1152,7 @@ function showTargetSelector(callback) {
   document.body.appendChild(modal);
 
   const list = modal.querySelector('#target-list');
-  // FIX: filter out entries where username hasn't loaded yet (causes "undefined" buttons)
-  const online = Object.keys(allPresence).filter(k => {
-    const p = allPresence[k];
-    return p && p.username && Date.now() - p.lastSeen < 180000;
-  });
+  const online = Object.keys(allPresence).filter(k => Date.now() - allPresence[k].lastSeen < 180000);
   online.forEach(k => {
     const p = allPresence[k];
     const b = document.createElement('button');
@@ -1276,3 +1222,20 @@ targetedSfxRef.on('child_added', snap => {
     s.play().catch(()=>{});
   }
 });
+
+// ---------------------- FORCE REFRESH (ADMIN TOOL) ----------------------
+// Clients listen for a force_refresh event targeting their username.
+// When received, they silently reload. Admins trigger this from Tools tab.
+forceRefreshRef.on('child_added', snap => {
+  const d = snap.val();
+  if (d && d.target === username && d.time > loadTime) {
+    snap.ref.remove(); // clean up the record
+    location.reload();
+  }
+});
+
+window.forceRefreshUser = function() {
+  showTargetSelector(user => {
+    if (user) forceRefreshRef.push({ target: user, time: Date.now() });
+  });
+};
