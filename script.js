@@ -566,6 +566,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// Inject a ✕ close button directly inside the panel so it's always reachable
+// even when the school clock is covering the Member List toggle button
+const memberPanelCloseBtn = document.createElement('button');
+memberPanelCloseBtn.textContent = '✕';
+memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
+memberPanelCloseBtn.title = 'Close';
+memberPanelCloseBtn.onclick = (e) => {
+  e.stopPropagation();
+  memberPanel.style.display = 'none';
+  memberArrow.textContent = '↓';
+};
+memberPanel.prepend(memberPanelCloseBtn);
+
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -574,15 +587,38 @@ if (memberListBtn) {
   };
 }
 
+// Close member panel when clicking anywhere outside it
+document.addEventListener('click', (e) => {
+  if (memberPanel.style.display !== 'none' &&
+      !memberPanel.contains(e.target) &&
+      !memberListBtn.contains(e.target)) {
+    memberPanel.style.display = 'none';
+    memberArrow.textContent = '↓';
+  }
+}, true);
+
 function updateMemberList() {
   membersList.innerHTML = '';
-  Object.keys(allUsers).sort((a,b) => (allUsers[a].originalName||a).localeCompare(allUsers[b].originalName||b)).forEach(cKey => {
-    const u = allUsers[cKey];
-    const dispName = u.originalName || cKey;
+
+  // Build a combined key set: registered users PLUS anyone in presence who
+  // isn't in allUsers yet (fixes the "missing accounts" bug where some users
+  // don't appear in the member list even though they're online).
+  const allKeys = new Set([
+    ...Object.keys(allUsers),
+    ...Object.keys(allPresence).filter(k => allPresence[k] && allPresence[k].username)
+  ]);
+
+  Array.from(allKeys).sort((a, b) => {
+    const na = (allUsers[a] && allUsers[a].originalName) || (allPresence[a] && allPresence[a].username) || a;
+    const nb = (allUsers[b] && allUsers[b].originalName) || (allPresence[b] && allPresence[b].username) || b;
+    return na.localeCompare(nb);
+  }).forEach(cKey => {
+    const u = allUsers[cKey] || {};
+    const pres = allPresence[cKey];
+    const dispName = u.originalName || (pres && pres.username) || cKey;
     const uColor = u.color || stringToColor(dispName);
     const uIcon = u.icon;
 
-    const pres = allPresence[cKey];
     let stat = '⚫';
     if (pres) {
       const age = Date.now() - pres.lastSeen;
@@ -607,7 +643,7 @@ function updateMemberList() {
       <span class="member-status">${stat}</span>
       ${uIcon ? `<img src="${uIcon}" class="member-icon">` : ''}
       <span class="member-name" style="color:${uColor};${admins[cKey.toLowerCase()] ? 'text-shadow:0 0 8px ' + uColor + ';' : ''}">${dispName}</span>
-      ${isAdmin && hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
+      ${hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
       ${isAdmin ? `<button class="delete-user-btn" data-cname="${cKey}" title="Delete account">⛔</button>` : ''}
     `;
     membersList.appendChild(item);
@@ -624,11 +660,10 @@ membersList.addEventListener('click', e => {
     }
   }
   const emoji = e.target.closest('.timeout-emoji');
-  if (emoji && isAdmin) {
+  if (emoji) {
     const item = emoji.closest('.member-item');
     const cKey = item.dataset.cname;
-    const dispName = (allUsers[cKey] && allUsers[cKey].originalName) || (allPresence[cKey] && allPresence[cKey].username) || cKey;
-    const dur = prompt(`New timeout seconds for ${dispName} (0 = remove):`, '60');
+    const dur = prompt(`New timeout seconds for ${allUsers[cKey].originalName} (0 = remove):`, '60');
     if (dur !== null) {
       const ns = parseInt(dur);
       Object.keys(timeouts || {}).forEach(did => {
