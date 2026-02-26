@@ -1205,7 +1205,7 @@ function showTargetSelector(callback) {
   document.body.appendChild(modal);
 
   const list = modal.querySelector('#target-list');
-  const online = Object.keys(allPresence).filter(k => Date.now() - allPresence[k].lastSeen < 180000);
+  const online = Object.keys(allPresence).filter(k => allPresence[k] && allPresence[k].username && Date.now() - allPresence[k].lastSeen < 180000);
   online.forEach(k => {
     const p = allPresence[k];
     const b = document.createElement('button');
