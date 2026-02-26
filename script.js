@@ -18,7 +18,6 @@ const presenceRef = db.ref('presence');
 const targetedSfxRef = db.ref('targeted_sfx');
 const jumpscaresRef = db.ref('jumpscares');
 const cursorRef = db.ref('cursors');
-const forceRefreshRef = db.ref('force_refresh');
 
 // ---------------------- 2. AUTH & ACCOUNT LOGIC ----------------------
 let username = "";
@@ -29,8 +28,7 @@ let isAdmin = false;
 // ADMIN CREDENTIALS & BADGES
 const admins = {
   "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
-  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" },
-  "placeholder": { password: "placeholder", badge: "placeholder.png" }
+  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" }
 };
 
 const authOverlay = document.getElementById('auth-overlay');
@@ -134,6 +132,24 @@ function completeLogin(uname, forceAdmin = false) {
     });
     
     setupPresence();
+
+    // AUTO-PRESENCE VERIFICATION: confirm our presence entry actually landed
+    // with a username. If not, auto-reload (up to 3 times) so the user always
+    // appears properly in the target selector for sounds/jumpscares/force-refresh.
+    const presenceRetries = parseInt(sessionStorage.getItem('presence_retries') || '0');
+    setTimeout(() => {
+      presenceRef.child(cleanName).once('value', snap => {
+        const data = snap.val();
+        if (!data || !data.username) {
+          if (presenceRetries < 3) {
+            sessionStorage.setItem('presence_retries', String(presenceRetries + 1));
+            location.reload();
+          }
+        } else {
+          sessionStorage.removeItem('presence_retries');
+        }
+      });
+    }, 2000);
 }
 
 // Auto-Login Check on Refresh
@@ -476,33 +492,16 @@ if (tabSounds) {
   tabSounds.onclick = () => {
     tabSounds.classList.add('active');
     tabJumps.classList.remove('active');
-    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'flex';
     jumpsContent.style.display = 'none';
-    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
   };
 }
 if (tabJumps) {
   tabJumps.onclick = () => {
     tabJumps.classList.add('active');
     tabSounds.classList.remove('active');
-    if (document.getElementById('tab-tools')) document.getElementById('tab-tools').classList.remove('active');
     soundsContent.style.display = 'none';
     jumpsContent.style.display = 'flex';
-    if (document.getElementById('tools-content')) document.getElementById('tools-content').style.display = 'none';
-  };
-}
-
-const tabTools = document.getElementById('tab-tools');
-const toolsContent = document.getElementById('tools-content');
-if (tabTools) {
-  tabTools.onclick = () => {
-    tabTools.classList.add('active');
-    tabSounds.classList.remove('active');
-    tabJumps.classList.remove('active');
-    soundsContent.style.display = 'none';
-    jumpsContent.style.display = 'none';
-    toolsContent.style.display = 'flex';
   };
 }
 
@@ -566,19 +565,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Inject a sticky ✕ close button inside the panel — always reachable
-// even when the school clock is blocking the Member List toggle button
-const memberPanelCloseBtn = document.createElement('button');
-memberPanelCloseBtn.textContent = '✕';
-memberPanelCloseBtn.style.cssText = 'position:sticky;top:4px;float:right;margin:4px 8px 0 0;background:none;border:none;color:#ed4245;font-size:18px;font-weight:bold;cursor:pointer;line-height:1;z-index:55;';
-memberPanelCloseBtn.title = 'Close';
-memberPanelCloseBtn.onclick = (e) => {
-  e.stopPropagation();
-  memberPanel.style.display = 'none';
-  memberArrow.textContent = '↓';
-};
-memberPanel.prepend(memberPanelCloseBtn);
-
 if (memberListBtn) {
   memberListBtn.onclick = () => {
     const show = memberPanel.style.display === 'none';
@@ -586,16 +572,6 @@ if (memberListBtn) {
     memberArrow.textContent = show ? '↑' : '↓';
   };
 }
-
-// Close member panel when clicking anywhere outside it
-document.addEventListener('click', (e) => {
-  if (memberPanel.style.display !== 'none' &&
-      !memberPanel.contains(e.target) &&
-      !memberListBtn.contains(e.target)) {
-    memberPanel.style.display = 'none';
-    memberArrow.textContent = '↓';
-  }
-}, true);
 
 function updateMemberList() {
   membersList.innerHTML = '';
@@ -630,7 +606,7 @@ function updateMemberList() {
       <span class="member-status">${stat}</span>
       ${uIcon ? `<img src="${uIcon}" class="member-icon">` : ''}
       <span class="member-name" style="color:${uColor};${admins[cKey.toLowerCase()] ? 'text-shadow:0 0 8px ' + uColor + ';' : ''}">${dispName}</span>
-      ${hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
+      ${isAdmin && hasT ? `<span class="timeout-emoji" style="color: ${tType==='shadow'?'#c724c7':'#ff4444'}" title="${tRem}s left (${tType})">⏳</span>` : ''}
       ${isAdmin ? `<button class="delete-user-btn" data-cname="${cKey}" title="Delete account">⛔</button>` : ''}
     `;
     membersList.appendChild(item);
@@ -647,10 +623,11 @@ membersList.addEventListener('click', e => {
     }
   }
   const emoji = e.target.closest('.timeout-emoji');
-  if (emoji) {
+  if (emoji && isAdmin) {
     const item = emoji.closest('.member-item');
     const cKey = item.dataset.cname;
-    const dur = prompt(`New timeout seconds for ${allUsers[cKey].originalName} (0 = remove):`, '60');
+    const dispName = (allUsers[cKey] && allUsers[cKey].originalName) || (allPresence[cKey] && allPresence[cKey].username) || cKey;
+    const dur = prompt(`New timeout seconds for ${dispName} (0 = remove):`, '60');
     if (dur !== null) {
       const ns = parseInt(dur);
       Object.keys(timeouts || {}).forEach(did => {
@@ -863,6 +840,19 @@ function createMessageElement(msg, msgKey) {
   }
 
   const p = document.createElement("p");
+
+  // Shadow timeout visual: admins see the message dimmed so they know it's a ghost post.
+  // The sender themselves sees it fully normally (no hint anything is wrong).
+  const isShadowed = msg.fingerprint && timeouts && timeouts[msg.fingerprint] &&
+      timeouts[msg.fingerprint].until > Date.now() &&
+      timeouts[msg.fingerprint].type === 'shadow';
+  const isMine = msg.fingerprint === deviceID;
+  if (isShadowed && isAdmin) {
+    p.style.opacity = '0.45';
+    p.style.filter = 'grayscale(60%)';
+    p.title = '🕶️ Shadow timed-out message (only you and the sender can see this)';
+  }
+
   if (msg && msg.text) {
     const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
     const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -998,9 +988,9 @@ function updateTimeoutDisplay() {
     const seconds = Math.ceil(Math.max(0, myStatus.until - Date.now()) / 1000);
     const isShadow = myStatus.type === 'shadow';
     timerEl.textContent = seconds > 0 
-      ? (isShadow ? `Shadow timeout: ${seconds}s (you can still chat)` : `Your device is timed out for ${seconds}s more.`)
+      ? (isShadow ? `` : `Your device is timed out for ${seconds}s more.`)
       : "";
-    timerEl.style.color = isShadow ? '#c724c7' : '#ffb4b4';
+    timerEl.style.color = '#ffb4b4';
     if (seconds <= 0) {
         clearInterval(timeoutInterval);
         timerEl.textContent = "";
@@ -1251,7 +1241,7 @@ targetedSfxRef.on('child_added', snap => {
 forceRefreshRef.on('child_added', snap => {
   const d = snap.val();
   if (d && d.target === username && d.time > loadTime) {
-    snap.ref.remove(); // clean up the record
+    snap.ref.remove();
     location.reload();
   }
 });
