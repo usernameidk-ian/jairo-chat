@@ -27,9 +27,7 @@ let isAdmin = false;
 
 // ADMIN CREDENTIALS & BADGES
 const admins = {
-  "bian": { password: "hehehahahehehaha", badge: "purplestar.png" },
-  "jair0": { password: "67JAIRO67", badge: "jairobadge.png" },
-  "Chr1stian": { password: "12345Dog##", badge: "christianbadge.png" }
+  "joemama" }
 };
 
 const authOverlay = document.getElementById('auth-overlay');
